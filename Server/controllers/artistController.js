@@ -1,9 +1,10 @@
 const Artist = require('../models/Artist');
 const scraperService = require('../services/scraper');
+const aiResearcher = require('../services/aiResearcher');
 
 exports.searchArtist = async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name, useAI } = req.query;
     if (!name) {
       return res.status(400).json({ message: 'Artist name is required' });
     }
@@ -12,16 +13,22 @@ exports.searchArtist = async (req, res) => {
     let artist = await Artist.findOne({ 'name.value': name });
 
     if (!artist) {
-      // If not found, scrape data
-      const scrapedData = await scraperService.scrapeArtist(name);
-      artist = new Artist(scrapedData);
+      let data;
+      if (useAI === 'true') {
+        // Use AI research
+        data = await aiResearcher.researchArtist(name);
+      } else {
+        // Use traditional scraping
+        data = await scraperService.scrapeArtist(name);
+      }
+      artist = new Artist(data);
       await artist.save();
     }
 
     res.json(artist);
   } catch (error) {
     console.error('Error in searchArtist:', error);
-    res.status(500).json({ message: 'Error searching for artist' });
+    res.status(500).json({ message: error.message || 'Error searching for artist' });
   }
 };
 

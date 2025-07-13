@@ -1,9 +1,10 @@
 const Taal = require('../models/Taal');
 const scraperService = require('../services/scraper');
+const aiResearcher = require('../services/aiResearcher');
 
 exports.searchTaal = async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name, useAI } = req.query;
     if (!name) {
       return res.status(400).json({ message: 'Taal name is required' });
     }
@@ -12,16 +13,22 @@ exports.searchTaal = async (req, res) => {
     let taal = await Taal.findOne({ 'name.value': name });
 
     if (!taal) {
-      // If not found, scrape data
-      const scrapedData = await scraperService.scrapeTaal(name);
-      taal = new Taal(scrapedData);
+      let data;
+      if (useAI === 'true') {
+        // Use AI research
+        data = await aiResearcher.researchTaal(name);
+      } else {
+        // Use traditional scraping
+        data = await scraperService.scrapeTaal(name);
+      }
+      taal = new Taal(data);
       await taal.save();
     }
 
     res.json(taal);
   } catch (error) {
     console.error('Error in searchTaal:', error);
-    res.status(500).json({ message: 'Error searching for taal' });
+    res.status(500).json({ message: error.message || 'Error searching for taal' });
   }
 };
 

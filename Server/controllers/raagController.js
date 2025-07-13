@@ -1,9 +1,10 @@
 const Raag = require('../models/Raag');
 const scraperService = require('../services/scraper');
+const aiResearcher = require('../services/aiResearcher');
 
 exports.searchRaag = async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name, useAI } = req.query;
     if (!name) {
       return res.status(400).json({ message: 'Raag name is required' });
     }
@@ -12,16 +13,22 @@ exports.searchRaag = async (req, res) => {
     let raag = await Raag.findOne({ 'name.value': name });
 
     if (!raag) {
-      // If not found, scrape data
-      const scrapedData = await scraperService.scrapeRaag(name);
-      raag = new Raag(scrapedData);
+      let data;
+      if (useAI === 'true') {
+        // Use AI research
+        data = await aiResearcher.researchRaag(name);
+      } else {
+        // Use traditional scraping
+        data = await scraperService.scrapeRaag(name);
+      }
+      raag = new Raag(data);
       await raag.save();
     }
 
     res.json(raag);
   } catch (error) {
     console.error('Error in searchRaag:', error);
-    res.status(500).json({ message: 'Error searching for raag' });
+    res.status(500).json({ message: error.message || 'Error searching for raag' });
   }
 };
 

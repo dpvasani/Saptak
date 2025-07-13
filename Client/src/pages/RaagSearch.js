@@ -6,6 +6,7 @@ const RaagSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [raag, setRaag] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [useAI, setUseAI] = useState(false);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -16,8 +17,9 @@ const RaagSearch = () => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/raags/search?name=${encodeURIComponent(searchQuery)}`);
+      const response = await axios.get(`http://localhost:5000/api/raags/search?name=${encodeURIComponent(searchQuery)}&useAI=${useAI}`);
       setRaag(response.data);
+      toast.success(`Raag data ${useAI ? 'researched using AI' : 'scraped from web'} successfully`);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error searching for raag');
     } finally {
@@ -129,12 +131,23 @@ const RaagSearch = () => {
                 placeholder="Enter raag name"
               />
             </div>
+            <div className="mt-3 sm:mt-0 sm:ml-3">
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={useAI}
+                  onChange={(e) => setUseAI(e.target.checked)}
+                  className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                />
+                <span className="ml-2 text-sm text-gray-600">Use AI Research</span>
+              </label>
+            </div>
             <button
               type="submit"
               disabled={loading}
-              className="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              className="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
             >
-              {loading ? 'Searching...' : 'Search'}
+              {loading ? (useAI ? 'AI Researching...' : 'Searching...') : 'Search'}
             </button>
           </form>
         </div>
