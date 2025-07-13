@@ -5,29 +5,33 @@ const aiResearcher = require('../services/aiResearcher');
 exports.searchTaal = async (req, res) => {
   try {
     const { name, useAI } = req.query;
+    console.log('Search request received:', { name, useAI });
+    
     if (!name) {
       return res.status(400).json({ message: 'Taal name is required' });
     }
 
-    // First check if taal exists in database
-    let taal = await Taal.findOne({ 'name.value': name });
-
-    if (!taal) {
-      let data;
-      if (useAI === 'true') {
-        // Use AI research
-        console.log('Using AI research for taal:', name);
+    let data;
+    if (useAI === 'true') {
+      // Use AI research - always get fresh data
+      console.log('Using AI research for taal:', name);
+      try {
         data = await aiResearcher.researchTaal(name);
-        console.log('AI research result:', data);
-      } else {
-        // Use traditional scraping
-        console.log('Using traditional scraping for taal:', name);
-        data = await scraperService.scrapeTaal(name);
+        console.log('AI research successful, data received:', data);
+      } catch (aiError) {
+        console.error('AI research failed:', aiError);
+        return res.status(500).json({ message: 'AI research failed: ' + aiError.message });
       }
-      taal = new Taal(data);
-      await taal.save();
-      console.log('Saved taal to database:', taal);
+    } else {
+      // Use traditional scraping
+      console.log('Using traditional scraping for taal:', name);
+      data = await scraperService.scrapeTaal(name);
     }
+
+    // Create new taal with the researched data
+    const taal = new Taal(data);
+    await taal.save();
+    console.log('Saved taal to database:', taal);
 
     res.json(taal);
   } catch (error) {

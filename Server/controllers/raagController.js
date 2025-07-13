@@ -5,29 +5,33 @@ const aiResearcher = require('../services/aiResearcher');
 exports.searchRaag = async (req, res) => {
   try {
     const { name, useAI } = req.query;
+    console.log('Search request received:', { name, useAI });
+    
     if (!name) {
       return res.status(400).json({ message: 'Raag name is required' });
     }
 
-    // First check if raag exists in database
-    let raag = await Raag.findOne({ 'name.value': name });
-
-    if (!raag) {
-      let data;
-      if (useAI === 'true') {
-        // Use AI research
-        console.log('Using AI research for raag:', name);
+    let data;
+    if (useAI === 'true') {
+      // Use AI research - always get fresh data
+      console.log('Using AI research for raag:', name);
+      try {
         data = await aiResearcher.researchRaag(name);
-        console.log('AI research result:', data);
-      } else {
-        // Use traditional scraping
-        console.log('Using traditional scraping for raag:', name);
-        data = await scraperService.scrapeRaag(name);
+        console.log('AI research successful, data received:', data);
+      } catch (aiError) {
+        console.error('AI research failed:', aiError);
+        return res.status(500).json({ message: 'AI research failed: ' + aiError.message });
       }
-      raag = new Raag(data);
-      await raag.save();
-      console.log('Saved raag to database:', raag);
+    } else {
+      // Use traditional scraping
+      console.log('Using traditional scraping for raag:', name);
+      data = await scraperService.scrapeRaag(name);
     }
+
+    // Create new raag with the researched data
+    const raag = new Raag(data);
+    await raag.save();
+    console.log('Saved raag to database:', raag);
 
     res.json(raag);
   } catch (error) {

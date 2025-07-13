@@ -5,29 +5,33 @@ const aiResearcher = require('../services/aiResearcher');
 exports.searchArtist = async (req, res) => {
   try {
     const { name, useAI } = req.query;
+    console.log('Search request received:', { name, useAI });
+    
     if (!name) {
       return res.status(400).json({ message: 'Artist name is required' });
     }
 
-    // First check if artist exists in database
-    let artist = await Artist.findOne({ 'name.value': name });
-
-    if (!artist) {
-      let data;
-      if (useAI === 'true') {
-        // Use AI research
-        console.log('Using AI research for artist:', name);
+    let data;
+    if (useAI === 'true') {
+      // Use AI research - always get fresh data
+      console.log('Using AI research for artist:', name);
+      try {
         data = await aiResearcher.researchArtist(name);
-        console.log('AI research result:', data);
-      } else {
-        // Use traditional scraping
-        console.log('Using traditional scraping for artist:', name);
-        data = await scraperService.scrapeArtist(name);
+        console.log('AI research successful, data received:', data);
+      } catch (aiError) {
+        console.error('AI research failed:', aiError);
+        return res.status(500).json({ message: 'AI research failed: ' + aiError.message });
       }
-      artist = new Artist(data);
-      await artist.save();
-      console.log('Saved artist to database:', artist);
+    } else {
+      // Use traditional scraping
+      console.log('Using traditional scraping for artist:', name);
+      data = await scraperService.scrapeArtist(name);
     }
+
+    // Create new artist with the researched data
+    const artist = new Artist(data);
+    await artist.save();
+    console.log('Saved artist to database:', artist);
 
     res.json(artist);
   } catch (error) {
