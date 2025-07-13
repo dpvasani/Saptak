@@ -53,7 +53,7 @@ Important:
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -65,7 +65,7 @@ Important:
           }
         ],
         temperature: 0.2,
-        max_tokens: 1500
+        max_tokens: 1000
       });
 
       console.log('OpenAI API response received');
@@ -145,7 +145,7 @@ Important: Provide accurate musical information with real sources.`;
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -157,7 +157,7 @@ Important: Provide accurate musical information with real sources.`;
           }
         ],
         temperature: 0.2,
-        max_tokens: 1500
+        max_tokens: 1000
       });
 
       console.log('OpenAI API response received');
@@ -231,7 +231,7 @@ Important: Provide accurate rhythmic information with real sources.`;
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -243,7 +243,7 @@ Important: Provide accurate rhythmic information with real sources.`;
           }
         ],
         temperature: 0.2,
-        max_tokens: 1500
+        max_tokens: 1000
       });
 
       console.log('OpenAI API response received');
