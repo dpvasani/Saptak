@@ -16,13 +16,17 @@ exports.searchTaal = async (req, res) => {
       let data;
       if (useAI === 'true') {
         // Use AI research
+        console.log('Using AI research for taal:', name);
         data = await aiResearcher.researchTaal(name);
+        console.log('AI research result:', data);
       } else {
         // Use traditional scraping
+        console.log('Using traditional scraping for taal:', name);
         data = await scraperService.scrapeTaal(name);
       }
       taal = new Taal(data);
       await taal.save();
+      console.log('Saved taal to database:', taal);
     }
 
     res.json(taal);

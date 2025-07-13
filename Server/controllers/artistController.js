@@ -16,13 +16,17 @@ exports.searchArtist = async (req, res) => {
       let data;
       if (useAI === 'true') {
         // Use AI research
+        console.log('Using AI research for artist:', name);
         data = await aiResearcher.researchArtist(name);
+        console.log('AI research result:', data);
       } else {
         // Use traditional scraping
+        console.log('Using traditional scraping for artist:', name);
         data = await scraperService.scrapeArtist(name);
       }
       artist = new Artist(data);
       await artist.save();
+      console.log('Saved artist to database:', artist);
     }
 
     res.json(artist);
