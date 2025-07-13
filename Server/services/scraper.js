@@ -1,69 +1,157 @@
 class ScraperService {
   constructor() {
-    // Remove dependency on environment variables since the URLs don't work
-    this.whitelistedSites = [];
+    // Disable puppeteer-based scraping since it requires Chrome installation
+    this.puppeteerEnabled = false;
   }
 
   async scrapeArtist(name) {
-    // Return basic structure with empty data since scraping doesn't work
+    console.log(`Traditional scraping requested for artist: ${name}`);
+    
+    // Since the oceanofragas URLs don't actually exist and puppeteer requires Chrome installation,
+    // we'll return a structured response indicating scraping is not available
     const results = {
       name: { 
         value: name, 
-        reference: `No reliable source found for ${name}`, 
+        reference: `Traditional web scraping not available - requires Chrome installation and valid sources`, 
         verified: false 
       },
-      guru: { value: '', reference: 'Information not available through web scraping', verified: false },
-      gharana: { value: '', reference: 'Information not available through web scraping', verified: false },
-      notableAchievements: { value: '', reference: 'Information not available through web scraping', verified: false },
-      disciples: { value: '', reference: 'Information not available through web scraping', verified: false }
+      guru: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      gharana: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      notableAchievements: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      disciples: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      }
     };
 
+    console.log('Returning empty scraper results:', results);
     return results;
   }
 
   async scrapeRaag(name) {
-    // Return basic structure with empty data since scraping doesn't work
+    console.log(`Traditional scraping requested for raag: ${name}`);
+    
     const results = {
       name: { 
         value: name, 
-        reference: `No reliable source found for ${name}`, 
+        reference: `Traditional web scraping not available - requires Chrome installation and valid sources`, 
         verified: false 
       },
-      aroha: { value: '', reference: 'Information not available through web scraping', verified: false },
-      avroha: { value: '', reference: 'Information not available through web scraping', verified: false },
-      chalan: { value: '', reference: 'Information not available through web scraping', verified: false },
-      vadi: { value: '', reference: 'Information not available through web scraping', verified: false },
-      samvadi: { value: '', reference: 'Information not available through web scraping', verified: false },
-      thaat: { value: '', reference: 'Information not available through web scraping', verified: false },
-      rasBhaav: { value: '', reference: 'Information not available through web scraping', verified: false },
-      tanpuraTuning: { value: '', reference: 'Information not available through web scraping', verified: false },
-      timeOfRendition: { value: '', reference: 'Information not available through web scraping', verified: false }
+      aroha: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      avroha: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      chalan: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      vadi: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      samvadi: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      thaat: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      rasBhaav: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      tanpuraTuning: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      timeOfRendition: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      }
     };
 
+    console.log('Returning empty scraper results:', results);
     return results;
   }
 
   async scrapeTaal(name) {
-    // Return basic structure with empty data since scraping doesn't work
+    console.log(`Traditional scraping requested for taal: ${name}`);
+    
     const results = {
       name: { 
         value: name, 
-        reference: `No reliable source found for ${name}`, 
+        reference: `Traditional web scraping not available - requires Chrome installation and valid sources`, 
         verified: false 
       },
-      numberOfBeats: { value: '', reference: 'Information not available through web scraping', verified: false },
-      divisions: { value: '', reference: 'Information not available through web scraping', verified: false },
+      numberOfBeats: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
+      divisions: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      },
       taali: {
-        count: { value: '', reference: 'Information not available through web scraping', verified: false },
-        beatNumbers: { value: '', reference: 'Information not available through web scraping', verified: false }
+        count: { 
+          value: '', 
+          reference: 'Web scraping not available - use AI research instead', 
+          verified: false 
+        },
+        beatNumbers: { 
+          value: '', 
+          reference: 'Web scraping not available - use AI research instead', 
+          verified: false 
+        }
       },
       khaali: {
-        count: { value: '', reference: 'Information not available through web scraping', verified: false },
-        beatNumbers: { value: '', reference: 'Information not available through web scraping', verified: false }
+        count: { 
+          value: '', 
+          reference: 'Web scraping not available - use AI research instead', 
+          verified: false 
+        },
+        beatNumbers: { 
+          value: '', 
+          reference: 'Web scraping not available - use AI research instead', 
+          verified: false 
+        }
       },
-      jaati: { value: '', reference: 'Information not available through web scraping', verified: false }
+      jaati: { 
+        value: '', 
+        reference: 'Web scraping not available - use AI research instead', 
+        verified: false 
+      }
     };
 
+    console.log('Returning empty scraper results:', results);
     return results;
   }
 }

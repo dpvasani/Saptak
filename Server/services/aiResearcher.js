@@ -65,7 +65,7 @@ Important:
           }
         ],
         temperature: 0.2,
-        max_tokens: 2000
+        max_tokens: 1500
       });
 
       console.log('OpenAI API response received');
@@ -157,7 +157,7 @@ Important: Provide accurate musical information with real sources.`;
           }
         ],
         temperature: 0.2,
-        max_tokens: 2000
+        max_tokens: 1500
       });
 
       console.log('OpenAI API response received');
@@ -243,7 +243,7 @@ Important: Provide accurate rhythmic information with real sources.`;
           }
         ],
         temperature: 0.2,
-        max_tokens: 2000
+        max_tokens: 1500
       });
 
       console.log('OpenAI API response received');
