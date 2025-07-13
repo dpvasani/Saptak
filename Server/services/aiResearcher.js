@@ -8,6 +8,12 @@ class AIResearcher {
   }
 
   async researchArtist(name) {
+    console.log('Starting AI research for artist:', name);
+    
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+      throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
+    }
+    
     const prompt = `Research the Indian Classical Music artist "${name}" and provide detailed, accurate information with reliable sources. For each piece of information, include a specific source URL or reference where this information can be verified.
 
 Please provide information in the following JSON format:
@@ -47,7 +53,7 @@ Important:
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4",
         messages: [
           {
             role: "system",
@@ -62,7 +68,9 @@ Important:
         max_tokens: 2000
       });
 
+      console.log('OpenAI API response received');
       const response = completion.choices[0].message.content;
+      console.log('Raw AI response:', response);
       return this.parseAIResponse(response);
     } catch (error) {
       console.error('Error in AI research:', error);
@@ -71,6 +79,12 @@ Important:
   }
 
   async researchRaag(name) {
+    console.log('Starting AI research for raag:', name);
+    
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+      throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
+    }
+    
     const prompt = `Research the Indian Classical Music raag "${name}" and provide detailed, accurate information with reliable sources.
 
 Please provide information in the following JSON format:
@@ -131,7 +145,7 @@ Important: Provide accurate musical information with real sources.`;
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4",
         messages: [
           {
             role: "system",
@@ -146,7 +160,9 @@ Important: Provide accurate musical information with real sources.`;
         max_tokens: 2000
       });
 
+      console.log('OpenAI API response received');
       const response = completion.choices[0].message.content;
+      console.log('Raw AI response:', response);
       return this.parseAIResponse(response);
     } catch (error) {
       console.error('Error in AI research:', error);
@@ -155,6 +171,12 @@ Important: Provide accurate musical information with real sources.`;
   }
 
   async researchTaal(name) {
+    console.log('Starting AI research for taal:', name);
+    
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+      throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
+    }
+    
     const prompt = `Research the Indian Classical Music taal "${name}" and provide detailed, accurate information with reliable sources.
 
 Please provide information in the following JSON format:
@@ -209,7 +231,7 @@ Important: Provide accurate rhythmic information with real sources.`;
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4",
         messages: [
           {
             role: "system",
@@ -224,7 +246,9 @@ Important: Provide accurate rhythmic information with real sources.`;
         max_tokens: 2000
       });
 
+      console.log('OpenAI API response received');
       const response = completion.choices[0].message.content;
+      console.log('Raw AI response:', response);
       return this.parseAIResponse(response);
     } catch (error) {
       console.error('Error in AI research:', error);
