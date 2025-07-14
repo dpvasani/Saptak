@@ -453,15 +453,15 @@ const TaalSearch = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              className="w-full sm:w-auto px-8 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
                   <ClockIcon className="animate-spin h-5 w-5 mr-2" />
-                  {useAI ? `${aiProvider.toUpperCase()} Researching...` : 'Searching...'}
+                  {useAI ? `${aiProvider.toUpperCase()} Researching...` : 'Web Searching...'}
                 </div>
               ) : (
-                'Search'
+                useAI ? 'AI Research' : 'Web Search'
               )}
             </button>
           </form>

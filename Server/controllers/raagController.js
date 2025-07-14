@@ -2,6 +2,7 @@ const Raag = require('../models/Raag');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
+const { webScrapingLimiter } = require('../middleware/rateLimiter');
 
 exports.searchRaag = async (req, res) => {
   try {
@@ -31,6 +32,14 @@ exports.searchRaag = async (req, res) => {
       }
     } else {
       // Use traditional scraping
+      // Apply web scraping rate limiting
+      await new Promise((resolve, reject) => {
+        webScrapingLimiter(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
       console.log('Using traditional scraping for raag:', name);
       data = await scraperService.scrapeRaag(name);
     }

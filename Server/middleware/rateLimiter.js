@@ -27,11 +27,23 @@ const aiLimiter = rateLimit({
 
 // Search rate limiting
 const searchLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 30, // limit each IP to 30 search requests per 5 minutes
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 20, // limit each IP to 20 search requests per 10 minutes (web scraping is resource intensive)
   message: {
-    error: 'Too many search requests. Please try again in 5 minutes.',
-    retryAfter: '5 minutes'
+    error: 'Too many search requests. Please try again in 10 minutes.',
+    retryAfter: '10 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Web scraping rate limiting (more restrictive)
+const webScrapingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 web scraping requests per 15 minutes
+  message: {
+    error: 'Too many web scraping requests. Please try again in 15 minutes.',
+    retryAfter: '15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -61,6 +73,7 @@ module.exports = {
   generalLimiter,
   aiLimiter,
   searchLimiter,
+  webScrapingLimiter,
   updateLimiter,
   speedLimiter
 };
