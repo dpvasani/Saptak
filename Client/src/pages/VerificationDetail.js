@@ -9,7 +9,8 @@ import {
   ArrowLeftIcon,
   ExclamationTriangleIcon,
   PencilIcon,
-  CheckIcon
+  CheckIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const VerificationDetail = () => {
@@ -20,6 +21,8 @@ const VerificationDetail = () => {
   const [error, setError] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [selectedFields, setSelectedFields] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState('');
 
   const categoryConfig = {
     artists: {
@@ -142,6 +145,30 @@ const VerificationDetail = () => {
     return item[field]?.reference || '';
   };
 
+  const updateItemField = (field, updates) => {
+    setItem(prevItem => {
+      const newItem = { ...prevItem };
+      
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        newItem[parent] = {
+          ...newItem[parent],
+          [child]: {
+            ...newItem[parent][child],
+            ...updates
+          }
+        };
+      } else {
+        newItem[field] = {
+          ...newItem[field],
+          ...updates
+        };
+      }
+      
+      return newItem;
+    });
+  };
+
   const handleVerification = async (field, currentStatus) => {
     try {
       const updatedItem = { ...item };
@@ -163,7 +190,9 @@ const VerificationDetail = () => {
       }
 
       await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
-      setItem(updatedItem);
+      
+      // Update local state immediately
+      updateItemField(field, { verified: !currentStatus });
       
       toast.success(`${field} verification updated successfully`);
     } catch (error) {
@@ -198,7 +227,10 @@ const VerificationDetail = () => {
       }
 
       await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
-      setItem(updatedItem);
+      
+      // Update local state immediately
+      updateItemField(editingField, { value: editValue });
+      
       setEditingField(null);
       setEditValue('');
       
@@ -212,6 +244,171 @@ const VerificationDetail = () => {
   const handleCancel = () => {
     setEditingField(null);
     setEditValue('');
+  };
+
+  // Bulk verification functions
+  const handleSelectAll = () => {
+    if (selectedFields.size === config.fields.length) {
+      setSelectedFields(new Set());
+    } else {
+      setSelectedFields(new Set(config.fields.map(field => field.key)));
+    }
+  };
+
+  const handleFieldSelect = (fieldKey) => {
+    const newSelected = new Set(selectedFields);
+    if (newSelected.has(fieldKey)) {
+      newSelected.delete(fieldKey);
+    } else {
+      newSelected.add(fieldKey);
+    }
+    setSelectedFields(newSelected);
+  };
+
+  const handleBulkVerification = async (verify) => {
+    if (selectedFields.size === 0) {
+      toast.warning('Please select fields to verify/unverify');
+      return;
+    }
+
+    try {
+      const updatedItem = { ...item };
+      
+      selectedFields.forEach(field => {
+        if (field.includes('.')) {
+          const [parent, child] = field.split('.');
+          updatedItem[parent] = {
+            ...updatedItem[parent],
+            [child]: {
+              ...updatedItem[parent][child],
+              verified: verify
+            }
+          };
+        } else {
+          updatedItem[field] = {
+            ...updatedItem[field],
+            verified: verify
+          };
+        }
+      });
+
+      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
+      setItem(updatedItem);
+      setSelectedFields(new Set());
+      
+      toast.success(`${selectedFields.size} fields ${verify ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      console.error('Error in bulk verification:', error);
+      toast.error('Failed to update verification status');
+    }
+  };
+
+  const renderField = (field) => {
+    if (!item) return null;
+
+    const value = getFieldValue(field.key);
+    const verified = getFieldVerified(field.key);
+    const reference = getFieldReference(field.key);
+    const isEditing = editingField === field.key;
+    const isSelected = selectedFields.has(field.key);
+
+    return (
+      <div key={field.key} className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-200 hover:border-primary-300 transition-colors duration-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => handleFieldSelect(field.key)}
+              className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+            />
+            <h3 className="text-lg font-semibold text-gray-900">{field.label}</h3>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleEdit(field.key)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 rounded-lg hover:bg-gray-100"
+              title="Edit field"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleVerification(field.key, verified)}
+              className={`flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                verified
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 shadow-sm'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200 shadow-sm'
+              }`}
+            >
+              {verified ? (
+                <>
+                  <CheckCircleIcon className="h-4 w-4 mr-1" />
+                  Verified
+                </>
+              ) : (
+                <>
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  Unverified
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-4">
+            <textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              rows={3}
+              placeholder={`Enter ${field.label.toLowerCase()}...`}
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSave}
+                className={`flex items-center px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md`}
+              >
+                <CheckIcon className="h-4 w-4 mr-1" />
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4">
+              {value ? (
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{value}</p>
+              ) : (
+                <p className="text-gray-500 italic">No data available</p>
+              )}
+            </div>
+
+            {reference && (
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Source:</p>
+                <a
+                  href={reference}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center text-sm ${colors.text} hover:underline break-all`}
+                >
+                  {reference}
+                  <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+                </a>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
   };
 
   if (!config) {
@@ -290,7 +487,7 @@ const VerificationDetail = () => {
           </div>
           
           {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
             <div 
               className={`h-2 rounded-full transition-all duration-300 ${
                 verificationPercentage === 100 ? 'bg-green-500' :
@@ -299,105 +496,47 @@ const VerificationDetail = () => {
               style={{ width: `${verificationPercentage}%` }}
             ></div>
           </div>
+
+          {/* Bulk Actions */}
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                >
+                  {selectedFields.size === config.fields.length ? 'Unselect All' : 'Select All'}
+                </button>
+                <span className="text-sm text-gray-600">
+                  {selectedFields.size} of {config.fields.length} fields selected
+                </span>
+              </div>
+              
+              {selectedFields.size > 0 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleBulkVerification(true)}
+                    className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                  >
+                    <CheckCircleIcon className="h-4 w-4 mr-1" />
+                    Verify Selected ({selectedFields.size})
+                  </button>
+                  <button
+                    onClick={() => handleBulkVerification(false)}
+                    className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-1" />
+                    Unverify Selected ({selectedFields.size})
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Fields */}
         <div className="space-y-6">
-          {config.fields.map((field) => {
-            const value = getFieldValue(field.key);
-            const verified = getFieldVerified(field.key);
-            const reference = getFieldReference(field.key);
-            const isEditing = editingField === field.key;
-
-            return (
-              <div key={field.key} className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{field.label}</h3>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleEdit(field.key)}
-                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                      title="Edit field"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleVerification(field.key, verified)}
-                      className={`flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 ${
-                        verified
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    >
-                      {verified ? (
-                        <>
-                          <CheckCircleIcon className="h-4 w-4 mr-1" />
-                          Verified
-                        </>
-                      ) : (
-                        <>
-                          <XCircleIcon className="h-4 w-4 mr-1" />
-                          Unverified
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      rows={3}
-                      placeholder={`Enter ${field.label.toLowerCase()}...`}
-                    />
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={handleSave}
-                        className={`flex items-center px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200`}
-                      >
-                        <CheckIcon className="h-4 w-4 mr-1" />
-                        Save
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4">
-                      {value ? (
-                        <p className="text-gray-900 whitespace-pre-wrap">{value}</p>
-                      ) : (
-                        <p className="text-gray-500 italic">No data available</p>
-                      )}
-                    </div>
-
-                    {reference && (
-                      <div className="border-t pt-4">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Source:</p>
-                        <a
-                          href={reference}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`inline-flex items-center text-sm ${colors.text} hover:underline`}
-                        >
-                          {reference}
-                          <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1" />
-                        </a>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
+          {config.fields.map(renderField)}
         </div>
 
         {/* Metadata */}
