@@ -314,8 +314,8 @@ const ArtistSearch = () => {
     );
   };
 
-  const verifiedFields = fields.filter(field => artist?.[field.key]?.verified);
-  const verificationPercentage = artist ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
+  const verifiedFields = artist ? fields.filter(field => artist?.[field.key]?.verified) : [];
+  const verificationPercentage = artist && verifiedFields.length >= 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
     <div className="max-w-4xl mx-auto">

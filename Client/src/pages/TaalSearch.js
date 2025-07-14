@@ -62,6 +62,7 @@ const TaalSearch = () => {
   };
 
   const getFieldValue = (field) => {
+    if (!taal) return '';
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       return taal[parent]?.[child]?.value || '';
@@ -70,6 +71,7 @@ const TaalSearch = () => {
   };
 
   const getFieldVerified = (field) => {
+    if (!taal) return false;
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       return taal[parent]?.[child]?.verified || false;
@@ -78,6 +80,7 @@ const TaalSearch = () => {
   };
 
   const getFieldReference = (field) => {
+    if (!taal) return '';
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       return taal[parent]?.[child]?.reference || '';
@@ -396,8 +399,8 @@ const TaalSearch = () => {
     );
   };
 
-  const verifiedFields = fields.filter(field => getFieldVerified(field.key));
-  const verificationPercentage = taal ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
+  const verifiedFields = taal ? fields.filter(field => getFieldVerified(field.key)) : [];
+  const verificationPercentage = taal && verifiedFields.length > 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
     <div className="max-w-4xl mx-auto">

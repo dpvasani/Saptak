@@ -319,8 +319,8 @@ const RaagSearch = () => {
     );
   };
 
-  const verifiedFields = fields.filter(field => raag?.[field.key]?.verified);
-  const verificationPercentage = raag ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
+  const verifiedFields = raag ? fields.filter(field => raag?.[field.key]?.verified) : [];
+  const verificationPercentage = raag && verifiedFields.length >= 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
     <div className="max-w-4xl mx-auto">
