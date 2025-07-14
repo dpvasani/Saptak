@@ -50,6 +50,7 @@ const Dashboard = () => {
           <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{title}</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
           {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          }
         </div>
         <div className={`p-3 rounded-full ${color.replace('border-l-', 'bg-').replace('-500', '-100')}`}>
           <Icon className={`h-8 w-8 ${color.replace('border-l-', 'text-')}`} />
