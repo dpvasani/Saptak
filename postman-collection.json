@@ -321,6 +321,186 @@
           }
         }
       ]
+    },
+    {
+      "name": "Verification & Analytics",
+      "item": [
+        {
+          "name": "Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "stats"]
+            },
+            "description": "Get overall dashboard statistics including verification rates"
+          }
+        },
+        {
+          "name": "Pending Verification Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pending-verification?category=artists&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "pending-verification"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "artists",
+                  "description": "Filter by category: artists, raags, taals (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items to return (default: 10)"
+                }
+              ]
+            },
+            "description": "Get items that need verification"
+          }
+        },
+        {
+          "name": "Verified Artists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/verified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "verified"]
+            },
+            "description": "Get all verified artists"
+          }
+        },
+        {
+          "name": "Unverified Artists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/unverified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "unverified"]
+            },
+            "description": "Get all unverified artists"
+          }
+        },
+        {
+          "name": "Artist Verification Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "stats"]
+            },
+            "description": "Get detailed verification statistics for artists"
+          }
+        },
+        {
+          "name": "Verified Raags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/raags/verified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "raags", "verified"]
+            },
+            "description": "Get all verified raags"
+          }
+        },
+        {
+          "name": "Unverified Raags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/raags/unverified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "raags", "unverified"]
+            },
+            "description": "Get all unverified raags"
+          }
+        },
+        {
+          "name": "Raag Verification Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/raags/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "raags", "stats"]
+            },
+            "description": "Get detailed verification statistics for raags"
+          }
+        },
+        {
+          "name": "Verified Taals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/taals/verified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "taals", "verified"]
+            },
+            "description": "Get all verified taals"
+          }
+        },
+        {
+          "name": "Unverified Taals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/taals/unverified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "taals", "unverified"]
+            },
+            "description": "Get all unverified taals"
+          }
+        },
+        {
+          "name": "Taal Verification Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/taals/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "taals", "stats"]
+            },
+            "description": "Get detailed verification statistics for taals"
+          }
+        },
+        {
+          "name": "Verified Artists by Field",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/artists/verified?field=guru",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "artists", "verified"],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "guru",
+                  "description": "Filter by specific field: name, guru, gharana, notableAchievements, disciples"
+                }
+              ]
+            },
+            "description": "Get artists where specific field is verified"
+          }
+        }
+      ]
     }
   ]
 }

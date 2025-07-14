@@ -99,4 +99,123 @@ exports.getArtistById = async (req, res) => {
     console.error('Error in getArtistById:', error);
     res.status(500).json({ message: 'Error fetching artist' });
   }
+};
+
+exports.getVerifiedArtists = async (req, res) => {
+  try {
+    const { field } = req.query; // Optional: filter by specific field
+    let query = {};
+    
+    if (field) {
+      // Get artists where specific field is verified
+      query[`${field}.verified`] = true;
+    } else {
+      // Get artists where at least one field is verified
+      query = {
+        $or: [
+          { 'name.verified': true },
+          { 'guru.verified': true },
+          { 'gharana.verified': true },
+          { 'notableAchievements.verified': true },
+          { 'disciples.verified': true }
+        ]
+      };
+    }
+    
+    const artists = await Artist.find(query).sort({ updatedAt: -1 });
+    res.json({
+      count: artists.length,
+      data: artists
+    });
+  } catch (error) {
+    console.error('Error in getVerifiedArtists:', error);
+    res.status(500).json({ message: 'Error fetching verified artists' });
+  }
+};
+
+exports.getUnverifiedArtists = async (req, res) => {
+  try {
+    const { field } = req.query; // Optional: filter by specific field
+    let query = {};
+    
+    if (field) {
+      // Get artists where specific field is not verified
+      query[`${field}.verified`] = false;
+    } else {
+      // Get artists where all fields are unverified
+      query = {
+        'name.verified': false,
+        'guru.verified': false,
+        'gharana.verified': false,
+        'notableAchievements.verified': false,
+        'disciples.verified': false
+      };
+    }
+    
+    const artists = await Artist.find(query).sort({ createdAt: -1 });
+    res.json({
+      count: artists.length,
+      data: artists
+    });
+  } catch (error) {
+    console.error('Error in getUnverifiedArtists:', error);
+    res.status(500).json({ message: 'Error fetching unverified artists' });
+  }
+};
+
+exports.getVerificationStats = async (req, res) => {
+  try {
+    const totalArtists = await Artist.countDocuments();
+    
+    // Count verified fields
+    const nameVerified = await Artist.countDocuments({ 'name.verified': true });
+    const guruVerified = await Artist.countDocuments({ 'guru.verified': true });
+    const gharanaVerified = await Artist.countDocuments({ 'gharana.verified': true });
+    const achievementsVerified = await Artist.countDocuments({ 'notableAchievements.verified': true });
+    const disciplesVerified = await Artist.countDocuments({ 'disciples.verified': true });
+    
+    // Count artists with at least one verified field
+    const partiallyVerified = await Artist.countDocuments({
+      $or: [
+        { 'name.verified': true },
+        { 'guru.verified': true },
+        { 'gharana.verified': true },
+        { 'notableAchievements.verified': true },
+        { 'disciples.verified': true }
+      ]
+    });
+    
+    // Count fully verified artists (all fields verified)
+    const fullyVerified = await Artist.countDocuments({
+      'name.verified': true,
+      'guru.verified': true,
+      'gharana.verified': true,
+      'notableAchievements.verified': true,
+      'disciples.verified': true
+    });
+    
+    const unverified = totalArtists - partiallyVerified;
+    
+    res.json({
+      total: totalArtists,
+      fullyVerified,
+      partiallyVerified,
+      unverified,
+      fieldStats: {
+        name: nameVerified,
+        guru: guruVerified,
+        gharana: gharanaVerified,
+        notableAchievements: achievementsVerified,
+        disciples: disciplesVerified
+      },
+      percentages: {
+        fullyVerified: totalArtists > 0 ? ((fullyVerified / totalArtists) * 100).toFixed(2) : 0,
+        partiallyVerified: totalArtists > 0 ? ((partiallyVerified / totalArtists) * 100).toFixed(2) : 0,
+        unverified: totalArtists > 0 ? ((unverified / totalArtists) * 100).toFixed(2) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Error in getVerificationStats:', error);
+    res.status(500).json({ message: 'Error fetching verification statistics' });
+  }
 }; 

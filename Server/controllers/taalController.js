@@ -99,4 +99,143 @@ exports.getTaalById = async (req, res) => {
     console.error('Error in getTaalById:', error);
     res.status(500).json({ message: 'Error fetching taal' });
   }
+};
+
+exports.getVerifiedTaals = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      if (field.includes('.')) {
+        // Handle nested fields like taali.count, khaali.beatNumbers
+        query[`${field}.verified`] = true;
+      } else {
+        query[`${field}.verified`] = true;
+      }
+    } else {
+      query = {
+        $or: [
+          { 'name.verified': true },
+          { 'numberOfBeats.verified': true },
+          { 'divisions.verified': true },
+          { 'taali.count.verified': true },
+          { 'taali.beatNumbers.verified': true },
+          { 'khaali.count.verified': true },
+          { 'khaali.beatNumbers.verified': true },
+          { 'jaati.verified': true }
+        ]
+      };
+    }
+    
+    const taals = await Taal.find(query).sort({ updatedAt: -1 });
+    res.json({
+      count: taals.length,
+      data: taals
+    });
+  } catch (error) {
+    console.error('Error in getVerifiedTaals:', error);
+    res.status(500).json({ message: 'Error fetching verified taals' });
+  }
+};
+
+exports.getUnverifiedTaals = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      if (field.includes('.')) {
+        query[`${field}.verified`] = false;
+      } else {
+        query[`${field}.verified`] = false;
+      }
+    } else {
+      query = {
+        'name.verified': false,
+        'numberOfBeats.verified': false,
+        'divisions.verified': false,
+        'taali.count.verified': false,
+        'taali.beatNumbers.verified': false,
+        'khaali.count.verified': false,
+        'khaali.beatNumbers.verified': false,
+        'jaati.verified': false
+      };
+    }
+    
+    const taals = await Taal.find(query).sort({ createdAt: -1 });
+    res.json({
+      count: taals.length,
+      data: taals
+    });
+  } catch (error) {
+    console.error('Error in getUnverifiedTaals:', error);
+    res.status(500).json({ message: 'Error fetching unverified taals' });
+  }
+};
+
+exports.getVerificationStats = async (req, res) => {
+  try {
+    const totalTaals = await Taal.countDocuments();
+    
+    const nameVerified = await Taal.countDocuments({ 'name.verified': true });
+    const numberOfBeatsVerified = await Taal.countDocuments({ 'numberOfBeats.verified': true });
+    const divisionsVerified = await Taal.countDocuments({ 'divisions.verified': true });
+    const taaliCountVerified = await Taal.countDocuments({ 'taali.count.verified': true });
+    const taaliBeatNumbersVerified = await Taal.countDocuments({ 'taali.beatNumbers.verified': true });
+    const khaaliCountVerified = await Taal.countDocuments({ 'khaali.count.verified': true });
+    const khaaliBeatNumbersVerified = await Taal.countDocuments({ 'khaali.beatNumbers.verified': true });
+    const jaatiVerified = await Taal.countDocuments({ 'jaati.verified': true });
+    
+    const partiallyVerified = await Taal.countDocuments({
+      $or: [
+        { 'name.verified': true },
+        { 'numberOfBeats.verified': true },
+        { 'divisions.verified': true },
+        { 'taali.count.verified': true },
+        { 'taali.beatNumbers.verified': true },
+        { 'khaali.count.verified': true },
+        { 'khaali.beatNumbers.verified': true },
+        { 'jaati.verified': true }
+      ]
+    });
+    
+    const fullyVerified = await Taal.countDocuments({
+      'name.verified': true,
+      'numberOfBeats.verified': true,
+      'divisions.verified': true,
+      'taali.count.verified': true,
+      'taali.beatNumbers.verified': true,
+      'khaali.count.verified': true,
+      'khaali.beatNumbers.verified': true,
+      'jaati.verified': true
+    });
+    
+    const unverified = totalTaals - partiallyVerified;
+    
+    res.json({
+      total: totalTaals,
+      fullyVerified,
+      partiallyVerified,
+      unverified,
+      fieldStats: {
+        name: nameVerified,
+        numberOfBeats: numberOfBeatsVerified,
+        divisions: divisionsVerified,
+        taaliCount: taaliCountVerified,
+        taaliBeatNumbers: taaliBeatNumbersVerified,
+        khaaliCount: khaaliCountVerified,
+        khaaliBeatNumbers: khaaliBeatNumbersVerified,
+        jaati: jaatiVerified
+      },
+      percentages: {
+        fullyVerified: totalTaals > 0 ? ((fullyVerified / totalTaals) * 100).toFixed(2) : 0,
+        partiallyVerified: totalTaals > 0 ? ((partiallyVerified / totalTaals) * 100).toFixed(2) : 0,
+        unverified: totalTaals > 0 ? ((unverified / totalTaals) * 100).toFixed(2) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Error in getVerificationStats:', error);
+    res.status(500).json({ message: 'Error fetching verification statistics' });
+  }
 }; 

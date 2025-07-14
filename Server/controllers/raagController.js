@@ -99,4 +99,146 @@ exports.getRaagById = async (req, res) => {
     console.error('Error in getRaagById:', error);
     res.status(500).json({ message: 'Error fetching raag' });
   }
+};
+
+exports.getVerifiedRaags = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      query[`${field}.verified`] = true;
+    } else {
+      query = {
+        $or: [
+          { 'name.verified': true },
+          { 'aroha.verified': true },
+          { 'avroha.verified': true },
+          { 'chalan.verified': true },
+          { 'vadi.verified': true },
+          { 'samvadi.verified': true },
+          { 'thaat.verified': true },
+          { 'rasBhaav.verified': true },
+          { 'tanpuraTuning.verified': true },
+          { 'timeOfRendition.verified': true }
+        ]
+      };
+    }
+    
+    const raags = await Raag.find(query).sort({ updatedAt: -1 });
+    res.json({
+      count: raags.length,
+      data: raags
+    });
+  } catch (error) {
+    console.error('Error in getVerifiedRaags:', error);
+    res.status(500).json({ message: 'Error fetching verified raags' });
+  }
+};
+
+exports.getUnverifiedRaags = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      query[`${field}.verified`] = false;
+    } else {
+      query = {
+        'name.verified': false,
+        'aroha.verified': false,
+        'avroha.verified': false,
+        'chalan.verified': false,
+        'vadi.verified': false,
+        'samvadi.verified': false,
+        'thaat.verified': false,
+        'rasBhaav.verified': false,
+        'tanpuraTuning.verified': false,
+        'timeOfRendition.verified': false
+      };
+    }
+    
+    const raags = await Raag.find(query).sort({ createdAt: -1 });
+    res.json({
+      count: raags.length,
+      data: raags
+    });
+  } catch (error) {
+    console.error('Error in getUnverifiedRaags:', error);
+    res.status(500).json({ message: 'Error fetching unverified raags' });
+  }
+};
+
+exports.getVerificationStats = async (req, res) => {
+  try {
+    const totalRaags = await Raag.countDocuments();
+    
+    const nameVerified = await Raag.countDocuments({ 'name.verified': true });
+    const arohaVerified = await Raag.countDocuments({ 'aroha.verified': true });
+    const avrohaVerified = await Raag.countDocuments({ 'avroha.verified': true });
+    const chalanVerified = await Raag.countDocuments({ 'chalan.verified': true });
+    const vadiVerified = await Raag.countDocuments({ 'vadi.verified': true });
+    const samvadiVerified = await Raag.countDocuments({ 'samvadi.verified': true });
+    const thaatVerified = await Raag.countDocuments({ 'thaat.verified': true });
+    const rasBhaavVerified = await Raag.countDocuments({ 'rasBhaav.verified': true });
+    const tanpuraTuningVerified = await Raag.countDocuments({ 'tanpuraTuning.verified': true });
+    const timeOfRenditionVerified = await Raag.countDocuments({ 'timeOfRendition.verified': true });
+    
+    const partiallyVerified = await Raag.countDocuments({
+      $or: [
+        { 'name.verified': true },
+        { 'aroha.verified': true },
+        { 'avroha.verified': true },
+        { 'chalan.verified': true },
+        { 'vadi.verified': true },
+        { 'samvadi.verified': true },
+        { 'thaat.verified': true },
+        { 'rasBhaav.verified': true },
+        { 'tanpuraTuning.verified': true },
+        { 'timeOfRendition.verified': true }
+      ]
+    });
+    
+    const fullyVerified = await Raag.countDocuments({
+      'name.verified': true,
+      'aroha.verified': true,
+      'avroha.verified': true,
+      'chalan.verified': true,
+      'vadi.verified': true,
+      'samvadi.verified': true,
+      'thaat.verified': true,
+      'rasBhaav.verified': true,
+      'tanpuraTuning.verified': true,
+      'timeOfRendition.verified': true
+    });
+    
+    const unverified = totalRaags - partiallyVerified;
+    
+    res.json({
+      total: totalRaags,
+      fullyVerified,
+      partiallyVerified,
+      unverified,
+      fieldStats: {
+        name: nameVerified,
+        aroha: arohaVerified,
+        avroha: avrohaVerified,
+        chalan: chalanVerified,
+        vadi: vadiVerified,
+        samvadi: samvadiVerified,
+        thaat: thaatVerified,
+        rasBhaav: rasBhaavVerified,
+        tanpuraTuning: tanpuraTuningVerified,
+        timeOfRendition: timeOfRenditionVerified
+      },
+      percentages: {
+        fullyVerified: totalRaags > 0 ? ((fullyVerified / totalRaags) * 100).toFixed(2) : 0,
+        partiallyVerified: totalRaags > 0 ? ((partiallyVerified / totalRaags) * 100).toFixed(2) : 0,
+        unverified: totalRaags > 0 ? ((unverified / totalRaags) * 100).toFixed(2) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Error in getVerificationStats:', error);
+    res.status(500).json({ message: 'Error fetching verification statistics' });
+  }
 }; 

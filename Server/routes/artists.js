@@ -5,6 +5,15 @@ const artistController = require('../controllers/artistController');
 // Search for an artist
 router.get('/search', artistController.searchArtist);
 
+// Get verified artists
+router.get('/verified', artistController.getVerifiedArtists);
+
+// Get unverified artists
+router.get('/unverified', artistController.getUnverifiedArtists);
+
+// Get verification statistics
+router.get('/stats', artistController.getVerificationStats);
+
 // Get all artists
 router.get('/', artistController.getAllArtists);
 

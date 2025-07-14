@@ -20,6 +20,7 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/artists', require('./routes/artists'));
 app.use('/api/raags', require('./routes/raags'));
 app.use('/api/taals', require('./routes/taals'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
