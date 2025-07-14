@@ -5,11 +5,11 @@ import { toast } from 'react-toastify';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
-  ExternalLinkIcon,
+  ArrowTopRightOnSquareIcon,
   ArrowLeftIcon,
   ExclamationTriangleIcon,
   PencilIcon,
-  SaveIcon
+  CheckIcon
 } from '@heroicons/react/24/outline';
 
 const VerificationDetail = () => {
@@ -358,7 +358,7 @@ const VerificationDetail = () => {
                         onClick={handleSave}
                         className={`flex items-center px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200`}
                       >
-                        <SaveIcon className="h-4 w-4 mr-1" />
+                        <CheckIcon className="h-4 w-4 mr-1" />
                         Save
                       </button>
                       <button
@@ -389,7 +389,7 @@ const VerificationDetail = () => {
                           className={`inline-flex items-center text-sm ${colors.text} hover:underline`}
                         >
                           {reference}
-                          <ExternalLinkIcon className="h-4 w-4 ml-1" />
+                          <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1" />
                         </a>
                       </div>
                     )}
