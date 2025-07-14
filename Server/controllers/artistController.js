@@ -2,6 +2,7 @@ const Artist = require('../models/Artist');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
+const { aiLimiter } = require('../middleware/rateLimiter');
 
 exports.searchArtist = async (req, res) => {
   try {
@@ -10,6 +11,16 @@ exports.searchArtist = async (req, res) => {
     
     if (!name) {
       return res.status(400).json({ message: 'Artist name is required' });
+    }
+
+    // Apply AI rate limiting if using AI
+    if (useAI === 'true') {
+      await new Promise((resolve, reject) => {
+        aiLimiter(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
     }
 
     let data;

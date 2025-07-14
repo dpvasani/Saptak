@@ -4,12 +4,15 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const errorHandler = require('./middleware/errorHandler');
+const { generalLimiter, speedLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
 // Middleware
 app.use(helmet());
 app.use(cors());
+app.use(generalLimiter);
+app.use(speedLimiter);
 app.use(express.json());
 
 // Database connection
