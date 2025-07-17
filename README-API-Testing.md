@@ -24,21 +24,22 @@ This repository includes a comprehensive Postman collection for testing the Indi
 
 #### Artists API
 - **Search Artist (Web Scraping)**: `GET /api/artists/search?name=Zakir Hussain&useAI=false`
-- **Search Artist (AI Research)**: `GET /api/artists/search?name=Ravi Shankar&useAI=true`
+- **Search Artist (AI Research - OpenAI)**: `GET /api/artists/search?name=Ravi Shankar&useAI=true&aiProvider=openai`
+- **Search Artist (AI Research - Perplexity)**: `GET /api/artists/search?name=Ravi Shankar&useAI=true&aiProvider=perplexity`
 - **Get All Artists**: `GET /api/artists`
 - **Get Artist by ID**: `GET /api/artists/{id}`
 - **Update Artist**: `PUT /api/artists/{id}`
 
 #### Raags API
 - **Search Raag (Web Scraping)**: `GET /api/raags/search?name=Yaman&useAI=false`
-- **Search Raag (AI Research)**: `GET /api/raags/search?name=Bhairav&useAI=true`
+- **Search Raag (AI Research - Perplexity)**: `GET /api/raags/search?name=Bhairav&useAI=true&aiProvider=perplexity`
 - **Get All Raags**: `GET /api/raags`
 - **Get Raag by ID**: `GET /api/raags/{id}`
 - **Update Raag**: `PUT /api/raags/{id}`
 
 #### Taals API
 - **Search Taal (Web Scraping)**: `GET /api/taals/search?name=Teentaal&useAI=false`
-- **Search Taal (AI Research)**: `GET /api/taals/search?name=Jhaptaal&useAI=true`
+- **Search Taal (AI Research - Perplexity)**: `GET /api/taals/search?name=Jhaptaal&useAI=true&aiProvider=perplexity`
 - **Get All Taals**: `GET /api/taals`
 - **Get Taal by ID**: `GET /api/taals/{id}`
 - **Update Taal**: `PUT /api/taals/{id}`
@@ -63,6 +64,12 @@ The collection includes realistic test data for:
 - **Artists**: Zakir Hussain, Ravi Shankar
 - **Raags**: Yaman, Bhairav
 - **Taals**: Teentaal, Jhaptaal
+
+### AI Provider Testing
+Test all three AI providers:
+- **OpenAI**: Good for general knowledge
+- **Gemini**: Free alternative with good performance
+- **Perplexity**: Excellent for web search and current information
 
 ### Expected Responses
 

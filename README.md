@@ -84,6 +84,7 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/indian-classical-music
 OPENAI_API_KEY=your_openai_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
 NODE_ENV=development
 ```
 

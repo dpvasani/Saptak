@@ -50,11 +50,11 @@ Search for an artist using web scraping or AI research.
 **Parameters:**
 - `name` (required): Artist name to search
 - `useAI` (optional): Use AI research (true/false, default: false)
-- `aiProvider` (optional): AI provider (openai/gemini, default: openai)
+- `aiProvider` (optional): AI provider (openai/gemini/perplexity, default: openai)
 
 **Example Request:**
 ```bash
-GET /api/artists/search?name=Zakir Hussain&useAI=true&aiProvider=openai
+GET /api/artists/search?name=Zakir Hussain&useAI=true&aiProvider=perplexity
 ```
 
 **Example Response:**

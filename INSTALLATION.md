@@ -96,6 +96,7 @@ MONGODB_URI=mongodb://localhost:27017/indian-classical-music
 # AI API Keys (Optional but recommended)
 OPENAI_API_KEY=your_openai_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
 
 # Security
 JWT_SECRET=your_jwt_secret_key_here
@@ -151,6 +152,13 @@ npm start
 4. Enable Gemini API
 5. Generate API key
 6. Add to `.env` file as `GEMINI_API_KEY`
+
+### Perplexity API Key
+1. Visit [perplexity.ai](https://www.perplexity.ai/)
+2. Sign up for an account
+3. Navigate to API settings
+4. Generate API key
+5. Add to `.env` file as `PERPLEXITY_API_KEY`
 
 ## Database Setup
 

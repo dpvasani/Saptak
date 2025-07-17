@@ -47,7 +47,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/artists/search?name=Ravi Shankar&useAI=true",
+              "raw": "{{baseUrl}}/api/artists/search?name=Ravi Shankar&useAI=true&aiProvider=perplexity",
               "host": ["{{baseUrl}}"],
               "path": ["api", "artists", "search"],
               "query": [
@@ -60,6 +60,11 @@
                   "key": "useAI",
                   "value": "true",
                   "description": "Use AI research with OpenAI"
+                },
+                {
+                  "key": "aiProvider",
+                  "value": "perplexity",
+                  "description": "AI provider (openai/gemini/perplexity, default: openai)"
                 }
               ]
             },
