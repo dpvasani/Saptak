@@ -2,6 +2,7 @@ const Raag = require('../models/Raag');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
+const perplexityResearcher = require('../services/perplexityResearcher');
 const { webScrapingLimiter } = require('../middleware/rateLimiter');
 
 exports.searchRaag = async (req, res) => {
@@ -19,7 +20,10 @@ exports.searchRaag = async (req, res) => {
       const provider = aiProvider || 'openai'; // Default to OpenAI
       console.log(`Using ${provider} AI research for raag:`, name);
       try {
-        if (provider === 'gemini') {
+        if (provider === 'perplexity') {
+          data = await perplexityResearcher.researchRaag(name);
+          console.log('Perplexity AI research successful, data received:', data);
+        } else if (provider === 'gemini') {
           data = await geminiResearcher.researchRaag(name);
           console.log('Gemini AI research successful, data received:', data);
         } else {

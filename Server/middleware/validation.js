@@ -25,8 +25,8 @@ const validateSearch = [
     .withMessage('useAI must be a boolean'),
   query('aiProvider')
     .optional()
-    .isIn(['openai', 'gemini'])
-    .withMessage('aiProvider must be either openai or gemini'),
+    .isIn(['openai', 'gemini', 'perplexity'])
+    .withMessage('aiProvider must be either openai, gemini, or perplexity'),
   handleValidationErrors
 ];
 

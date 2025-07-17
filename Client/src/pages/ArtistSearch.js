@@ -360,6 +360,7 @@ const ArtistSearch = () => {
                   >
                     <option value="openai">OpenAI (GPT-3.5)</option>
                     <option value="gemini">Google Gemini (Free)</option>
+                    <option value="perplexity">Perplexity AI (Web Search)</option>
                   </select>
                 )}
               </div>
