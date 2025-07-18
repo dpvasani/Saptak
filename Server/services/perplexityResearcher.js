@@ -4,7 +4,7 @@ class PerplexityResearcher {
   constructor() {
     this.apiKey = process.env.PERPLEXITY_API_KEY;
     this.baseURL = 'https://api.perplexity.ai/chat/completions';
-    this.model = 'llama-3.1-sonar-small-128k-online'; // Default model with web search capabilities
+    this.model = 'sonar-reasoning'; // Default model with web search capabilities
   }
 
   async researchArtist(name) {
