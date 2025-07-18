@@ -268,6 +268,10 @@ Important: Provide accurate rhythmic information with real sources.`;
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Convert arrays to strings for fields that expect strings
+        this.normalizeDataTypes(parsed);
+        
         console.log('Parsed AI response:', parsed);
         return parsed;
       }
@@ -277,6 +281,36 @@ Important: Provide accurate rhythmic information with real sources.`;
       console.error('Error parsing AI response:', error);
       console.error('Raw response:', response);
       throw new Error('Failed to parse AI research results: ' + error.message);
+    }
+  }
+
+  normalizeDataTypes(data) {
+    // Convert arrays to comma-separated strings for fields that expect strings
+    const fieldsToNormalize = ['notableAchievements', 'disciples'];
+    
+    fieldsToNormalize.forEach(field => {
+      if (data[field] && data[field].value && Array.isArray(data[field].value)) {
+        data[field].value = data[field].value.join(', ');
+      }
+    });
+    
+    // Handle nested fields for taals
+    if (data.taali) {
+      if (data.taali.count && data.taali.count.value && Array.isArray(data.taali.count.value)) {
+        data.taali.count.value = data.taali.count.value.join(', ');
+      }
+      if (data.taali.beatNumbers && data.taali.beatNumbers.value && Array.isArray(data.taali.beatNumbers.value)) {
+        data.taali.beatNumbers.value = data.taali.beatNumbers.value.join(', ');
+      }
+    }
+    
+    if (data.khaali) {
+      if (data.khaali.count && data.khaali.count.value && Array.isArray(data.khaali.count.value)) {
+        data.khaali.count.value = data.khaali.count.value.join(', ');
+      }
+      if (data.khaali.beatNumbers && data.khaali.beatNumbers.value && Array.isArray(data.khaali.beatNumbers.value)) {
+        data.khaali.beatNumbers.value = data.khaali.beatNumbers.value.join(', ');
+      }
     }
   }
 }
