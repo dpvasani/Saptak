@@ -82,10 +82,60 @@ Important:
       console.error('Error in Perplexity research:', error);
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
+        
+        // If it's a model error, try with a fallback model
+        if (error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback model...');
+          return await this.researchWithFallbackModel(name, prompt);
+        }
+        
         throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
       throw new Error('Failed to research artist using Perplexity AI: ' + error.message);
     }
+  }
+
+  async researchWithFallbackModel(name, prompt) {
+    const fallbackModels = [
+      'mixtral-8x7b-instruct',
+      'llama-3.1-70b-instruct',
+      'codellama-34b-instruct'
+    ];
+
+    for (const model of fallbackModels) {
+      try {
+        console.log(`Trying fallback model: ${model}`);
+        const response = await axios.post(this.baseURL, {
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert researcher specializing in Indian Classical Music. Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 1000
+        }, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log(`Fallback model ${model} worked!`);
+        const responseText = response.data.choices[0].message.content;
+        return this.parseAIResponse(responseText);
+      } catch (fallbackError) {
+        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
+        continue;
+      }
+    }
+
+    throw new Error('All Perplexity models failed. Please check the Perplexity API documentation for available models.');
   }
 
   async researchRaag(name) {
@@ -183,6 +233,12 @@ Important: Provide accurate musical information with real sources. Return only v
       console.error('Error in Perplexity research:', error);
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
+        
+        if (error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback model...');
+          return await this.researchWithFallbackModel(name, prompt);
+        }
+        
         throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
       throw new Error('Failed to research raag using Perplexity AI: ' + error.message);
@@ -278,6 +334,12 @@ Important: Provide accurate rhythmic information with real sources. Return only 
       console.error('Error in Perplexity research:', error);
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
+        
+        if (error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback model...');
+          return await this.researchWithFallbackModel(name, prompt);
+        }
+        
         throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
       throw new Error('Failed to research taal using Perplexity AI: ' + error.message);
