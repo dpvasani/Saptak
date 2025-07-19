@@ -4,13 +4,7 @@ class PerplexityResearcher {
   constructor() {
     this.apiKey = process.env.PERPLEXITY_API_KEY;
     this.baseURL = 'https://api.perplexity.ai/chat/completions';
-    // Use sonar-pro for better web search and accuracy
-    this.model = 'sonar-pro'; // More accurate than sonar-reasoning
-    this.fallbackModels = [
-      'sonar-reasoning',
-      'llama-3.1-sonar-large-128k-online',
-      'llama-3.1-sonar-small-128k-online'
-    ];
+    this.model = 'sonar-reasoning'; // Default model with web search capabilities
   }
 
   async researchArtist(name) {
@@ -20,52 +14,43 @@ class PerplexityResearcher {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Enhanced prompt with specific search terms and source requirements
-    const prompt = `Search for comprehensive information about the Indian Classical Music artist "${name}". Focus on finding information from these specific types of sources:
+    const prompt = `Research the Indian Classical Music artist "${name}" and provide detailed, accurate information with reliable sources. For each piece of information, include a specific source URL or reference where this information can be verified.
 
-1. Wikipedia articles about the artist
-2. Official music institution websites (Sangeet Natak Akademi, ITC Sangeet Research Academy)
-3. Academic music journals and publications
-4. Verified artist biographies from music organizations
-5. Concert hall and festival websites with artist profiles
-
-For the artist "${name}", provide ONLY factual, verifiable information in this exact JSON format:
-
+Please provide information in the following JSON format:
 {
   "name": {
     "value": "${name}",
-    "reference": "Most authoritative source URL (prefer Wikipedia or official music institutions)",
+    "reference": "Wikipedia or other reliable source URL",
     "verified": false
   },
   "guru": {
-    "value": "Full name of the primary guru/teacher (if found, otherwise empty string)",
-    "reference": "Specific URL where guru information is mentioned",
+    "value": "Name of the guru/teacher",
+    "reference": "Specific source URL or book reference",
     "verified": false
   },
   "gharana": {
-    "value": "Complete gharana name with 'Gharana' suffix (e.g., 'Kirana Gharana', 'Gwalior Gharana')",
-    "reference": "URL specifically mentioning the gharana affiliation",
+    "value": "Name of the gharana/school",
+    "reference": "Specific source URL or academic reference",
     "verified": false
   },
   "notableAchievements": {
-    "value": "Major awards, honors, recognitions separated by commas (Padma awards, Sangeet Natak Akademi, Grammy, etc.)",
-    "reference": "URL listing achievements or awards",
+    "value": "List of major achievements, awards, recognitions",
+    "reference": "Source URL for achievements",
     "verified": false
   },
   "disciples": {
-    "value": "Names of famous disciples/students separated by commas (if found, otherwise empty string)",
-    "reference": "URL mentioning disciples or students",
+    "value": "Names of notable disciples/students",
+    "reference": "Source URL or reference for disciples",
     "verified": false
   }
 }
 
-CRITICAL REQUIREMENTS:
-- Use ONLY information found in your web search results
-- Provide REAL, working URLs as references
-- If information is not found, use empty string for value but provide a reference explaining why
-- Do NOT make up or assume information
-- Prefer authoritative sources like Wikipedia, Sangeet Natak Akademi, ITC SRA
-- Return ONLY the JSON object, no additional text or formatting`;
+Important: 
+- Provide actual, verifiable information only
+- Use real source URLs (Wikipedia, official websites, music institutions)
+- If information is not available, set value to empty string but provide a reference explaining why
+- Focus on accuracy over completeness
+- Return only valid JSON without any additional text or formatting`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -73,38 +58,20 @@ CRITICAL REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are a specialized researcher for Indian Classical Music. Your task is to find accurate, verifiable information about musicians from authoritative sources. 
-
-SEARCH STRATEGY:
-1. First search for the artist on Wikipedia
-2. Look for official music institution websites
-3. Check academic and scholarly sources
-4. Verify information across multiple sources
-5. Prioritize recent and authoritative sources
-
-RESPONSE FORMAT:
-- Return ONLY valid JSON
-- Use real, working URLs
-- Be precise with names and terminology
-- If uncertain, leave fields empty rather than guessing
-- Focus on factual, biographical information`
+            content: "You are an expert researcher specializing in Indian Classical Music. Always provide accurate information with verifiable sources. Prefer Wikipedia, official artist websites, music institution websites, and academic sources. Return only valid JSON without any additional text or formatting."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.1, // Lower temperature for more factual responses
-        max_tokens: 1500, // More tokens for detailed responses
-        top_p: 0.9, // Focus on most likely tokens
-        frequency_penalty: 0.1, // Reduce repetition
-        presence_penalty: 0.1 // Encourage diverse information
+        temperature: 0.2,
+        max_tokens: 1000
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
-        },
-        timeout: 30000 // 30 second timeout
+        }
       });
 
       console.log('Perplexity API response received');
@@ -116,9 +83,9 @@ RESPONSE FORMAT:
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
         
-        // Try fallback models if primary model fails
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
+        // If it's a model error, try with a fallback model
+        if (error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback model...');
           return await this.researchWithFallbackModel(name, prompt);
         }
         
@@ -128,6 +95,49 @@ RESPONSE FORMAT:
     }
   }
 
+  async researchWithFallbackModel(name, prompt) {
+    const fallbackModels = [
+      'mixtral-8x7b-instruct',
+      'llama-3.1-70b-instruct',
+      'codellama-34b-instruct'
+    ];
+
+    for (const model of fallbackModels) {
+      try {
+        console.log(`Trying fallback model: ${model}`);
+        const response = await axios.post(this.baseURL, {
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert researcher specializing in Indian Classical Music. Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 1000
+        }, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log(`Fallback model ${model} worked!`);
+        const responseText = response.data.choices[0].message.content;
+        return this.parseAIResponse(responseText);
+      } catch (fallbackError) {
+        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
+        continue;
+      }
+    }
+
+    throw new Error('All Perplexity models failed. Please check the Perplexity API documentation for available models.');
+  }
+
   async researchRaag(name) {
     console.log('Starting Perplexity AI research for raag:', name);
     
@@ -135,75 +145,63 @@ RESPONSE FORMAT:
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    const prompt = `Search for detailed information about the Indian Classical Music raag "${name}". Look specifically for:
+    const prompt = `Research the Indian Classical Music raag "${name}" and provide detailed, accurate information with reliable sources.
 
-1. Wikipedia articles about the raag
-2. Music theory websites and academic sources
-3. Raga databases and music institution websites
-4. Classical music learning platforms
-5. Scholarly articles on Indian music theory
-
-For raag "${name}", provide accurate musical information in this JSON format:
-
+Please provide information in the following JSON format:
 {
   "name": {
     "value": "${name}",
-    "reference": "Most authoritative source URL",
+    "reference": "Wikipedia or reliable music source URL",
     "verified": false
   },
   "aroha": {
-    "value": "Ascending note sequence using sargam notation (Sa Re Ga Ma Pa Dha Ni Sa format)",
-    "reference": "URL where aroha is specifically mentioned",
+    "value": "Ascending note sequence (e.g., Sa Re Ga Ma Pa Dha Ni Sa)",
+    "reference": "Specific source URL",
     "verified": false
   },
   "avroha": {
-    "value": "Descending note sequence using sargam notation",
-    "reference": "URL where avroha is specifically mentioned",
+    "value": "Descending note sequence",
+    "reference": "Specific source URL",
     "verified": false
   },
   "chalan": {
-    "value": "Characteristic melodic phrases or pakad",
-    "reference": "URL mentioning chalan or pakad",
+    "value": "Characteristic melodic phrases",
+    "reference": "Source URL or music reference",
     "verified": false
   },
   "vadi": {
-    "value": "Most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni)",
-    "reference": "URL mentioning vadi swara",
+    "value": "Most important note (e.g., Pa, Ma, etc.)",
+    "reference": "Source URL",
     "verified": false
   },
   "samvadi": {
-    "value": "Second most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni)",
-    "reference": "URL mentioning samvadi swara",
+    "value": "Second most important note",
+    "reference": "Source URL",
     "verified": false
   },
   "thaat": {
-    "value": "Parent thaat name (e.g., Bilawal, Khamaj, Kafi, etc.)",
-    "reference": "URL mentioning thaat classification",
+    "value": "Parent scale/thaat name",
+    "reference": "Source URL",
     "verified": false
   },
   "rasBhaav": {
-    "value": "Emotional content and mood (e.g., devotional, romantic, peaceful)",
-    "reference": "URL discussing emotional aspects",
+    "value": "Emotional content and mood",
+    "reference": "Source URL",
     "verified": false
   },
   "tanpuraTuning": {
-    "value": "Tanpura tuning notes (e.g., Sa Pa Sa Sa)",
-    "reference": "URL mentioning tanpura tuning",
+    "value": "Tanpura tuning notes",
+    "reference": "Source URL",
     "verified": false
   },
   "timeOfRendition": {
-    "value": "Traditional performance time (morning, evening, night, etc.)",
-    "reference": "URL mentioning time of performance",
+    "value": "Traditional time of performance",
+    "reference": "Source URL",
     "verified": false
   }
 }
 
-REQUIREMENTS:
-- Use proper sargam notation (Sa Re Ga Ma Pa Dha Ni)
-- Provide specific note names for vadi/samvadi
-- Use standard thaat names
-- Return only factual information found in sources
-- Use real URLs as references`;
+Important: Provide accurate musical information with real sources. Return only valid JSON without additional text.`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -211,24 +209,20 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are an expert in Indian Classical Music theory and ragas. Search for accurate information about ragas from authoritative music sources. Focus on technical accuracy and use proper Indian music terminology. Verify information across multiple sources before including it.`
+            content: "You are an expert in Indian Classical Music raags. Provide accurate information with verifiable sources. Return only valid JSON without additional text."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 1500,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.1
+        temperature: 0.2,
+        max_tokens: 1000
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
-        },
-        timeout: 30000
+        }
       });
 
       console.log('Perplexity API response received');
@@ -240,8 +234,8 @@ REQUIREMENTS:
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
         
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
+        if (error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback model...');
           return await this.researchWithFallbackModel(name, prompt);
         }
         
@@ -258,68 +252,57 @@ REQUIREMENTS:
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    const prompt = `Search for detailed information about the Indian Classical Music taal "${name}". Look for:
+    const prompt = `Research the Indian Classical Music taal "${name}" and provide detailed, accurate information with reliable sources.
 
-1. Wikipedia articles about the taal
-2. Rhythm and percussion websites
-3. Music theory and tabla learning resources
-4. Academic sources on Indian rhythm systems
-5. Classical music institution websites
-
-For taal "${name}", provide accurate rhythmic information in this JSON format:
-
+Please provide information in the following JSON format:
 {
   "name": {
     "value": "${name}",
-    "reference": "Most authoritative source URL",
+    "reference": "Wikipedia or reliable music source URL",
     "verified": false
   },
   "numberOfBeats": {
-    "value": "Total number of matras/beats (as a number, e.g., 16, 12, 10)",
-    "reference": "URL mentioning beat count",
+    "value": "Number of matras/beats (as number)",
+    "reference": "Source URL",
     "verified": false
   },
   "divisions": {
-    "value": "Vibhag structure description (e.g., '4 vibhags of 4 beats each')",
-    "reference": "URL describing vibhag structure",
+    "value": "Vibhag structure description",
+    "reference": "Source URL",
     "verified": false
   },
   "taali": {
     "count": {
-      "value": "Number of taali positions (as number)",
-      "reference": "URL mentioning taali count",
+      "value": "Number of taali positions",
+      "reference": "Source URL",
       "verified": false
     },
     "beatNumbers": {
-      "value": "Beat numbers where taali occurs (e.g., '1, 5, 13')",
-      "reference": "URL showing taali positions",
+      "value": "Beat numbers where taali occurs",
+      "reference": "Source URL",
       "verified": false
     }
   },
   "khaali": {
     "count": {
-      "value": "Number of khaali positions (as number)",
-      "reference": "URL mentioning khaali count",
+      "value": "Number of khaali positions",
+      "reference": "Source URL",
       "verified": false
     },
     "beatNumbers": {
-      "value": "Beat numbers where khaali occurs (e.g., '9')",
-      "reference": "URL showing khaali positions",
+      "value": "Beat numbers where khaali occurs",
+      "reference": "Source URL",
       "verified": false
     }
   },
   "jaati": {
-    "value": "Jaati classification (Chatusra, Tisra, Khanda, Misra, or Sankeerna)",
-    "reference": "URL mentioning jaati",
+    "value": "Jaati classification (e.g., Chatusra, Tisra, etc.)",
+    "reference": "Source URL",
     "verified": false
   }
 }
 
-REQUIREMENTS:
-- Provide exact beat numbers and counts
-- Use standard jaati terminology
-- Ensure mathematical accuracy (taali + khaali should relate to total beats)
-- Use real URLs as references`;
+Important: Provide accurate rhythmic information with real sources. Return only valid JSON without additional text.`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -327,24 +310,20 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are an expert in Indian Classical Music rhythm and talas. Search for precise information about talas from authoritative sources. Focus on mathematical accuracy of beat structures and use proper terminology for Indian rhythm systems.`
+            content: "You are an expert in Indian Classical Music taals. Provide accurate rhythmic information with verifiable sources. Return only valid JSON without additional text."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 1500,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.1
+        temperature: 0.2,
+        max_tokens: 1000
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
-        },
-        timeout: 30000
+        }
       });
 
       console.log('Perplexity API response received');
@@ -356,8 +335,8 @@ REQUIREMENTS:
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
         
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
+        if (error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback model...');
           return await this.researchWithFallbackModel(name, prompt);
         }
         
@@ -367,58 +346,13 @@ REQUIREMENTS:
     }
   }
 
-  async researchWithFallbackModel(name, prompt) {
-    for (const model of this.fallbackModels) {
-      try {
-        console.log(`Trying fallback model: ${model}`);
-        const response = await axios.post(this.baseURL, {
-          model: model,
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert researcher specializing in Indian Classical Music. Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.1,
-          max_tokens: 1500,
-          top_p: 0.9
-        }, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        });
-
-        console.log(`Fallback model ${model} worked!`);
-        const responseText = response.data.choices[0].message.content;
-        return this.parseAIResponse(responseText);
-      } catch (fallbackError) {
-        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
-        continue;
-      }
-    }
-
-    throw new Error('All Perplexity models failed. Please check the Perplexity API documentation for available models.');
-  }
-
   parseAIResponse(response) {
     try {
       // Clean the response to extract JSON
       let cleanResponse = response.trim();
       
-      // Remove any thinking blocks that Perplexity might include
-      cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/g, '');
-      
       // Remove markdown code blocks if present
       cleanResponse = cleanResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      
-      // Remove any extra text before or after JSON
-      cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
       
       // Find JSON object
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
@@ -427,9 +361,6 @@ REQUIREMENTS:
         
         // Convert arrays to strings for fields that expect strings
         this.normalizeDataTypes(parsed);
-        
-        // Validate and clean the data
-        this.validateAndCleanData(parsed);
         
         console.log('Parsed Perplexity response:', parsed);
         return parsed;
@@ -471,47 +402,6 @@ REQUIREMENTS:
         data.khaali.beatNumbers.value = data.khaali.beatNumbers.value.join(', ');
       }
     }
-  }
-
-  validateAndCleanData(data) {
-    // Ensure all required fields exist with proper structure
-    const requiredFields = ['name', 'guru', 'gharana', 'notableAchievements', 'disciples'];
-    
-    requiredFields.forEach(field => {
-      if (!data[field]) {
-        data[field] = { value: '', reference: 'Information not found in search results', verified: false };
-      } else {
-        // Ensure each field has the required structure
-        if (typeof data[field].value === 'undefined') data[field].value = '';
-        if (typeof data[field].reference === 'undefined') data[field].reference = 'No reference provided';
-        if (typeof data[field].verified === 'undefined') data[field].verified = false;
-        
-        // Convert verified to boolean if it's not already
-        data[field].verified = Boolean(data[field].verified);
-      }
-    });
-
-    // Special handling for taal nested fields
-    if (data.taali) {
-      if (!data.taali.count) data.taali.count = { value: '', reference: 'Information not found', verified: false };
-      if (!data.taali.beatNumbers) data.taali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-    }
-    
-    if (data.khaali) {
-      if (!data.khaali.count) data.khaali.count = { value: '', reference: 'Information not found', verified: false };
-      if (!data.khaali.beatNumbers) data.khaali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-    }
-
-    // Clean up URLs - ensure they're valid
-    Object.keys(data).forEach(key => {
-      if (data[key] && data[key].reference) {
-        const ref = data[key].reference;
-        // Basic URL validation and cleanup
-        if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not')) {
-          data[key].reference = 'Invalid URL provided: ' + ref;
-        }
-      }
-    });
   }
 }
 
