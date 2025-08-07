@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
+import AIModelSelector from '../components/AIModelSelector';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -17,7 +18,9 @@ const TaalSearch = () => {
   const [taal, setTaal] = useState(null);
   const [loading, setLoading] = useState(false);
   const [useAI, setUseAI] = useState(false);
-  const [aiProvider, setAiProvider] = useState('openai');
+  const [selectedProvider, setSelectedProvider] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [modelData, setModelData] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [selectedFields, setSelectedFields] = useState(new Set());
@@ -34,17 +37,22 @@ const TaalSearch = () => {
   ];
 
   // Debounced search function
-  const debouncedSearch = debounce(async (query, aiEnabled, provider) => {
+  const debouncedSearch = debounce(async (query, aiEnabled, provider, model) => {
     if (!query.trim()) {
       toast.error('Please enter a taal name');
       return;
     }
 
+    if (aiEnabled && (!provider || !model)) {
+      toast.error('Please select both AI provider and model');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/taals/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}`);
+      const response = await axios.get(`http://localhost:5000/api/taals/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
       setTaal(response.data);
-      toast.success(`Taal data ${aiEnabled ? `researched using ${provider.toUpperCase()} AI` : 'scraped from web'} successfully`);
+      toast.success(`Taal data ${aiEnabled ? `researched using ${modelData?.name || model}` : 'scraped from web'} successfully`);
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error('Rate limit exceeded. Please try again later.');
@@ -58,7 +66,13 @@ const TaalSearch = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    debouncedSearch(searchQuery, useAI, aiProvider);
+    debouncedSearch(searchQuery, useAI, selectedProvider, selectedModel);
+  };
+
+  const handleModelChange = ({ provider, model, modelData: data }) => {
+    setSelectedProvider(provider);
+    setSelectedModel(model);
+    setModelData(data);
   };
 
   const getFieldValue = (field) => {
@@ -436,20 +450,19 @@ const TaalSearch = () => {
                   />
                   <span className="ml-2 text-sm text-gray-700 font-medium">Use AI Research</span>
                 </label>
-                
-                {useAI && (
-                  <select
-                    value={aiProvider}
-                    onChange={(e) => setAiProvider(e.target.value)}
-                    className="rounded-lg border-gray-300 text-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                  >
-                    <option value="openai">OpenAI (GPT-3.5)</option>
-                    <option value="gemini">Google Gemini (Free)</option>
-                    <option value="perplexity">Perplexity AI (Web Search)</option>
-                  </select>
-                )}
               </div>
             </div>
+            
+            {/* AI Model Selection */}
+            {useAI && (
+              <div className="mt-4">
+                <AIModelSelector
+                  onModelChange={handleModelChange}
+                  selectedProvider={selectedProvider}
+                  selectedModel={selectedModel}
+                />
+              </div>
+            )}
             
             <button
               type="submit"
@@ -459,7 +472,7 @@ const TaalSearch = () => {
               {loading ? (
                 <div className="flex items-center justify-center">
                   <ClockIcon className="animate-spin h-5 w-5 mr-2" />
-                  {useAI ? `${aiProvider.toUpperCase()} Researching...` : 'Web Searching...'}
+                  {useAI ? `${modelData?.name || 'AI'} Researching...` : 'Web Searching...'}
                 </div>
               ) : (
                 useAI ? 'AI Research' : 'Web Search'

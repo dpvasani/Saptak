@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
+import AIModelSelector from '../components/AIModelSelector';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -17,7 +18,9 @@ const ArtistSearch = () => {
   const [artist, setArtist] = useState(null);
   const [loading, setLoading] = useState(false);
   const [useAI, setUseAI] = useState(false);
-  const [aiProvider, setAiProvider] = useState('openai');
+  const [selectedProvider, setSelectedProvider] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [modelData, setModelData] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [selectedFields, setSelectedFields] = useState(new Set());
@@ -31,17 +34,22 @@ const ArtistSearch = () => {
   ];
 
   // Debounced search function
-  const debouncedSearch = debounce(async (query, aiEnabled, provider) => {
+  const debouncedSearch = debounce(async (query, aiEnabled, provider, model) => {
     if (!query.trim()) {
       toast.error('Please enter an artist name');
       return;
     }
 
+    if (aiEnabled && (!provider || !model)) {
+      toast.error('Please select both AI provider and model');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/artists/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}`);
+      const response = await axios.get(`http://localhost:5000/api/artists/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
       setArtist(response.data);
-      toast.success(`Artist data ${aiEnabled ? `researched using ${provider.toUpperCase()} AI` : 'scraped from web'} successfully`);
+      toast.success(`Artist data ${aiEnabled ? `researched using ${modelData?.name || model}` : 'scraped from web'} successfully`);
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error('Rate limit exceeded. Please try again later.');
@@ -55,7 +63,13 @@ const ArtistSearch = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    debouncedSearch(searchQuery, useAI, aiProvider);
+    debouncedSearch(searchQuery, useAI, selectedProvider, selectedModel);
+  };
+
+  const handleModelChange = ({ provider, model, modelData: data }) => {
+    setSelectedProvider(provider);
+    setSelectedModel(model);
+    setModelData(data);
   };
 
   const updateArtistField = (field, updates) => {
@@ -347,34 +361,33 @@ const ArtistSearch = () => {
                     type="checkbox"
                     checked={useAI}
                     onChange={(e) => setUseAI(e.target.checked)}
-                    className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                   />
                   <span className="ml-2 text-sm text-gray-700 font-medium">Use AI Research</span>
                 </label>
-                
-                {useAI && (
-                  <select
-                    value={aiProvider}
-                    onChange={(e) => setAiProvider(e.target.value)}
-                    className="rounded-lg border-gray-300 text-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
-                  >
-                    <option value="openai">OpenAI (GPT-3.5)</option>
-                    <option value="gemini">Google Gemini (Free)</option>
-                    <option value="perplexity">Perplexity AI (Web Search)</option>
-                  </select>
-                )}
               </div>
             </div>
+            
+            {/* AI Model Selection */}
+            {useAI && (
+              <div className="mt-4">
+                <AIModelSelector
+                  onModelChange={handleModelChange}
+                  selectedProvider={selectedProvider}
+                  selectedModel={selectedModel}
+                />
+              </div>
+            )}
             
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
                   <ClockIcon className="animate-spin h-5 w-5 mr-2" />
-                  {useAI ? `${aiProvider.toUpperCase()} Researching...` : 'Web Searching...'}
+                  {useAI ? `${modelData?.name || 'AI'} Researching...` : 'Web Searching...'}
                 </div>
               ) : (
                 useAI ? 'AI Research' : 'Web Search'
@@ -415,7 +428,7 @@ const ArtistSearch = () => {
                 <div className="flex items-center space-x-4">
                   <button
                     onClick={handleSelectAll}
-                    className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                    className="flex items-center px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors duration-200 text-sm font-medium"
                   >
                     {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
                   </button>
@@ -428,14 +441,14 @@ const ArtistSearch = () => {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleBulkVerification(true)}
-                      className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
                     >
                       <CheckCircleIcon className="h-4 w-4 mr-1" />
                       Verify Selected ({selectedFields.size})
                     </button>
                     <button
                       onClick={() => handleBulkVerification(false)}
-                      className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      className="flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
                     >
                       <XCircleIcon className="h-4 w-4 mr-1" />
                       Unverify Selected ({selectedFields.size})
