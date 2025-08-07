@@ -1,4 +1,4 @@
-# API Documentation - Indian Classical Music Data Collection System
+# Indian Classical Music Data Collection System Guide
 
 ## Base URL
 ```
