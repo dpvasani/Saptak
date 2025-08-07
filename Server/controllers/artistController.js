@@ -7,8 +7,8 @@ const { aiLimiter, webScrapingLimiter } = require('../middleware/rateLimiter');
 
 exports.searchArtist = async (req, res) => {
   try {
-    const { name, useAI, aiProvider } = req.query;
-    console.log('Search request received:', { name, useAI, aiProvider });
+    const { name, useAI, aiProvider, aiModel } = req.query;
+    console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
     if (!name) {
       return res.status(400).json({ message: 'Artist name is required' });
@@ -28,21 +28,22 @@ exports.searchArtist = async (req, res) => {
     if (useAI === 'true') {
       // Use AI research - always get fresh data
       const provider = aiProvider || 'openai'; // Default to OpenAI
-      console.log(`Using ${provider} AI research for artist:`, name);
+      const model = aiModel || 'default';
+      console.log(`Using ${provider} AI research (${model}) for artist:`, name);
       try {
         if (provider === 'perplexity') {
-          data = await perplexityResearcher.researchArtist(name);
+          data = await perplexityResearcher.researchArtist(name, model);
           console.log('Perplexity AI research successful, data received:', data);
         } else if (provider === 'gemini') {
-          data = await geminiResearcher.researchArtist(name);
+          data = await geminiResearcher.researchArtist(name, model);
           console.log('Gemini AI research successful, data received:', data);
         } else {
-          data = await aiResearcher.researchArtist(name);
+          data = await aiResearcher.researchArtist(name, model);
           console.log('OpenAI research successful, data received:', data);
         }
       } catch (aiError) {
         console.error(`${provider} AI research failed:`, aiError);
-        return res.status(500).json({ message: `${provider} AI research failed: ` + aiError.message });
+        return res.status(500).json({ message: `${provider} AI research (${model}) failed: ` + aiError.message });
       }
     } else {
       // Use traditional scraping
@@ -54,7 +55,7 @@ exports.searchArtist = async (req, res) => {
         });
       });
       
-      console.log('Using traditional scraping for artist:', name);
+      console.log('Using enhanced web search (prioritizing official websites) for artist:', name);
       data = await scraperService.scrapeArtist(name);
     }
 

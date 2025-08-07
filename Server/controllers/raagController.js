@@ -7,8 +7,8 @@ const { webScrapingLimiter } = require('../middleware/rateLimiter');
 
 exports.searchRaag = async (req, res) => {
   try {
-    const { name, useAI, aiProvider } = req.query;
-    console.log('Search request received:', { name, useAI, aiProvider });
+    const { name, useAI, aiProvider, aiModel } = req.query;
+    console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
     if (!name) {
       return res.status(400).json({ message: 'Raag name is required' });
@@ -18,21 +18,22 @@ exports.searchRaag = async (req, res) => {
     if (useAI === 'true') {
       // Use AI research - always get fresh data
       const provider = aiProvider || 'openai'; // Default to OpenAI
-      console.log(`Using ${provider} AI research for raag:`, name);
+      const model = aiModel || 'default';
+      console.log(`Using ${provider} AI research (${model}) for raag:`, name);
       try {
         if (provider === 'perplexity') {
-          data = await perplexityResearcher.researchRaag(name);
+          data = await perplexityResearcher.researchRaag(name, model);
           console.log('Perplexity AI research successful, data received:', data);
         } else if (provider === 'gemini') {
-          data = await geminiResearcher.researchRaag(name);
+          data = await geminiResearcher.researchRaag(name, model);
           console.log('Gemini AI research successful, data received:', data);
         } else {
-          data = await aiResearcher.researchRaag(name);
+          data = await aiResearcher.researchRaag(name, model);
           console.log('OpenAI research successful, data received:', data);
         }
       } catch (aiError) {
         console.error(`${provider} AI research failed:`, aiError);
-        return res.status(500).json({ message: `${provider} AI research failed: ` + aiError.message });
+        return res.status(500).json({ message: `${provider} AI research (${model}) failed: ` + aiError.message });
       }
     } else {
       // Use traditional scraping

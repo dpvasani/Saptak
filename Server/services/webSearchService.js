@@ -11,6 +11,17 @@ class WebSearchService {
     
     this.musicSources = [
       'wikipedia.org',
+      // Artist official websites and high-priority sources
+      'ravishankar.org',
+      'zakirhussain.com',
+      'panditjasraj.com',
+      'ustadrashidkhan.com',
+      'panditshivkumar.com',
+      'sangeetnatak.gov.in',
+      'itcsra.org',
+      'darbarfestival.com',
+      'spicmacay.org',
+      // General music sources
       'britannica.com',
       'allmusic.com',
       'musicbrainz.org',
@@ -23,7 +34,19 @@ class WebSearchService {
       'hindustanimusic.com',
       'carnaticmusic.com',
       'ragajournal.com',
-      'sangeetpedia.com'
+      'sangeetpedia.com',
+      'classicalmusic.about.com',
+      'musictheory.net'
+    ];
+
+    // Priority sources for artist searches (checked first)
+    this.artistPrioritySources = [
+      'wikipedia.org',
+      'sangeetnatak.gov.in',
+      'itcsra.org',
+      'darbarfestival.com',
+      'spicmacay.org',
+      'britannica.com'
     ];
 
     this.headers = {
@@ -40,7 +63,15 @@ class WebSearchService {
     console.log(`Starting comprehensive web search for artist: ${name}`);
     
     try {
-      const searchResults = await this.performMultiSourceSearch(`"${name}" Indian classical music artist guru gharana`);
+      // First, try to find official artist website
+      const officialWebsiteResults = await this.searchOfficialArtistWebsite(name);
+      
+      // Then perform multi-source search with priority sources
+      const searchResults = await this.performPrioritySearch(`"${name}" Indian classical music artist guru gharana`);
+      
+      // Combine results with official website taking priority
+      const combinedResults = [...officialWebsiteResults, ...searchResults];
+      
       const artistData = await this.extractArtistData(name, searchResults);
       
       return {
@@ -200,6 +231,142 @@ class WebSearchService {
     }
   }
 
+  async searchOfficialArtistWebsite(artistName) {
+    console.log(`Searching for official website of artist: ${artistName}`);
+    
+    try {
+      // Search for official artist website
+      const officialSiteQuery = `"${artistName}" site:*.com OR site:*.org OR site:*.in "official website" OR "biography" OR "about"`;
+      const officialResults = await this.performTargetedWebSearch(officialSiteQuery, 3);
+      
+      // Filter results that are likely to be official websites
+      const filteredResults = officialResults.filter(result => {
+        const url = result.url.toLowerCase();
+        const content = result.content.toLowerCase();
+        const artistNameLower = artistName.toLowerCase();
+        
+        // Check if URL contains artist name or if content strongly suggests it's an official site
+        const hasArtistInUrl = url.includes(artistNameLower.replace(/\s+/g, ''));
+        const hasOfficialIndicators = content.includes('official') || 
+                                    content.includes('biography') || 
+                                    content.includes('about ' + artistNameLower) ||
+                                    url.includes('official') ||
+                                    url.includes('bio');
+        
+        return hasArtistInUrl || hasOfficialIndicators;
+      });
+      
+      console.log(`Found ${filteredResults.length} potential official website results`);
+      return filteredResults;
+    } catch (error) {
+      console.error('Error searching for official artist website:', error);
+      return [];
+    }
+  }
+
+  async performPrioritySearch(query) {
+    const results = [];
+    
+    try {
+      // Search priority sources first
+      console.log('Searching priority sources...');
+      for (const source of this.artistPrioritySources.slice(0, 4)) {
+        try {
+          const sourceResults = await this.searchSpecificSource(source, query, 2);
+          results.push(...sourceResults);
+          
+          // Add delay to avoid being blocked
+          await new Promise(resolve => setTimeout(resolve, 800));
+        } catch (error) {
+          console.log(`Priority search failed for ${source}:`, error.message);
+        }
+      }
+      
+      // If we don't have enough results, search other sources
+      if (results.length < 5) {
+        console.log('Searching additional sources...');
+        const additionalResults = await this.searchMusicSources(query);
+        results.push(...additionalResults);
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('Error in priority search:', error);
+      return results;
+    }
+  }
+
+  async searchSpecificSource(source, query, maxResults = 2) {
+    try {
+      const searchUrl = `https://www.google.com/search?q=site:${source} ${encodeURIComponent(query)}`;
+      const response = await axios.get(searchUrl, { 
+        headers: this.headers,
+        timeout: 8000 
+      });
+      
+      const $ = cheerio.load(response.data);
+      const results = [];
+      
+      $('div.g').each((i, element) => {
+        if (i >= maxResults) return false;
+        
+        const title = $(element).find('h3').text();
+        const url = $(element).find('a').attr('href');
+        const snippet = $(element).find('.VwiC3b').text() || $(element).find('.s3v9rd').text();
+        
+        if (title && url && snippet) {
+          results.push({
+            title,
+            url: url.startsWith('/url?q=') ? decodeURIComponent(url.split('/url?q=')[1].split('&')[0]) : url,
+            content: snippet,
+            source: source,
+            priority: true // Mark as priority source
+          });
+        }
+      });
+      
+      return results;
+    } catch (error) {
+      console.log(`Specific source search failed for ${source}:`, error.message);
+      return [];
+    }
+  }
+
+  async performTargetedWebSearch(query, maxResults = 5) {
+    try {
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      const response = await axios.get(searchUrl, { 
+        headers: this.headers,
+        timeout: 10000 
+      });
+      
+      const $ = cheerio.load(response.data);
+      const results = [];
+      
+      $('div.g').each((i, element) => {
+        if (i >= maxResults) return false;
+        
+        const title = $(element).find('h3').text();
+        const url = $(element).find('a').attr('href');
+        const snippet = $(element).find('.VwiC3b').text() || $(element).find('.s3v9rd').text();
+        
+        if (title && url && snippet) {
+          results.push({
+            title,
+            url: url.startsWith('/url?q=') ? decodeURIComponent(url.split('/url?q=')[1].split('&')[0]) : url,
+            content: snippet,
+            source: 'Targeted Search'
+          });
+        }
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Targeted web search failed:', error);
+      return [];
+    }
+  }
+
   async performMultiSourceSearch(query) {
     const results = [];
     
@@ -355,7 +522,24 @@ class WebSearchService {
       sources: {}
     };
     
-    for (const result of searchResults) {
+    // Sort results to prioritize official websites and priority sources
+    const sortedResults = searchResults.sort((a, b) => {
+      // Official websites first
+      if (a.source === 'Targeted Search' && b.source !== 'Targeted Search') return -1;
+      if (b.source === 'Targeted Search' && a.source !== 'Targeted Search') return 1;
+      
+      // Priority sources next
+      if (a.priority && !b.priority) return -1;
+      if (b.priority && !a.priority) return 1;
+      
+      // Wikipedia gets high priority
+      if (a.source === 'Wikipedia' && b.source !== 'Wikipedia') return -1;
+      if (b.source === 'Wikipedia' && a.source !== 'Wikipedia') return 1;
+      
+      return 0;
+    });
+    
+    for (const result of sortedResults) {
       const content = result.content.toLowerCase();
       
       // Extract guru information
@@ -364,6 +548,7 @@ class WebSearchService {
         if (guruMatch) {
           data.guru = guruMatch;
           data.sources.guru = result.url;
+          console.log(`Found guru info from ${result.source}: ${guruMatch}`);
         }
       }
       
@@ -373,6 +558,7 @@ class WebSearchService {
         if (gharanaMatch) {
           data.gharana = gharanaMatch;
           data.sources.gharana = result.url;
+          console.log(`Found gharana info from ${result.source}: ${gharanaMatch}`);
         }
       }
       
@@ -382,6 +568,7 @@ class WebSearchService {
         if (achievementsMatch) {
           data.achievements = achievementsMatch;
           data.sources.achievements = result.url;
+          console.log(`Found achievements from ${result.source}: ${achievementsMatch}`);
         }
       }
       
@@ -391,6 +578,7 @@ class WebSearchService {
         if (disciplesMatch) {
           data.disciples = disciplesMatch;
           data.sources.disciples = result.url;
+          console.log(`Found disciples from ${result.source}: ${disciplesMatch}`);
         }
       }
     }
@@ -500,32 +688,61 @@ class WebSearchService {
   extractGuruInfo(content) {
     const patterns = [
       /guru[:\s]+([^.]+)/i,
+      /teacher[:\s]+([^.]+)/i,
       /trained under[:\s]+([^.]+)/i,
       /student of[:\s]+([^.]+)/i,
-      /disciple of[:\s]+([^.]+)/i
+      /disciple of[:\s]+([^.]+)/i,
+      /learned from[:\s]+([^.]+)/i,
+      /studied under[:\s]+([^.]+)/i
     ];
     
     for (const pattern of patterns) {
       const match = content.match(pattern);
       if (match && match[1]) {
-        return match[1].trim().split(',')[0];
+        // Clean up the extracted guru name
+        let guruName = match[1].trim().split(',')[0].split('.')[0];
+        // Remove common prefixes/suffixes
+        guruName = guruName.replace(/^(ustad|pandit|pt\.?|sri|shri)\s+/i, '');
+        guruName = guruName.replace(/\s+(sahib|ji|saheb)$/i, '');
+        return guruName.trim();
       }
     }
     return '';
   }
 
   extractGharanaInfo(content) {
-    const match = content.match(/([^.\s]+)\s+gharana/i);
-    return match ? match[1].trim() + ' Gharana' : '';
+    const patterns = [
+      /([^.\s,]+)\s+gharana/i,
+      /gharana[:\s]+([^.,]+)/i,
+      /belongs to the ([^.,]+) gharana/i,
+      /from the ([^.,]+) gharana/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1]) {
+        let gharanaName = match[1].trim();
+        // Ensure it ends with 'Gharana' if not already
+        if (!gharanaName.toLowerCase().includes('gharana')) {
+          gharanaName += ' Gharana';
+        }
+        return gharanaName;
+      }
+    }
+    return '';
   }
 
   extractAchievements(content) {
     const achievements = [];
     const patterns = [
       /padma\s+\w+/gi,
+      /bharat\s+ratna/gi,
       /grammy\s+award/gi,
       /sangeet\s+natak\s+akademi/gi,
-      /bharat\s+ratna/gi
+      /national\s+award/gi,
+      /fellowship/gi,
+      /doctorate/gi,
+      /honorary\s+degree/gi
     ];
     
     patterns.forEach(pattern => {
@@ -535,13 +752,30 @@ class WebSearchService {
       }
     });
     
-    return achievements.join(', ');
+    // Remove duplicates and clean up
+    const uniqueAchievements = [...new Set(achievements.map(a => a.trim()))];
+    return uniqueAchievements.join(', ');
   }
 
   extractDisciples(content) {
-    // This is a simplified extraction - in reality, this would be more complex
-    const match = content.match(/disciples?[:\s]+([^.]+)/i);
-    return match ? match[1].trim() : '';
+    const patterns = [
+      /disciples?[:\s]+([^.]+)/i,
+      /students?[:\s]+([^.]+)/i,
+      /taught[:\s]+([^.]+)/i,
+      /notable students include[:\s]+([^.]+)/i,
+      /among his students are[:\s]+([^.]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1]) {
+        let disciples = match[1].trim();
+        // Clean up common endings
+        disciples = disciples.replace(/\s+(and many others|among others|etc\.?)$/i, '');
+        return disciples;
+      }
+    }
+    return '';
   }
 
   extractMusicalSequence(content, type) {
