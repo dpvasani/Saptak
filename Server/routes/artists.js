@@ -26,4 +26,13 @@ router.get('/:id', validateId, asyncHandler(artistController.getArtistById));
 // Update artist
 router.put('/:id', updateLimiter, validateId, validateArtistUpdate, asyncHandler(artistController.updateArtist));
 
+// Delete artist
+router.delete('/:id', validateId, asyncHandler(artistController.deleteArtist));
+
+// Get partially verified artists
+router.get('/partial', asyncHandler(artistController.getPartiallyVerifiedArtists));
+
+// Export artists
+router.get('/export', asyncHandler(artistController.exportArtists));
+
 module.exports = router; 

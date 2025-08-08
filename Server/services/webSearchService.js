@@ -21,6 +21,12 @@ class WebSearchService {
       'itcsra.org',
       'darbarfestival.com',
       'spicmacay.org',
+      // Social media platforms
+      'facebook.com',
+      'instagram.com',
+      'twitter.com',
+      'youtube.com',
+      'linkedin.com',
       // General music sources
       'britannica.com',
       'allmusic.com',
@@ -66,13 +72,22 @@ class WebSearchService {
       // First, try to find official artist website
       const officialWebsiteResults = await this.searchOfficialArtistWebsite(name);
       
+      // Search for social media profiles
+      const socialMediaResults = await this.searchSocialMediaProfiles(name);
+      
       // Then perform multi-source search with priority sources
       const searchResults = await this.performPrioritySearch(`"${name}" Indian classical music artist guru gharana`);
       
       // Combine results with official website taking priority
-      const combinedResults = [...officialWebsiteResults, ...searchResults];
+      const combinedResults = [...officialWebsiteResults, ...socialMediaResults, ...searchResults];
       
       const artistData = await this.extractArtistData(name, searchResults);
+      
+      // If we don't have enough data, try to get general summary
+      if (!artistData.guru && !artistData.gharana && !artistData.achievements) {
+        const summaryData = await this.getGeneralSummary(name, combinedResults);
+        Object.assign(artistData, summaryData);
+      }
       
       return {
         name: {
@@ -511,6 +526,145 @@ class WebSearchService {
       console.error('General web search failed:', error);
       return [];
     }
+  }
+  async searchSocialMediaProfiles(artistName) {
+    console.log(`Searching for social media profiles of artist: ${artistName}`);
+    
+    const socialPlatforms = [
+      { platform: 'facebook', query: `site:facebook.com "${artistName}" Indian classical music` },
+      { platform: 'instagram', query: `site:instagram.com "${artistName}" classical music` },
+      { platform: 'youtube', query: `site:youtube.com "${artistName}" Indian classical` },
+      { platform: 'twitter', query: `site:twitter.com "${artistName}" classical music` }
+    ];
+    
+    const results = [];
+    
+    for (const { platform, query } of socialPlatforms) {
+      try {
+        const platformResults = await this.performTargetedWebSearch(query, 2);
+        results.push(...platformResults.map(result => ({
+          ...result,
+          platform,
+          socialMedia: true
+        })));
+        
+        // Add delay to avoid being blocked
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.log(`Social media search failed for ${platform}:`, error.message);
+      }
+    }
+    
+    console.log(`Found ${results.length} social media results`);
+    return results;
+  }
+
+  async getGeneralSummary(artistName, availableResults) {
+    console.log(`Getting general summary for artist: ${artistName}`);
+    
+    const summaryData = {
+      guru: '',
+      gharana: '',
+      achievements: '',
+      disciples: '',
+      sources: {}
+    };
+    
+    // Extract any available information from all sources
+    for (const result of availableResults) {
+      const content = result.content.toLowerCase();
+      const originalContent = result.content;
+      
+      // Try to extract any biographical information
+      if (!summaryData.guru) {
+        const bioInfo = this.extractBiographicalInfo(originalContent, 'guru');
+        if (bioInfo) {
+          summaryData.guru = bioInfo;
+          summaryData.sources.guru = result.url;
+        }
+      }
+      
+      if (!summaryData.gharana) {
+        const bioInfo = this.extractBiographicalInfo(originalContent, 'gharana');
+        if (bioInfo) {
+          summaryData.gharana = bioInfo;
+          summaryData.sources.gharana = result.url;
+        }
+      }
+      
+      if (!summaryData.achievements) {
+        const bioInfo = this.extractBiographicalInfo(originalContent, 'achievements');
+        if (bioInfo) {
+          summaryData.achievements = bioInfo;
+          summaryData.sources.achievements = result.url;
+        }
+      }
+      
+      // Extract from social media descriptions
+      if (result.socialMedia && !summaryData.achievements) {
+        const socialInfo = this.extractSocialMediaInfo(originalContent);
+        if (socialInfo) {
+          summaryData.achievements = socialInfo;
+          summaryData.sources.achievements = result.url;
+        }
+      }
+    }
+    
+    return summaryData;
+  }
+
+  extractBiographicalInfo(content, type) {
+    const patterns = {
+      guru: [
+        /trained under ([^.,]+)/i,
+        /student of ([^.,]+)/i,
+        /disciple of ([^.,]+)/i,
+        /learned from ([^.,]+)/i,
+        /mentored by ([^.,]+)/i
+      ],
+      gharana: [
+        /([^.\s,]+)\s+gharana/i,
+        /belongs to ([^.,]+) tradition/i,
+        /from the ([^.,]+) school/i
+      ],
+      achievements: [
+        /(padma\s+\w+[^.]*)/gi,
+        /(grammy[^.]*)/gi,
+        /(sangeet\s+natak\s+akademi[^.]*)/gi,
+        /(national\s+award[^.]*)/gi
+      ]
+    };
+    
+    const typePatterns = patterns[type] || [];
+    
+    for (const pattern of typePatterns) {
+      const match = content.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    return '';
+  }
+
+  extractSocialMediaInfo(content) {
+    // Extract key information from social media profiles
+    const patterns = [
+      /classical\s+music\s+artist/i,
+      /tabla\s+player/i,
+      /sitar\s+player/i,
+      /vocalist/i,
+      /musician/i,
+      /performer/i
+    ];
+    
+    for (const pattern of patterns) {
+      if (pattern.test(content)) {
+        return content.substring(0, 200) + '...'; // Return first 200 chars as summary
+      }
+    }
+    
+    return '';
   }
 
   async extractArtistData(name, searchResults) {

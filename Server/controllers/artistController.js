@@ -242,4 +242,106 @@ exports.getVerificationStats = async (req, res) => {
     console.error('Error in getVerificationStats:', error);
     res.status(500).json({ message: 'Error fetching verification statistics' });
   }
-}; 
+};
+
+exports.deleteArtist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const artist = await Artist.findByIdAndDelete(id);
+    
+    if (!artist) {
+      return res.status(404).json({ message: 'Artist not found' });
+    }
+
+    res.json({ message: 'Artist deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteArtist:', error);
+    res.status(500).json({ message: 'Error deleting artist' });
+  }
+};
+
+exports.getPartiallyVerifiedArtists = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      query = {
+        $and: [
+          { [`${field}.verified`]: true },
+          {
+            $or: [
+              { 'name.verified': false },
+              { 'guru.verified': false },
+              { 'gharana.verified': false },
+              { 'notableAchievements.verified': false },
+              { 'disciples.verified': false }
+            ]
+          }
+        ]
+      };
+    } else {
+      // Artists with some but not all fields verified
+      query = {
+        $and: [
+          {
+            $or: [
+              { 'name.verified': true },
+              { 'guru.verified': true },
+              { 'gharana.verified': true },
+              { 'notableAchievements.verified': true },
+              { 'disciples.verified': true }
+            ]
+          },
+          {
+            $or: [
+              { 'name.verified': false },
+              { 'guru.verified': false },
+              { 'gharana.verified': false },
+              { 'notableAchievements.verified': false },
+              { 'disciples.verified': false }
+            ]
+          }
+        ]
+      };
+    }
+    
+    const artists = await Artist.find(query).sort({ updatedAt: -1 });
+    res.json({
+      count: artists.length,
+      data: artists
+    });
+  } catch (error) {
+    console.error('Error in getPartiallyVerifiedArtists:', error);
+    res.status(500).json({ message: 'Error fetching partially verified artists' });
+  }
+};
+
+exports.exportArtists = async (req, res) => {
+  try {
+    const { format } = req.query;
+    const artists = await Artist.find().sort({ 'name.value': 1 });
+    
+    if (format === 'markdown') {
+      let markdown = '# Indian Classical Music Artists\n\n';
+      
+      artists.forEach(artist => {
+        markdown += `## ${artist.name.value}\n\n`;
+        if (artist.guru.value) markdown += `**Guru:** ${artist.guru.value}\n\n`;
+        if (artist.gharana.value) markdown += `**Gharana:** ${artist.gharana.value}\n\n`;
+        if (artist.notableAchievements.value) markdown += `**Achievements:** ${artist.notableAchievements.value}\n\n`;
+        if (artist.disciples.value) markdown += `**Disciples:** ${artist.disciples.value}\n\n`;
+        markdown += '---\n\n';
+      });
+      
+      res.setHeader('Content-Type', 'text/markdown');
+      res.send(markdown);
+    } else {
+      // For PDF and Word, return JSON that frontend can process
+      res.json(artists);
+    }
+  } catch (error) {
+    console.error('Error in exportArtists:', error);
+    res.status(500).json({ message: 'Error exporting artists' });
+  }
+};

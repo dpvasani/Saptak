@@ -21,6 +21,9 @@ const VerificationPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedField, setSelectedField] = useState('');
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [bulkAction, setBulkAction] = useState('');
 
   const categoryConfig = {
     artists: {
@@ -85,6 +88,8 @@ const VerificationPage = () => {
         url += '/verified';
       } else if (activeTab === 'unverified') {
         url += '/unverified';
+      } else if (activeTab === 'partial') {
+        url += '/partial';
       }
       
       if (selectedField) {
@@ -138,6 +143,76 @@ const VerificationPage = () => {
     } catch (error) {
       console.error('Error updating verification:', error);
       toast.error('Failed to update verification status');
+    }
+  };
+
+  const handleItemSelect = (itemId) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.size === data.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(data.map(item => item._id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) {
+      toast.warning('Please select items to delete');
+      return;
+    }
+
+    try {
+      const deletePromises = Array.from(selectedItems).map(id =>
+        axios.delete(`http://localhost:5000/api/${category}/${id}`)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      toast.success(`${selectedItems.size} ${category} deleted successfully`);
+      setSelectedItems(new Set());
+      setShowDeleteModal(false);
+      fetchData();
+      fetchStats();
+    } catch (error) {
+      console.error('Error deleting items:', error);
+      toast.error('Failed to delete items');
+    }
+  };
+
+  const exportData = async (format) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/${category}/export?format=${format}`, {
+        responseType: format === 'pdf' ? 'blob' : 'text'
+      });
+      
+      const blob = new Blob([response.data], {
+        type: format === 'pdf' ? 'application/pdf' : 
+              format === 'word' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
+              'text/markdown'
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${category}-export.${format === 'word' ? 'docx' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success(`${category} exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast.error('Failed to export data');
     }
   };
 
@@ -263,7 +338,7 @@ const VerificationPage = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Tabs */}
             <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-              {['all', 'verified', 'unverified'].map((tab) => (
+              {['all', 'verified', 'partial', 'unverified'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -273,7 +348,8 @@ const VerificationPage = () => {
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'partial' ? 'Partially Verified' : 
+                   tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
@@ -293,6 +369,48 @@ const VerificationPage = () => {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          <div className="bg-gray-50 rounded-lg p-4 mt-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                >
+                  {selectedItems.size === data.length ? 'Unselect All' : 'Select All'}
+                </button>
+                <span className="text-sm text-gray-600">
+                  {selectedItems.size} of {data.length} items selected
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                {selectedItems.size > 0 && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-1" />
+                    Delete Selected ({selectedItems.size})
+                  </button>
+                )}
+                
+                <div className="relative">
+                  <select
+                    onChange={(e) => e.target.value && exportData(e.target.value)}
+                    className="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                    defaultValue=""
+                  >
+                    <option value="">Export As...</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="pdf">PDF</option>
+                    <option value="word">Word Document</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -321,6 +439,14 @@ const VerificationPage = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.size === data.length && data.length > 0}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                      />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -344,6 +470,14 @@ const VerificationPage = () => {
                     
                     return (
                       <tr key={item._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(item._id)}
+                            onChange={() => handleItemSelect(item._id)}
+                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {getFieldValue(item, 'name')}
@@ -382,6 +516,35 @@ const VerificationPage = () => {
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3 text-center">
+                <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-500" />
+                <h3 className="text-lg font-medium text-gray-900 mt-2">Delete {selectedItems.size} {category}?</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  This action cannot be undone. All selected {category} and their data will be permanently deleted.
+                </p>
+                <div className="flex justify-center space-x-4 mt-6">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
