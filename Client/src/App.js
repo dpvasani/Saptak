@@ -23,8 +23,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/verification/:category" element={<VerificationPage />} />
-            <Route path="/verification/:category/:id" element={<VerificationDetail />} />
+            <Route path="/verification/:type" element={<VerificationPage />} />
+            <Route path="/verification/:type/:id" element={<VerificationDetail />} />
             <Route path="/view/:category/:id" element={<ArtistMarkdownView />} />
             <Route path="/artists" element={<ArtistSearch />} />
             <Route path="/raags" element={<RaagSearch />} />

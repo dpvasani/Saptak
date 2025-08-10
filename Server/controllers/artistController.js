@@ -465,3 +465,4 @@ exports.exportSingleArtist = async (req, res) => {
     console.error('Error in exportSingleArtist:', error);
     res.status(500).json({ message: 'Error exporting artist' });
   }
+};
