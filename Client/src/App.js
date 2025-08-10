@@ -12,6 +12,7 @@ import VerificationDetail from './pages/VerificationDetail';
 import ArtistSearch from './pages/ArtistSearch';
 import RaagSearch from './pages/RaagSearch';
 import TaalSearch from './pages/TaalSearch';
+import ArtistMarkdownView from './pages/ArtistMarkdownView';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/verification/:category" element={<VerificationPage />} />
             <Route path="/verification/:category/:id" element={<VerificationDetail />} />
+            <Route path="/view/:category/:id" element={<ArtistMarkdownView />} />
             <Route path="/artists" element={<ArtistSearch />} />
             <Route path="/raags" element={<RaagSearch />} />
             <Route path="/taals" element={<TaalSearch />} />

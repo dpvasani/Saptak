@@ -30,7 +30,8 @@ const ArtistSearch = () => {
     { key: 'guru', label: 'Guru' },
     { key: 'gharana', label: 'Gharana' },
     { key: 'notableAchievements', label: 'Notable Achievements' },
-    { key: 'disciples', label: 'Disciples' }
+    { key: 'disciples', label: 'Disciples' },
+    { key: 'summary', label: 'Summary' }
   ];
 
   // Debounced search function

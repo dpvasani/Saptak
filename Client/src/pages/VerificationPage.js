@@ -24,21 +24,23 @@ const VerificationPage = () => {
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [bulkAction, setBulkAction] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
 
   const categoryConfig = {
     artists: {
       title: 'Artists',
-      fields: ['name', 'guru', 'gharana', 'notableAchievements', 'disciples'],
+      fields: ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'],
       color: 'green'
     },
     raags: {
       title: 'Raags',
-      fields: ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition'],
+      fields: ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition', 'summary'],
       color: 'purple'
     },
     taals: {
       title: 'Taals',
-      fields: ['name', 'numberOfBeats', 'divisions', 'taali.count', 'taali.beatNumbers', 'khaali.count', 'khaali.beatNumbers', 'jaati'],
+      fields: ['name', 'numberOfBeats', 'divisions', 'taali.count', 'taali.beatNumbers', 'khaali.count', 'khaali.beatNumbers', 'jaati', 'summary'],
       color: 'orange'
     }
   };
@@ -77,6 +79,10 @@ const VerificationPage = () => {
     }
   }, [category, activeTab, selectedField]);
 
+  useEffect(() => {
+    handleSearch();
+  }, [data, searchQuery]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -114,6 +120,25 @@ const VerificationPage = () => {
     } catch (error) {
       console.error(`Error fetching ${category} stats:`, error);
     }
+  };
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setFilteredData(data);
+      return;
+    }
+
+    const filtered = data.filter(item => {
+      const searchLower = searchQuery.toLowerCase();
+      
+      // Search in all fields
+      return config.fields.some(field => {
+        const value = getFieldValue(item, field);
+        return value && value.toLowerCase().includes(searchLower);
+      });
+    });
+
+    setFilteredData(filtered);
   };
 
   const handleVerification = async (id, field, currentStatus) => {
@@ -188,9 +213,56 @@ const VerificationPage = () => {
     }
   };
 
+  const handleSingleDelete = async (itemId) => {
+    if (window.confirm(`Are you sure you want to delete this ${category.slice(0, -1)}?`)) {
+      try {
+        await axios.delete(`http://localhost:5000/api/${category}/${itemId}`);
+        toast.success(`${category.slice(0, -1)} deleted successfully`);
+        fetchData();
+        fetchStats();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        toast.error('Failed to delete item');
+      }
+    }
+  };
+
+  const handleSingleExport = async (itemId, format) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/${category}/${itemId}/export?format=${format}`, {
+        responseType: format === 'markdown' ? 'text' : 'json'
+      });
+      
+      if (format === 'markdown') {
+        const blob = new Blob([response.data], { type: 'text/markdown' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${category.slice(0, -1)}-${itemId}.md`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+      
+      toast.success(`${category.slice(0, -1)} exported successfully`);
+    } catch (error) {
+      console.error('Error exporting item:', error);
+      toast.error('Failed to export item');
+    }
+  };
+
   const exportData = async (format) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/${category}/export?format=${format}`, {
+      let url = `http://localhost:5000/api/${category}/export?format=${format}`;
+      
+      // If items are selected, export only selected items
+      if (selectedItems.size > 0) {
+        const selectedIds = Array.from(selectedItems).join(',');
+        url += `&ids=${selectedIds}`;
+      }
+      
+      const response = await axios.get(url, {
         responseType: format === 'pdf' ? 'blob' : 'text'
       });
       
@@ -203,13 +275,16 @@ const VerificationPage = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${category}-export.${format === 'word' ? 'docx' : format}`;
+      const timestamp = new Date().toISOString().split('T')[0];
+      const prefix = selectedItems.size > 0 ? `selected-${category}` : category;
+      a.download = `${prefix}-export-${timestamp}.${format === 'word' ? 'docx' : format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success(`${category} exported as ${format.toUpperCase()}`);
+      const itemCount = selectedItems.size > 0 ? selectedItems.size : data.length;
+      toast.success(`${itemCount} ${category} exported as ${format.toUpperCase()}`);
     } catch (error) {
       console.error('Error exporting data:', error);
       toast.error('Failed to export data');
@@ -335,7 +410,27 @@ const VerificationPage = () => {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder={`Search ${config.title.toLowerCase()}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={handleSearch}
+                className={`px-6 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200`}
+              >
+                Search
+              </button>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Tabs */}
             <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
               {['all', 'verified', 'partial', 'unverified'].map((tab) => (
@@ -369,6 +464,7 @@ const VerificationPage = () => {
                   </option>
                 ))}
               </select>
+            </div>
             </div>
           </div>
 
@@ -464,7 +560,7 @@ const VerificationPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((item) => {
+                  {(filteredData.length > 0 ? filteredData : data).map((item) => {
                     const status = getVerificationStatus(item);
                     const verifiedCount = config.fields.filter(field => getFieldVerified(item, field)).length;
                     
@@ -504,9 +600,31 @@ const VerificationPage = () => {
                           <Link
                             to={`/verification/${category}/${item._id}`}
                             className={`${colors.text} hover:opacity-75 mr-4`}
+                            title="Edit/Verify"
                           >
                             <EyeIcon className="h-5 w-5 inline" />
                           </Link>
+                          <Link
+                            to={`/view/${category}/${item._id}`}
+                            className="text-blue-600 hover:text-blue-800 mr-4"
+                            title="View in Markdown"
+                          >
+                            📖
+                          </Link>
+                          <button
+                            onClick={() => handleSingleDelete(item._id)}
+                            className="text-red-600 hover:text-red-800 mr-4"
+                            title="Delete item"
+                          >
+                            <XCircleIcon className="h-5 w-5 inline" />
+                          </button>
+                          <button
+                            onClick={() => handleSingleExport(item._id, 'markdown')}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Export as Markdown"
+                          >
+                            📄
+                          </button>
                         </td>
                       </tr>
                     );

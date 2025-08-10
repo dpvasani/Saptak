@@ -319,8 +319,16 @@ exports.getPartiallyVerifiedArtists = async (req, res) => {
 
 exports.exportArtists = async (req, res) => {
   try {
-    const { format } = req.query;
-    const artists = await Artist.find().sort({ 'name.value': 1 });
+    const { format, ids } = req.query;
+    
+    let query = {};
+    if (ids) {
+      // Export specific artists by IDs
+      const idArray = ids.split(',');
+      query = { _id: { $in: idArray } };
+    }
+    
+    const artists = await Artist.find(query).sort({ 'name.value': 1 });
     
     if (format === 'markdown') {
       let markdown = '# Indian Classical Music Artists\n\n';
@@ -331,17 +339,129 @@ exports.exportArtists = async (req, res) => {
         if (artist.gharana.value) markdown += `**Gharana:** ${artist.gharana.value}\n\n`;
         if (artist.notableAchievements.value) markdown += `**Achievements:** ${artist.notableAchievements.value}\n\n`;
         if (artist.disciples.value) markdown += `**Disciples:** ${artist.disciples.value}\n\n`;
+        if (artist.summary.value) markdown += `**Summary:** ${artist.summary.value}\n\n`;
+        
+        // Add sources
+        markdown += `### Sources\n\n`;
+        if (artist.name.reference) markdown += `- Name: [${artist.name.reference}](${artist.name.reference})\n`;
+        if (artist.guru.reference) markdown += `- Guru: [${artist.guru.reference}](${artist.guru.reference})\n`;
+        if (artist.gharana.reference) markdown += `- Gharana: [${artist.gharana.reference}](${artist.gharana.reference})\n`;
+        if (artist.notableAchievements.reference) markdown += `- Achievements: [${artist.notableAchievements.reference}](${artist.notableAchievements.reference})\n`;
+        if (artist.disciples.reference) markdown += `- Disciples: [${artist.disciples.reference}](${artist.disciples.reference})\n`;
+        if (artist.summary.reference) markdown += `- Summary: [${artist.summary.reference}](${artist.summary.reference})\n`;
+        
         markdown += '---\n\n';
       });
       
       res.setHeader('Content-Type', 'text/markdown');
+      res.setHeader('Content-Disposition', `attachment; filename="artists-${new Date().toISOString().split('T')[0]}.md"`);
       res.send(markdown);
-    } else {
-      // For PDF and Word, return JSON that frontend can process
+    } else if (format === 'json') {
       res.json(artists);
+    } else {
+      // For PDF and Word, return formatted data
+      const formattedData = artists.map(artist => ({
+        name: artist.name.value,
+        guru: artist.guru.value,
+        gharana: artist.gharana.value,
+        achievements: artist.notableAchievements.value,
+        disciples: artist.disciples.value,
+        summary: artist.summary.value,
+        sources: {
+          name: artist.name.reference,
+          guru: artist.guru.reference,
+          gharana: artist.gharana.reference,
+          achievements: artist.notableAchievements.reference,
+          disciples: artist.disciples.reference,
+          summary: artist.summary.reference
+        },
+        createdAt: artist.createdAt,
+        updatedAt: artist.updatedAt
+      }));
+      
+      res.json({
+        format: format,
+        data: formattedData,
+        exportDate: new Date().toISOString(),
+        totalItems: formattedData.length
+      });
     }
   } catch (error) {
     console.error('Error in exportArtists:', error);
     res.status(500).json({ message: 'Error exporting artists' });
   }
 };
+
+exports.exportSingleArtist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { format } = req.query;
+    
+    const artist = await Artist.findById(id);
+    if (!artist) {
+      return res.status(404).json({ message: 'Artist not found' });
+    }
+    
+    if (format === 'markdown') {
+      let markdown = `# ${artist.name.value}\n\n`;
+      
+      if (artist.summary.value) {
+        markdown += `## Summary\n\n${artist.summary.value}\n\n`;
+      }
+      
+      markdown += `## Details\n\n`;
+      if (artist.guru.value) markdown += `**Guru:** ${artist.guru.value}\n\n`;
+      if (artist.gharana.value) markdown += `**Gharana:** ${artist.gharana.value}\n\n`;
+      if (artist.notableAchievements.value) markdown += `**Notable Achievements:** ${artist.notableAchievements.value}\n\n`;
+      if (artist.disciples.value) markdown += `**Disciples:** ${artist.disciples.value}\n\n`;
+      
+      markdown += `## Sources\n\n`;
+      if (artist.name.reference) markdown += `- **Name:** [${artist.name.reference}](${artist.name.reference})\n`;
+      if (artist.guru.reference) markdown += `- **Guru:** [${artist.guru.reference}](${artist.guru.reference})\n`;
+      if (artist.gharana.reference) markdown += `- **Gharana:** [${artist.gharana.reference}](${artist.gharana.reference})\n`;
+      if (artist.notableAchievements.reference) markdown += `- **Achievements:** [${artist.notableAchievements.reference}](${artist.notableAchievements.reference})\n`;
+      if (artist.disciples.reference) markdown += `- **Disciples:** [${artist.disciples.reference}](${artist.disciples.reference})\n`;
+      if (artist.summary.reference) markdown += `- **Summary:** [${artist.summary.reference}](${artist.summary.reference})\n`;
+      
+      markdown += `\n## Metadata\n\n`;
+      markdown += `- **Created:** ${new Date(artist.createdAt).toLocaleDateString()}\n`;
+      markdown += `- **Last Updated:** ${new Date(artist.updatedAt).toLocaleDateString()}\n`;
+      markdown += `- **ID:** ${artist._id}\n`;
+      
+      res.setHeader('Content-Type', 'text/markdown');
+      res.setHeader('Content-Disposition', `attachment; filename="${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.md"`);
+      res.send(markdown);
+    } else {
+      // Return formatted data for other formats
+      const formattedData = {
+        name: artist.name.value,
+        guru: artist.guru.value,
+        gharana: artist.gharana.value,
+        achievements: artist.notableAchievements.value,
+        disciples: artist.disciples.value,
+        summary: artist.summary.value,
+        sources: {
+          name: artist.name.reference,
+          guru: artist.guru.reference,
+          gharana: artist.gharana.reference,
+          achievements: artist.notableAchievements.reference,
+          disciples: artist.disciples.reference,
+          summary: artist.summary.reference
+        },
+        metadata: {
+          id: artist._id,
+          createdAt: artist.createdAt,
+          updatedAt: artist.updatedAt
+        }
+      };
+      
+      res.json({
+        format: format,
+        data: formattedData,
+        exportDate: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error in exportSingleArtist:', error);
+    res.status(500).json({ message: 'Error exporting artist' });
+  }

@@ -35,4 +35,7 @@ router.get('/partial', asyncHandler(artistController.getPartiallyVerifiedArtists
 // Export artists
 router.get('/export', asyncHandler(artistController.exportArtists));
 
+// Export single artist
+router.get('/:id/export', validateId, asyncHandler(artistController.exportSingleArtist));
+
 module.exports = router; 

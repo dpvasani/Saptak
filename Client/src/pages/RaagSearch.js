@@ -35,7 +35,8 @@ const RaagSearch = () => {
     { key: 'thaat', label: 'Thaat' },
     { key: 'rasBhaav', label: 'Ras-Bhaav' },
     { key: 'tanpuraTuning', label: 'Tanpura Tuning' },
-    { key: 'timeOfRendition', label: 'Time of Rendition' }
+    { key: 'timeOfRendition', label: 'Time of Rendition' },
+    { key: 'summary', label: 'Summary' }
   ];
 
   // Debounced search function

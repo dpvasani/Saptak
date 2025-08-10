@@ -33,7 +33,8 @@ const TaalSearch = () => {
     { key: 'taali.beatNumbers', label: 'Taali Beat Numbers' },
     { key: 'khaali.count', label: 'Khaali Count' },
     { key: 'khaali.beatNumbers', label: 'Khaali Beat Numbers' },
-    { key: 'jaati', label: 'Jaati' }
+    { key: 'jaati', label: 'Jaati' },
+    { key: 'summary', label: 'Summary' }
   ];
 
   // Debounced search function
