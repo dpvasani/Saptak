@@ -26,11 +26,6 @@ const artistSchema = new mongoose.Schema({
     reference: { type: String },
     verified: { type: Boolean, default: false }
   },
-  summary: {
-    value: { type: String },
-    reference: { type: String },
-    verified: { type: Boolean, default: false }
-  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

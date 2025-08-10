@@ -78,7 +78,6 @@ export const apiService = {
   getVerifiedArtists: (field) => api.get(`/api/artists/verified${field ? `?field=${field}` : ''}`),
   getUnverifiedArtists: (field) => api.get(`/api/artists/unverified${field ? `?field=${field}` : ''}`),
   getArtistStats: () => api.get('/api/artists/stats'),
-  verifyArtist: (id, status) => api.put(`/api/artists/${id}/verify`, { verificationStatus: status }),
 
   // Raags
   searchRaag: (name, useAI = false, aiProvider = 'openai') =>
@@ -90,7 +89,6 @@ export const apiService = {
   getVerifiedRaags: (field) => api.get(`/api/raags/verified${field ? `?field=${field}` : ''}`),
   getUnverifiedRaags: (field) => api.get(`/api/raags/unverified${field ? `?field=${field}` : ''}`),
   getRaagStats: () => api.get('/api/raags/stats'),
-  verifyRaag: (id, status) => api.put(`/api/raags/${id}/verify`, { verificationStatus: status }),
 
   // Taals
   searchTaal: (name, useAI = false, aiProvider = 'openai') =>
@@ -102,7 +100,6 @@ export const apiService = {
   getVerifiedTaals: (field) => api.get(`/api/taals/verified${field ? `?field=${field}` : ''}`),
   getUnverifiedTaals: (field) => api.get(`/api/taals/unverified${field ? `?field=${field}` : ''}`),
   getTaalStats: () => api.get('/api/taals/stats'),
-  verifyTaal: (id, status) => api.put(`/api/taals/${id}/verify`, { verificationStatus: status }),
 
   // Dashboard
   getDashboardStats: () => api.get('/api/dashboard/stats'),

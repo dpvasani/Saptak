@@ -112,7 +112,7 @@ const Dashboard = () => {
       
       <div className="mt-4 flex space-x-2">
         <Link 
-          to={`/verification/${category === 'artists' ? 'artist' : category === 'raags' ? 'raag' : 'taal'}`} 
+          to={`/verification/${category}`} 
           className={`flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium ${color.replace('border-l-', 'bg-').replace('-500', '-50')} ${color.replace('border-l-', 'text-')} hover:${color.replace('border-l-', 'bg-').replace('-500', '-100')} transition-colors duration-200`}
         >
           Manage
@@ -172,21 +172,21 @@ const Dashboard = () => {
             value={stats?.overview?.totalArtists || 0}
             icon={UserGroupIcon}
             color="border-l-green-500"
-            link="/verification/artist"
+            link="/verification/artists"
           />
           <StatCard
             title="Raags"
             value={stats?.overview?.totalRaags || 0}
             icon={MusicalNoteIcon}
             color="border-l-purple-500"
-            link="/verification/raag"
+            link="/verification/raags"
           />
           <StatCard
             title="Taals"
             value={stats?.overview?.totalTaals || 0}
             icon={ClockIcon}
             color="border-l-orange-500"
-            link="/verification/taal"
+            link="/verification/taals"
           />
         </div>
 
@@ -244,14 +244,14 @@ const Dashboard = () => {
                   <p className="text-gray-500 text-center py-4">No recent {category}</p>
                 )}
               </div>
-                             <div className="mt-4">
-                 <Link 
-                   to={`/verification/${category === 'artists' ? 'artist' : category === 'raags' ? 'raag' : 'taal'}`}
-                   className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                 >
-                   View all {category} →
-                 </Link>
-               </div>
+              <div className="mt-4">
+                <Link 
+                  to={`/verification/${category}`}
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
+                  View all {category} →
+                </Link>
+              </div>
             </div>
           ))}
         </div>

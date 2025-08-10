@@ -42,11 +42,6 @@ Please provide information in the following JSON format:
     "value": "Names of notable disciples/students",
     "reference": "Source URL or reference for disciples",
     "verified": false
-  },
-  "summary": {
-    "value": "Comprehensive summary about the artist including all available information, achievements, style, contributions to Indian Classical Music, and any other relevant details",
-    "reference": "Primary source URL for comprehensive information",
-    "verified": false
   }
 }
 
@@ -143,11 +138,6 @@ Please provide information in the following JSON format:
     "value": "Traditional time of performance",
     "reference": "Source URL",
     "verified": false
-  },
-  "summary": {
-    "value": "Comprehensive summary about the raag including its characteristics, history, famous compositions, notable performers, and cultural significance",
-    "reference": "Primary source URL for comprehensive information",
-    "verified": false
   }
 }
 
@@ -233,11 +223,6 @@ Please provide information in the following JSON format:
   "jaati": {
     "value": "Jaati classification (e.g., Chatusra, Tisra, etc.)",
     "reference": "Source URL",
-    "verified": false
-  },
-  "summary": {
-    "value": "Comprehensive summary about the taal including its structure, usage in different musical forms, famous compositions, and cultural significance",
-    "reference": "Primary source URL for comprehensive information",
     "verified": false
   }
 }

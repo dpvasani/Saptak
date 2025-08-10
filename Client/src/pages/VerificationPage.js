@@ -1,491 +1,550 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { apiService } from '../utils/api';
+import { useParams, Link } from 'react-router-dom';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { 
+  CheckCircleIcon, 
+  XCircleIcon, 
+  ClockIcon,
+  EyeIcon,
+  PencilIcon,
+  ChartBarIcon,
+  ArrowLeftIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
 
 const VerificationPage = () => {
-  const { type, id } = useParams();
-  const navigate = useNavigate();
-  const [item, setItem] = useState(null);
-  const [items, setItems] = useState([]);
+  const { category } = useParams();
+  const [activeTab, setActiveTab] = useState('all');
+  const [data, setData] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [verificationStatus, setVerificationStatus] = useState('pending');
+  const [selectedField, setSelectedField] = useState('');
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [bulkAction, setBulkAction] = useState('');
+
+  const categoryConfig = {
+    artists: {
+      title: 'Artists',
+      fields: ['name', 'guru', 'gharana', 'notableAchievements', 'disciples'],
+      color: 'green'
+    },
+    raags: {
+      title: 'Raags',
+      fields: ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition'],
+      color: 'purple'
+    },
+    taals: {
+      title: 'Taals',
+      fields: ['name', 'numberOfBeats', 'divisions', 'taali.count', 'taali.beatNumbers', 'khaali.count', 'khaali.beatNumbers', 'jaati'],
+      color: 'orange'
+    }
+  };
+
+  const config = categoryConfig[category];
+  const colorClasses = {
+    green: {
+      bg: 'bg-green-50',
+      text: 'text-green-700',
+      border: 'border-green-200',
+      button: 'bg-green-600 hover:bg-green-700',
+      badge: 'bg-green-100 text-green-800'
+    },
+    purple: {
+      bg: 'bg-purple-50',
+      text: 'text-purple-700',
+      border: 'border-purple-200',
+      button: 'bg-purple-600 hover:bg-purple-700',
+      badge: 'bg-purple-100 text-purple-800'
+    },
+    orange: {
+      bg: 'bg-orange-50',
+      text: 'text-orange-700',
+      border: 'border-orange-200',
+      button: 'bg-orange-600 hover:bg-orange-700',
+      badge: 'bg-orange-100 text-orange-800'
+    }
+  };
+
+  const colors = colorClasses[config?.color] || colorClasses.green;
 
   useEffect(() => {
-    if (id) {
-      // If ID is provided, fetch specific item
-      fetchItem();
+    if (config) {
+      fetchData();
+      fetchStats();
+    }
+  }, [category, activeTab, selectedField]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let url = `http://localhost:5000/api/${category}`;
+      
+      if (activeTab === 'verified') {
+        url += '/verified';
+      } else if (activeTab === 'unverified') {
+        url += '/unverified';
+      } else if (activeTab === 'partial') {
+        url += '/partial';
+      }
+      
+      if (selectedField) {
+        url += `?field=${selectedField}`;
+      }
+      
+      const response = await axios.get(url);
+      setData(response.data.data || response.data);
+    } catch (error) {
+      console.error(`Error fetching ${category}:`, error);
+      setError(`Failed to load ${category}. Please try again.`);
+      toast.error(`Failed to load ${category}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/${category}/stats`);
+      setStats(response.data);
+    } catch (error) {
+      console.error(`Error fetching ${category} stats:`, error);
+    }
+  };
+
+  const handleVerification = async (id, field, currentStatus) => {
+    try {
+      const item = data.find(d => d._id === id);
+      if (!item) return;
+
+      const updatedItem = {
+        ...item,
+        [field]: {
+          ...item[field],
+          verified: !currentStatus
+        }
+      };
+
+      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
+      
+      // Update local state
+      setData(prevData => 
+        prevData.map(d => 
+          d._id === id ? updatedItem : d
+        )
+      );
+      
+      toast.success(`${field} verification updated successfully`);
+      fetchStats(); // Refresh stats
+    } catch (error) {
+      console.error('Error updating verification:', error);
+      toast.error('Failed to update verification status');
+    }
+  };
+
+  const handleItemSelect = (itemId) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
     } else {
-      // If no ID, fetch list of items that need verification
-      fetchItemsForVerification();
+      newSelected.add(itemId);
     }
-  }, [type, id]);
+    setSelectedItems(newSelected);
+  };
 
-  const fetchItem = async () => {
-    try {
-      setLoading(true);
-      let response;
-      
-      switch (type) {
-        case 'artist':
-          response = await fetch(`/api/artists/${id}`);
-          break;
-        case 'raag':
-          response = await fetch(`/api/raags/${id}`);
-          break;
-        case 'taal':
-          response = await fetch(`/api/taals/${id}`);
-          break;
-        default:
-          throw new Error('Invalid type');
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch item');
-      }
-
-      const data = await response.json();
-      setItem(data);
-      setVerificationStatus(data.verificationStatus || 'pending');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  const handleSelectAll = () => {
+    if (selectedItems.size === data.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(data.map(item => item._id)));
     }
   };
 
-  const fetchItemsForVerification = async () => {
-    try {
-      setLoading(true);
-      let response;
-      
-      switch (type) {
-        case 'artist':
-          response = await apiService.getUnverifiedArtists();
-          break;
-        case 'raag':
-          response = await apiService.getUnverifiedRaags();
-          break;
-        case 'taal':
-          response = await apiService.getUnverifiedTaals();
-          break;
-        default:
-          throw new Error('Invalid type');
-      }
-
-      console.log('API Response:', response); // Debug log
-      
-      // Handle different response structures
-      let itemsArray = [];
-      if (response && response.data) {
-        // Server returns { count: number, data: array }
-        if (response.data.data && Array.isArray(response.data.data)) {
-          itemsArray = response.data.data;
-        }
-        // If response.data is an array, use it directly (fallback)
-        else if (Array.isArray(response.data)) {
-          itemsArray = response.data;
-        } 
-        // If response.data has a nested array property, try to find it
-        else if (response.data.items && Array.isArray(response.data.items)) {
-          itemsArray = response.data.items;
-        }
-        // If response.data has an array property matching the type, try to find it
-        else if (response.data[type] && Array.isArray(response.data[type])) {
-          itemsArray = response.data[type];
-        }
-        // If response.data is an object with array values, try to find any array
-        else if (typeof response.data === 'object') {
-          const arrayValues = Object.values(response.data).filter(val => Array.isArray(val));
-          if (arrayValues.length > 0) {
-            itemsArray = arrayValues[0];
-          }
-        }
-      }
-      
-      console.log('Processed items array:', itemsArray); // Debug log
-      setItems(itemsArray);
-    } catch (err) {
-      console.error('Error fetching items:', err); // Debug log
-      setError(err.message);
-      setItems([]); // Ensure items is always an array
-    } finally {
-      setLoading(false);
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) {
+      toast.warning('Please select items to delete');
+      return;
     }
-  };
 
-  const handleVerification = async (status) => {
     try {
-      let response;
-      
-      switch (type) {
-        case 'artist':
-          response = await apiService.verifyArtist(id, status);
-          break;
-        case 'raag':
-          response = await apiService.verifyRaag(id, status);
-          break;
-        case 'taal':
-          response = await apiService.verifyTaal(id, status);
-          break;
-        default:
-          throw new Error('Invalid type');
-      }
-
-      if (response.success) {
-        setVerificationStatus(status);
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      setError('Failed to update verification status');
-    }
-  };
-
-  // If no ID is provided, show list of items for verification
-  if (!id) {
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
-          </div>
-        </div>
+      const deletePromises = Array.from(selectedItems).map(id =>
+        axios.delete(`http://localhost:5000/api/${category}/${id}`)
       );
-    }
-
-    if (error) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-red-600 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Verify {type.charAt(0).toUpperCase() + type.slice(1)}s
-                </h1>
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
-                >
-                  Back to Dashboard
-                </button>
-              </div>
-            </div>
-
-            <div className="px-6 py-6">
-              {!Array.isArray(items) || items.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600">
-                    {!Array.isArray(items) 
-                      ? `Error: Expected array but got ${typeof items}. Check console for details.`
-                      : `No ${type}s found that need verification.`
-                    }
-                  </p>
-                  {!Array.isArray(items) && (
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    >
-                      Reload Page
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map((item) => (
-                    <div key={item._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <h3 className="font-semibold text-gray-900 mb-2">
-                        {item.name?.value || item.name || 'Unnamed'}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Status: <span className="font-medium text-yellow-600">Pending Verification</span>
-                      </p>
-                      <button
-                        onClick={() => navigate(`/verification/${type}/${item._id}`)}
-                        className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
-                      >
-                        Review & Verify
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Original single item verification logic
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-600 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!item) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Item Not Found</h1>
-          <p className="text-gray-600 mb-4">The requested item could not be found.</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const renderItemDetails = () => {
-    switch (type) {
-      case 'artist':
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Name</h3>
-              <p className="text-gray-700">{item.name?.value || 'N/A'}</p>
-              {item.name?.reference && (
-                <a href={item.name.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Guru</h3>
-              <p className="text-gray-700">{item.guru?.value || 'N/A'}</p>
-              {item.guru?.reference && (
-                <a href={item.guru.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Gharana</h3>
-              <p className="text-gray-700">{item.gharana?.value || 'N/A'}</p>
-              {item.gharana?.reference && (
-                <a href={item.gharana.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Summary</h3>
-              <p className="text-gray-700">{item.summary?.value || 'N/A'}</p>
-              {item.summary?.reference && (
-                <a href={item.summary.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-          </div>
-        );
       
-      case 'raag':
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Name</h3>
-              <p className="text-gray-700">{item.name?.value || 'N/A'}</p>
-              {item.name?.reference && (
-                <a href={item.name.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Thaat</h3>
-              <p className="text-gray-700">{item.thaat?.value || 'N/A'}</p>
-              {item.thaat?.reference && (
-                <a href={item.thaat.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Description</h3>
-              <p className="text-gray-700">{item.description?.value || 'N/A'}</p>
-              {item.description?.reference && (
-                <a href={item.description.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-          </div>
-        );
+      await Promise.all(deletePromises);
       
-      case 'taal':
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Name</h3>
-              <p className="text-gray-700">{item.name?.value || 'N/A'}</p>
-              {item.name?.reference && (
-                <a href={item.name.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Beats</h3>
-              <p className="text-gray-700">{item.beats?.value || 'N/A'}</p>
-              {item.beats?.reference && (
-                <a href={item.beats.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Description</h3>
-              <p className="text-gray-700">{item.description?.value || 'N/A'}</p>
-              {item.description?.reference && (
-                <a href={item.description.reference} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">
-                  Source
-                </a>
-              )}
-            </div>
-          </div>
-        );
-      
-      default:
-        return null;
+      toast.success(`${selectedItems.size} ${category} deleted successfully`);
+      setSelectedItems(new Set());
+      setShowDeleteModal(false);
+      fetchData();
+      fetchStats();
+    } catch (error) {
+      console.error('Error deleting items:', error);
+      toast.error('Failed to delete items');
     }
   };
+
+  const exportData = async (format) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/${category}/export?format=${format}`, {
+        responseType: format === 'pdf' ? 'blob' : 'text'
+      });
+      
+      const blob = new Blob([response.data], {
+        type: format === 'pdf' ? 'application/pdf' : 
+              format === 'word' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
+              'text/markdown'
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${category}-export.${format === 'word' ? 'docx' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success(`${category} exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast.error('Failed to export data');
+    }
+  };
+
+  const getFieldValue = (item, field) => {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      return item[parent]?.[child]?.value || '';
+    }
+    return item[field]?.value || '';
+  };
+
+  const getFieldVerified = (item, field) => {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      return item[parent]?.[child]?.verified || false;
+    }
+    return item[field]?.verified || false;
+  };
+
+  const getFieldReference = (item, field) => {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      return item[parent]?.[child]?.reference || '';
+    }
+    return item[field]?.reference || '';
+  };
+
+  const getVerificationStatus = (item) => {
+    const verifiedFields = config.fields.filter(field => getFieldVerified(item, field));
+    const totalFields = config.fields.length;
+    
+    if (verifiedFields.length === totalFields) return 'fully';
+    if (verifiedFields.length > 0) return 'partial';
+    return 'none';
+  };
+
+  const StatCard = ({ title, value, subtitle, icon: Icon }) => (
+    <div className={`${colors.bg} rounded-lg p-4 ${colors.border} border`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className={`text-sm font-medium ${colors.text} uppercase tracking-wide`}>{title}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+        </div>
+        <Icon className={`h-8 w-8 ${colors.text}`} />
+      </div>
+    </div>
+  );
+
+  if (!config) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600">Invalid category: {category}</p>
+          <Link to="/dashboard" className="text-primary-600 hover:text-primary-700 mt-2 inline-block">
+            ← Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !data.length) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading {config.title.toLowerCase()}...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Verify {type.charAt(0).toUpperCase() + type.slice(1)}
-              </h1>
-              <div className="flex items-center space-x-2">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  verificationStatus === 'verified' ? 'bg-green-100 text-green-800' :
-                  verificationStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {verificationStatus.charAt(0).toUpperCase() + verificationStatus.slice(1)}
-                </span>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center mb-4">
+            <Link 
+              to="/dashboard" 
+              className="mr-4 p-2 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+            >
+              <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
+            </Link>
+            <h1 className="text-4xl font-bold text-gray-900">{config.title} Verification</h1>
+          </div>
+          <p className="text-gray-600">Manage and verify {config.title.toLowerCase()} data</p>
+        </div>
+
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <StatCard
+              title="Total"
+              value={stats.total}
+              icon={ChartBarIcon}
+            />
+            <StatCard
+              title="Fully Verified"
+              value={stats.fullyVerified}
+              subtitle={`${stats.percentages.fullyVerified}%`}
+              icon={CheckCircleIcon}
+            />
+            <StatCard
+              title="Partially Verified"
+              value={stats.partiallyVerified}
+              subtitle={`${stats.percentages.partiallyVerified}%`}
+              icon={ClockIcon}
+            />
+            <StatCard
+              title="Unverified"
+              value={stats.unverified}
+              subtitle={`${stats.percentages.unverified}%`}
+              icon={XCircleIcon}
+            />
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Tabs */}
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              {['all', 'verified', 'partial', 'unverified'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    activeTab === tab
+                      ? `${colors.button} text-white`
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {tab === 'partial' ? 'Partially Verified' : 
+                   tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* Field Filter */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Filter by field:</label>
+              <select
+                value={selectedField}
+                onChange={(e) => setSelectedField(e.target.value)}
+                className="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+              >
+                <option value="">All fields</option>
+                {config.fields.map((field) => (
+                  <option key={field} value={field}>
+                    {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div className="px-6 py-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Item Details</h2>
-                {renderItemDetails()}
+          {/* Bulk Actions */}
+          <div className="bg-gray-50 rounded-lg p-4 mt-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                >
+                  {selectedItems.size === data.length ? 'Unselect All' : 'Select All'}
+                </button>
+                <span className="text-sm text-gray-600">
+                  {selectedItems.size} of {data.length} items selected
+                </span>
               </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification Actions</h2>
-                <div className="space-y-4">
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <h3 className="font-medium text-gray-900 mb-2">Current Status</h3>
-                    <p className="text-gray-600">
-                      This {type} is currently marked as {verificationStatus}.
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => handleVerification('verified')}
-                      disabled={verificationStatus === 'verified'}
-                      className={`w-full px-4 py-2 rounded-md font-medium ${
-                        verificationStatus === 'verified'
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
-                    >
-                      Mark as Verified
-                    </button>
-                    
-                    <button
-                      onClick={() => handleVerification('rejected')}
-                      disabled={verificationStatus === 'rejected'}
-                      className={`w-full px-4 py-2 rounded-md font-medium ${
-                        verificationStatus === 'rejected'
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-red-600 text-white hover:bg-red-700'
-                      }`}
-                    >
-                      Mark as Rejected
-                    </button>
-                    
-                    <button
-                      onClick={() => handleVerification('pending')}
-                      disabled={verificationStatus === 'pending'}
-                      className={`w-full px-4 py-2 rounded-md font-medium ${
-                        verificationStatus === 'pending'
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                      }`}
-                    >
-                      Mark as Pending
-                    </button>
-                  </div>
-
-                  <div className="pt-4">
-                    <button
-                      onClick={() => navigate('/dashboard')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                      Back to Dashboard
-                    </button>
-                  </div>
+              
+              <div className="flex items-center space-x-2">
+                {selectedItems.size > 0 && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-1" />
+                    Delete Selected ({selectedItems.size})
+                  </button>
+                )}
+                
+                <div className="relative">
+                  <select
+                    onChange={(e) => e.target.value && exportData(e.target.value)}
+                    className="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                    defaultValue=""
+                  >
+                    <option value="">Export As...</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="pdf">PDF</option>
+                    <option value="word">Word Document</option>
+                  </select>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Data Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {error ? (
+            <div className="p-8 text-center">
+              <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">{error}</p>
+              <button 
+                onClick={fetchData}
+                className={`px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200`}
+              >
+                Retry
+              </button>
+            </div>
+          ) : data.length === 0 ? (
+            <div className="p-8 text-center">
+              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No {config.title.toLowerCase()} found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.size === data.length && data.length > 0}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                      />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Verified Fields
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.map((item) => {
+                    const status = getVerificationStatus(item);
+                    const verifiedCount = config.fields.filter(field => getFieldVerified(item, field)).length;
+                    
+                    return (
+                      <tr key={item._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(item._id)}
+                            onChange={() => handleItemSelect(item._id)}
+                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {getFieldValue(item, 'name')}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            status === 'fully' ? 'bg-green-100 text-green-800' :
+                            status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {status === 'fully' ? 'Fully Verified' :
+                             status === 'partial' ? 'Partially Verified' :
+                             'Unverified'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {verifiedCount}/{config.fields.length} fields
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <Link
+                            to={`/verification/${category}/${item._id}`}
+                            className={`${colors.text} hover:opacity-75 mr-4`}
+                          >
+                            <EyeIcon className="h-5 w-5 inline" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3 text-center">
+                <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-500" />
+                <h3 className="text-lg font-medium text-gray-900 mt-2">Delete {selectedItems.size} {category}?</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  This action cannot be undone. All selected {category} and their data will be permanently deleted.
+                </p>
+                <div className="flex justify-center space-x-4 mt-6">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

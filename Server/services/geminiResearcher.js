@@ -41,11 +41,6 @@ Please provide information in the following JSON format:
     "value": "Names of notable disciples/students",
     "reference": "Source URL or reference for disciples",
     "verified": false
-  },
-  "summary": {
-    "value": "Comprehensive summary about the artist including all available information, achievements, style, contributions to Indian Classical Music, and any other relevant details",
-    "reference": "Primary source URL for comprehensive information",
-    "verified": false
   }
 }
 

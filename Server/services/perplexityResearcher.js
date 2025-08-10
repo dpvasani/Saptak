@@ -56,11 +56,6 @@ For the artist "${name}", provide ONLY factual, verifiable information in this e
     "value": "Names of famous disciples/students separated by commas (if found, otherwise empty string)",
     "reference": "URL mentioning disciples or students",
     "verified": false
-  },
-  "summary": {
-    "value": "Comprehensive summary about the artist including biography, musical style, major contributions, influence on Indian Classical Music, and any other significant information with multiple source links",
-    "reference": "Primary authoritative source URL",
-    "verified": false
   }
 }
 
