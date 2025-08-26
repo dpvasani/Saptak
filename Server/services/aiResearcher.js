@@ -590,66 +590,71 @@ CRITICAL REQUIREMENTS:
   validateAndCleanData(data) {
     // Ensure all required fields exist with proper structure
     const requiredFields = ['name'];
-    const optionalFields = ['guru', 'gharana', 'notableAchievements', 'disciples', 'summary', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition', 'numberOfBeats', 'divisions', 'jaati'];
-    
+    const optionalFields = [
+      'guru',
+      'gharana',
+      'notableAchievements',
+      'disciples',
+      'summary',
+      'aroha',
+      'avroha',
+      'chalan',
+      'vadi',
+      'samvadi',
+      'thaat',
+      'rasBhaav',
+      'tanpuraTuning',
+      'timeOfRendition',
+      'numberOfBeats',
+      'divisions',
+      'jaati'
+    ];
+
     requiredFields.forEach(field => {
       if (!data[field]) {
         data[field] = { value: '', reference: 'Required field - information not found in comprehensive search', verified: false };
       } else {
-        // Ensure each field has the required structure
         if (typeof data[field].value === 'undefined') data[field].value = '';
         if (typeof data[field].reference === 'undefined') data[field].reference = 'Source reference not provided';
         if (typeof data[field].verified === 'undefined') data[field].verified = false;
-        
-        // Convert verified to boolean if it's not already
+
         data[field].verified = Boolean(data[field].verified);
-        
-        // Clean and format references
         data[field].reference = this.cleanReference(data[field].reference);
       }
     });
-    
-    // Handle optional fields
+
     optionalFields.forEach(field => {
       if (data[field]) {
         if (typeof data[field].value === 'undefined') data[field].value = '';
         if (typeof data[field].reference === 'undefined') data[field].reference = 'Information found but source not specified';
         if (typeof data[field].verified === 'undefined') data[field].verified = false;
         data[field].verified = Boolean(data[field].verified);
-        
-        // Clean and format references
         data[field].reference = this.cleanReference(data[field].reference);
       }
     });
-}
 
     // Special handling for taal nested fields
     if (data.taali) {
       if (!data.taali.count) data.taali.count = { value: '', reference: 'Information not found', verified: false };
       if (!data.taali.beatNumbers) data.taali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-      
-      // Clean references for nested fields
       data.taali.count.reference = this.cleanReference(data.taali.count.reference);
       data.taali.beatNumbers.reference = this.cleanReference(data.taali.beatNumbers.reference);
     }
-    
+
     if (data.khaali) {
       if (!data.khaali.count) data.khaali.count = { value: '', reference: 'Information not found', verified: false };
       if (!data.khaali.beatNumbers) data.khaali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-      
-      // Clean references for nested fields
       data.khaali.count.reference = this.cleanReference(data.khaali.count.reference);
       data.khaali.beatNumbers.reference = this.cleanReference(data.khaali.beatNumbers.reference);
-  cleanReference(reference) {
+    }
+  }
 
   cleanReference(reference) {
     if (!reference) return 'No source provided';
     
-    // Handle multiple URLs separated by various delimiters
     const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
     let cleanRef = reference;
-    
-    // Check if it contains multiple URLs
+ 
     let hasMultipleUrls = false;
     for (const separator of urlSeparators) {
       if (cleanRef.includes(separator)) {
@@ -657,52 +662,57 @@ CRITICAL REQUIREMENTS:
         break;
       }
     }
-    
+ 
     if (hasMultipleUrls) {
-      // Split and clean multiple URLs
       let urls = cleanRef;
       for (const separator of urlSeparators) {
         urls = urls.split(separator).join(' | ');
       }
-      
-      // Clean each URL
+ 
       const urlList = urls.split(' | ').map(url => {
         const trimmedUrl = url.trim();
-        
-        // Remove parenthetical descriptions
         const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
-        
-        // Validate URL format
+ 
         if (this.isValidUrl(cleanUrl)) {
           return cleanUrl;
-        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
+        } else if (
+          cleanUrl.includes('.com') ||
+          cleanUrl.includes('.org') ||
+          cleanUrl.includes('.edu') ||
+          cleanUrl.includes('wikipedia')
+        ) {
           return `Invalid URL format: ${cleanUrl}`;
         } else {
           return `Non-URL reference: ${cleanUrl}`;
         }
       }).filter(url => url.length > 0);
-      
+ 
       return urlList.join(' | ');
     } else {
-      // Single reference
       const trimmedRef = cleanRef.trim();
-      
-      // Remove parenthetical descriptions
       const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
-      
-      // Validate single URL
+ 
       if (this.isValidUrl(cleanSingleRef)) {
         return cleanSingleRef;
-      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
+      } else if (
+        cleanSingleRef.includes('.com') ||
+        cleanSingleRef.includes('.org') ||
+        cleanSingleRef.includes('.edu') ||
+        cleanSingleRef.includes('wikipedia')
+      ) {
         return `Invalid URL format: ${cleanSingleRef}`;
-      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
-        return cleanSingleRef; // Keep explanatory messages as-is
+      } else if (
+        cleanSingleRef.includes('not found') ||
+        cleanSingleRef.includes('Information not') ||
+        cleanSingleRef.includes('No authoritative')
+      ) {
+        return cleanSingleRef;
       } else {
         return `Non-URL reference: ${cleanSingleRef}`;
       }
     }
   }
-  
+ 
   isValidUrl(string) {
     try {
       const url = new URL(string);
@@ -711,74 +721,6 @@ CRITICAL REQUIREMENTS:
       return false;
     }
   }
-    if (!reference) return 'No source provided';
-    
-    // Handle multiple URLs separated by various delimiters
-    const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
-    let cleanRef = reference;
-    
-    // Check if it contains multiple URLs
-    let hasMultipleUrls = false;
-    for (const separator of urlSeparators) {
-      if (cleanRef.includes(separator)) {
-        hasMultipleUrls = true;
-        break;
-      }
-    }
-    
-    if (hasMultipleUrls) {
-      // Split and clean multiple URLs
-      let urls = cleanRef;
-      for (const separator of urlSeparators) {
-        urls = urls.split(separator).join(' | ');
-      }
-      
-      // Clean each URL
-      const urlList = urls.split(' | ').map(url => {
-        const trimmedUrl = url.trim();
-        
-        // Remove parenthetical descriptions
-        const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
-        
-        // Validate URL format
-        if (this.isValidUrl(cleanUrl)) {
-          return cleanUrl;
-        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
-          return `Invalid URL format: ${cleanUrl}`;
-        } else {
-          return `Non-URL reference: ${cleanUrl}`;
-        }
-      }).filter(url => url.length > 0);
-      
-      return urlList.join(' | ');
-    } else {
-      // Single reference
-      const trimmedRef = cleanRef.trim();
-      
-      // Remove parenthetical descriptions
-      const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
-      
-      // Validate single URL
-      if (this.isValidUrl(cleanSingleRef)) {
-        return cleanSingleRef;
-      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
-        return `Invalid URL format: ${cleanSingleRef}`;
-      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
-        return cleanSingleRef; // Keep explanatory messages as-is
-      } else {
-        return `Non-URL reference: ${cleanSingleRef}`;
-      }
-    }
-  }
-  
-  isValidUrl(string) {
-    try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch (_) {
-      return false;
-    }
-  }
-    }
-  }
+}
+
 module.exports = new AIResearcher();
