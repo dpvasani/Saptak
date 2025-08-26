@@ -359,15 +359,12 @@ CRITICAL REQUIREMENTS:
     }
   }
 
-  async researchTaal(name, modelName = null) {
+  async researchTaal(name) {
     console.log('Starting AI research for taal:', name);
     
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
       throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
     }
-    
-    const model = modelName || "gpt-4-turbo";
-    console.log(`Using OpenAI model: ${model}`);
     
     const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
 
@@ -726,6 +723,46 @@ CRITICAL REQUIREMENTS:
     } catch (_) {
       return false;
     }
+  }
+
+  async researchWithFallbackModel(name, prompt, type) {
+    const fallbackModels = ['gpt-4', 'gpt-3.5-turbo', 'gpt-4-vision'];
+    
+    for (const model of fallbackModels) {
+      try {
+        console.log(`Trying OpenAI fallback model: ${model}`);
+        const completion = await this.openai.chat.completions.create({
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
+- Deep knowledge of Indian Classical Music traditions
+- Access to academic and institutional sources
+- Ability to verify information across multiple sources
+- Understanding of proper musicological terminology
+Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting.`
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.02,
+          max_tokens: 3000,
+          top_p: 0.9
+        });
+
+        console.log(`OpenAI fallback model ${model} worked!`);
+        const responseText = completion.choices[0].message.content;
+        return this.parseAIResponse(responseText);
+      } catch (fallbackError) {
+        console.log(`OpenAI fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
+        continue;
+      }
+    }
+
+    throw new Error('All OpenAI models failed. Please check your API access and model availability.');
   }
 }
 
