@@ -4,6 +4,7 @@ const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
 const { webScrapingLimiter } = require('../middleware/rateLimiter');
+const mongoose = require('mongoose');
 
 exports.searchRaag = async (req, res) => {
   try {
@@ -102,6 +103,9 @@ exports.getAllRaags = async (req, res) => {
 exports.getRaagById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid raag id' });
+    }
     const raag = await Raag.findById(id);
     
     if (!raag) {
