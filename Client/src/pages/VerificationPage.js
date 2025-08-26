@@ -166,15 +166,15 @@ exports.getUnverifiedTaals = async (req, res) => {
       }
     } else {
       query = {
-        $and: [
-          { 'name.verified': { $ne: true } },
-          { 'numberOfBeats.verified': { $ne: true } },
-          { 'divisions.verified': { $ne: true } },
-          { 'taali.count.verified': { $ne: true } },
-          { 'taali.beatNumbers.verified': { $ne: true } },
-          { 'khaali.count.verified': { $ne: true } },
-          { 'khaali.beatNumbers.verified': { $ne: true } },
-          { 'jaati.verified': { $ne: true } }
+        $or: [
+          { 'name.verified': false },
+          { 'numberOfBeats.verified': false },
+          { 'divisions.verified': false },
+          { 'taali.count.verified': false },
+          { 'taali.beatNumbers.verified': false },
+          { 'khaali.count.verified': false },
+          { 'khaali.beatNumbers.verified': false },
+          { 'jaati.verified': false }
         ]
       };
     }
