@@ -172,10 +172,9 @@ exports.getUnverifiedArtists = async (req, res) => {
         'guru.verified': false,
         'gharana.verified': false,
         'notableAchievements.verified': false,
-        'disciples.verified': false
+        'disciples.verified': false,
+        'summary.verified': false
       }
-      'disciples.verified': false,
-      'summary.verified': false
     }
     
     const artists = await Artist.find(query).sort({ createdAt: -1 });
