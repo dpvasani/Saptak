@@ -88,8 +88,6 @@ const VerificationPage = () => {
         url += '/verified';
       } else if (activeTab === 'unverified') {
         url += '/unverified';
-      } else if (activeTab === 'partial') {
-        url += '/partial';
       }
       
       if (selectedField) {
@@ -97,7 +95,17 @@ const VerificationPage = () => {
       }
       
       const response = await axios.get(url);
-      setData(response.data.data || response.data);
+      let fetchedData = response.data.data || response.data;
+      
+      // Handle partial verification filtering on frontend since we don't have a backend endpoint
+      if (activeTab === 'partial') {
+        fetchedData = fetchedData.filter(item => {
+          const verifiedFields = config.fields.filter(field => getFieldVerified(item, field));
+          return verifiedFields.length > 0 && verifiedFields.length < config.fields.length;
+        });
+      }
+      
+      setData(fetchedData);
     } catch (error) {
       console.error(`Error fetching ${category}:`, error);
       setError(`Failed to load ${category}. Please try again.`);

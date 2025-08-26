@@ -159,16 +159,18 @@ exports.getUnverifiedRaags = async (req, res) => {
       query[`${field}.verified`] = false;
     } else {
       query = {
-        'name.verified': false,
-        'aroha.verified': false,
-        'avroha.verified': false,
-        'chalan.verified': false,
-        'vadi.verified': false,
-        'samvadi.verified': false,
-        'thaat.verified': false,
-        'rasBhaav.verified': false,
-        'tanpuraTuning.verified': false,
-        'timeOfRendition.verified': false
+        $and: [
+          { 'name.verified': false },
+          { 'aroha.verified': false },
+          { 'avroha.verified': false },
+          { 'chalan.verified': false },
+          { 'vadi.verified': false },
+          { 'samvadi.verified': false },
+          { 'thaat.verified': false },
+          { 'rasBhaav.verified': false },
+          { 'tanpuraTuning.verified': false },
+          { 'timeOfRendition.verified': false }
+        ]
       };
     }
     
