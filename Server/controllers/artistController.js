@@ -256,10 +256,17 @@ exports.deleteArtist = async (req, res) => {
       return res.status(404).json({ message: 'Artist not found' });
     }
 
-    res.json({ message: 'Artist deleted successfully' });
+    res.json({ 
+      success: true,
+      message: 'Artist deleted successfully',
+      data: { deletedId: id, deletedName: artist.name.value }
+    });
   } catch (error) {
     console.error('Error in deleteArtist:', error);
-    res.status(500).json({ message: 'Error deleting artist' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error deleting artist' 
+    });
   }
 };
 
@@ -348,3 +355,273 @@ exports.exportArtists = async (req, res) => {
     res.status(500).json({ message: 'Error exporting artists' });
   }
 };
+
+exports.bulkDeleteArtists = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Artist IDs array is required'
+      });
+    }
+
+    // Validate all IDs are valid MongoDB ObjectIds
+    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid artist IDs: ${invalidIds.join(', ')}`
+      });
+    }
+
+    // Get artist names before deletion for response
+    const artistsToDelete = await Artist.find({ _id: { $in: ids } }).select('name.value');
+    const deletedNames = artistsToDelete.map(artist => artist.name.value);
+
+    // Perform bulk deletion
+    const result = await Artist.deleteMany({ _id: { $in: ids } });
+    
+    res.json({
+      success: true,
+      message: `${result.deletedCount} artists deleted successfully`,
+      data: {
+        deletedCount: result.deletedCount,
+        deletedIds: ids,
+        deletedNames: deletedNames
+      }
+    });
+  } catch (error) {
+    console.error('Error in bulkDeleteArtists:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting artists'
+    });
+  }
+};
+
+exports.exportSingleArtist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { format = 'json' } = req.query;
+    
+    const artist = await Artist.findById(id);
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+        message: 'Artist not found'
+      });
+    }
+
+    const exportData = this.formatArtistForExport(artist);
+
+    switch (format.toLowerCase()) {
+      case 'markdown':
+        const markdown = this.generateMarkdown([exportData]);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.md"`);
+        res.send(markdown);
+        break;
+        
+      case 'pdf':
+        // Return structured data for frontend PDF generation
+        res.json({
+          success: true,
+          data: {
+            format: 'pdf',
+            content: [exportData],
+            filename: `${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`
+          }
+        });
+        break;
+        
+      case 'word':
+        // Return structured data for frontend Word generation
+        res.json({
+          success: true,
+          data: {
+            format: 'word',
+            content: [exportData],
+            filename: `${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.docx`
+          }
+        });
+        break;
+        
+      default:
+        res.json({
+          success: true,
+          data: exportData
+        });
+    }
+  } catch (error) {
+    console.error('Error in exportSingleArtist:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting artist'
+    });
+  }
+};
+
+exports.exportArtists = async (req, res) => {
+  try {
+    const { format = 'json', ids } = req.body;
+    let query = {};
+    
+    // If specific IDs provided, export only those
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      query = { _id: { $in: ids } };
+    }
+    
+    const artists = await Artist.find(query).sort({ 'name.value': 1 });
+    
+    if (artists.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No artists found to export'
+      });
+    }
+
+    const exportData = artists.map(artist => this.formatArtistForExport(artist));
+    const filename = ids && ids.length > 0 ? 
+      `selected-artists-${ids.length}` : 
+      `all-artists-${artists.length}`;
+
+    switch (format.toLowerCase()) {
+      case 'markdown':
+        const markdown = this.generateMarkdown(exportData);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
+        res.send(markdown);
+        break;
+        
+      case 'pdf':
+        // Return structured data for frontend PDF generation
+        res.json({
+          success: true,
+          data: {
+            format: 'pdf',
+            content: exportData,
+            filename: `${filename}.pdf`,
+            count: artists.length
+          }
+        });
+        break;
+        
+      case 'word':
+        // Return structured data for frontend Word generation
+        res.json({
+          success: true,
+          data: {
+            format: 'word',
+            content: exportData,
+            filename: `${filename}.docx`,
+            count: artists.length
+          }
+        });
+        break;
+        
+      default:
+        res.json({
+          success: true,
+          data: {
+            artists: exportData,
+            count: artists.length,
+            exported: new Date().toISOString()
+          }
+        });
+    }
+  } catch (error) {
+    console.error('Error in exportArtists:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting artists'
+    });
+  }
+};
+
+// Helper method to format artist data for export
+exports.formatArtistForExport = (artist) => {
+  return {
+    id: artist._id,
+    name: artist.name?.value || 'N/A',
+    guru: artist.guru?.value || 'N/A',
+    gharana: artist.gharana?.value || 'N/A',
+    notableAchievements: artist.notableAchievements?.value || 'N/A',
+    disciples: artist.disciples?.value || 'N/A',
+    summary: artist.summary?.value || 'N/A',
+    verification: {
+      name: artist.name?.verified || false,
+      guru: artist.guru?.verified || false,
+      gharana: artist.gharana?.verified || false,
+      notableAchievements: artist.notableAchievements?.verified || false,
+      disciples: artist.disciples?.verified || false,
+      summary: artist.summary?.verified || false
+    },
+    sources: {
+      name: artist.name?.reference || 'N/A',
+      guru: artist.guru?.reference || 'N/A',
+      gharana: artist.gharana?.reference || 'N/A',
+      notableAchievements: artist.notableAchievements?.reference || 'N/A',
+      disciples: artist.disciples?.reference || 'N/A',
+      summary: artist.summary?.reference || 'N/A'
+    },
+    metadata: {
+      createdAt: artist.createdAt,
+      updatedAt: artist.updatedAt,
+      verificationPercentage: this.calculateVerificationPercentage(artist)
+    }
+  };
+};
+
+// Helper method to calculate verification percentage
+exports.calculateVerificationPercentage = (artist) => {
+  const fields = ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'];
+  const verifiedFields = fields.filter(field => artist[field]?.verified);
+  return Math.round((verifiedFields.length / fields.length) * 100);
+};
+
+// Helper method to generate markdown
+exports.generateMarkdown = (artists) => {
+  let markdown = '# Indian Classical Music Artists\n\n';
+  markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
+  markdown += `**Total Artists:** ${artists.length}\n\n`;
+  markdown += '---\n\n';
+  
+  artists.forEach((artist, index) => {
+    markdown += `## ${index + 1}. ${artist.name}\n\n`;
+    
+    if (artist.summary && artist.summary !== 'N/A') {
+      markdown += `### Summary\n${artist.summary}\n\n`;
+    }
+    
+    markdown += '### Details\n\n';
+    if (artist.guru !== 'N/A') markdown += `**Guru:** ${artist.guru}\n\n`;
+    if (artist.gharana !== 'N/A') markdown += `**Gharana:** ${artist.gharana}\n\n`;
+    if (artist.notableAchievements !== 'N/A') markdown += `**Notable Achievements:** ${artist.notableAchievements}\n\n`;
+    if (artist.disciples !== 'N/A') markdown += `**Disciples:** ${artist.disciples}\n\n`;
+    
+    markdown += '### Verification Status\n\n';
+    markdown += `- **Verification Progress:** ${artist.metadata.verificationPercentage}%\n`;
+    markdown += `- **Name:** ${artist.verification.name ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Guru:** ${artist.verification.guru ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Gharana:** ${artist.verification.gharana ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Achievements:** ${artist.verification.notableAchievements ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Disciples:** ${artist.verification.disciples ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Summary:** ${artist.verification.summary ? '✅ Verified' : '❌ Unverified'}\n\n`;
+    
+    markdown += '### Sources\n\n';
+    if (artist.sources.name !== 'N/A') markdown += `**Name Source:** ${artist.sources.name}\n\n`;
+    if (artist.sources.guru !== 'N/A') markdown += `**Guru Source:** ${artist.sources.guru}\n\n`;
+    if (artist.sources.gharana !== 'N/A') markdown += `**Gharana Source:** ${artist.sources.gharana}\n\n`;
+    if (artist.sources.notableAchievements !== 'N/A') markdown += `**Achievements Source:** ${artist.sources.notableAchievements}\n\n`;
+    if (artist.sources.disciples !== 'N/A') markdown += `**Disciples Source:** ${artist.sources.disciples}\n\n`;
+    if (artist.sources.summary !== 'N/A') markdown += `**Summary Source:** ${artist.sources.summary}\n\n`;
+    
+    markdown += `**Created:** ${new Date(artist.metadata.createdAt).toLocaleString()}\n\n`;
+    markdown += `**Last Updated:** ${new Date(artist.metadata.updatedAt).toLocaleString()}\n\n`;
+    
+    markdown += '---\n\n';
+  });
+  
+  return markdown;

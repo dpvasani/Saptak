@@ -79,6 +79,30 @@ export const apiService = {
   getUnverifiedArtists: (field) => api.get(`/api/artists/unverified${field ? `?field=${field}` : ''}`),
   getArtistStats: () => api.get('/api/artists/stats'),
 
+  // Delete operations
+  deleteArtist: (id) => api.delete(`/api/artists/${id}`),
+  bulkDeleteArtists: (ids) => api.delete('/api/artists', { data: { ids } }),
+
+  // Export operations
+  exportSingleArtist: (id, format) => api.get(`/api/artists/${id}/export?format=${format}`),
+  exportArtists: (format, ids = null) => api.post('/api/artists/export', { format, ids }),
+
+  // Delete operations for raags
+  deleteRaag: (id) => api.delete(`/api/raags/${id}`),
+  bulkDeleteRaags: (ids) => api.delete('/api/raags', { data: { ids } }),
+
+  // Export operations for raags
+  exportSingleRaag: (id, format) => api.get(`/api/raags/${id}/export?format=${format}`),
+  exportRaags: (format, ids = null) => api.post('/api/raags/export', { format, ids }),
+
+  // Delete operations for taals
+  deleteTaal: (id) => api.delete(`/api/taals/${id}`),
+  bulkDeleteTaals: (ids) => api.delete('/api/taals', { data: { ids } }),
+
+  // Export operations for taals
+  exportSingleTaal: (id, format) => api.get(`/api/taals/${id}/export?format=${format}`),
+  exportTaals: (format, ids = null) => api.post('/api/taals/export', { format, ids }),
+
   // Raags
   searchRaag: (name, useAI = false, aiProvider = 'openai') =>
     api.get(`/api/raags/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}`),

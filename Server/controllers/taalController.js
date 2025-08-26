@@ -252,4 +252,3 @@ exports.getVerificationStats = async (req, res) => {
     console.error('Error in getVerificationStats:', error);
     res.status(500).json({ message: 'Error fetching verification statistics' });
   }
-}; 

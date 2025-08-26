@@ -23,4 +23,16 @@ router.get('/:id', taalController.getTaalById);
 // Update taal
 router.put('/:id', taalController.updateTaal);
 
+// Delete taal
+router.delete('/:id', taalController.deleteTaal);
+
+// Bulk delete taals
+router.delete('/', taalController.bulkDeleteTaals);
+
+// Export single taal
+router.get('/:id/export', taalController.exportSingleTaal);
+
+// Export taals
+router.post('/export', taalController.exportTaals);
+
 module.exports = router; 

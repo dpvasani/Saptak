@@ -29,10 +29,16 @@ router.put('/:id', updateLimiter, validateId, validateArtistUpdate, asyncHandler
 // Delete artist
 router.delete('/:id', validateId, asyncHandler(artistController.deleteArtist));
 
+// Bulk delete artists
+router.delete('/', asyncHandler(artistController.bulkDeleteArtists));
+
 // Get partially verified artists
 router.get('/partial', asyncHandler(artistController.getPartiallyVerifiedArtists));
 
 // Export artists
-router.get('/export', asyncHandler(artistController.exportArtists));
+router.post('/export', asyncHandler(artistController.exportArtists));
+
+// Export single artist
+router.get('/:id/export', validateId, asyncHandler(artistController.exportSingleArtist));
 
 module.exports = router; 

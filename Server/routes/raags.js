@@ -23,4 +23,16 @@ router.get('/:id', raagController.getRaagById);
 // Update raag
 router.put('/:id', raagController.updateRaag);
 
+// Delete raag
+router.delete('/:id', raagController.deleteRaag);
+
+// Bulk delete raags
+router.delete('/', raagController.bulkDeleteRaags);
+
+// Export single raag
+router.get('/:id/export', raagController.exportSingleRaag);
+
+// Export raags
+router.post('/export', raagController.exportRaags);
+
 module.exports = router; 
