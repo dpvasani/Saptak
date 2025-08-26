@@ -420,7 +420,7 @@ exports.exportRaags = async (req, res) => {
 };
 
 // Helper functions
-const formatRaagForExport = (raag) => {
+function formatRaagForExport(raag) {
   return {
     id: raag._id,
     name: raag.name?.value || 'N/A',
@@ -463,15 +463,15 @@ const formatRaagForExport = (raag) => {
       verificationPercentage: calculateRaagVerificationPercentage(raag)
     }
   };
-};
+}
 
-const calculateRaagVerificationPercentage = (raag) => {
+function calculateRaagVerificationPercentage(raag) {
   const fields = ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition'];
   const verifiedFields = fields.filter(field => raag[field]?.verified);
   return Math.round((verifiedFields.length / fields.length) * 100);
-};
+}
 
-const generateRaagMarkdown = (raags) => {
+function generateRaagMarkdown(raags) {
   let markdown = '# Indian Classical Music Raags\n\n';
   markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
   markdown += `**Total Raags:** ${raags.length}\n\n`;
@@ -508,5 +508,4 @@ const generateRaagMarkdown = (raags) => {
   });
   
   return markdown;
-};
-}; 
+} 

@@ -4,6 +4,7 @@ const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
 const { webScrapingLimiter } = require('../middleware/rateLimiter');
+const mongoose = require('mongoose');
 
 exports.searchTaal = async (req, res) => {
   try {
@@ -102,6 +103,9 @@ exports.getAllTaals = async (req, res) => {
 exports.getTaalById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid taal id' });
+    }
     const taal = await Taal.findById(id);
     
     if (!taal) {
@@ -252,3 +256,201 @@ exports.getVerificationStats = async (req, res) => {
     console.error('Error in getVerificationStats:', error);
     res.status(500).json({ message: 'Error fetching verification statistics' });
   }
+};
+
+exports.deleteTaal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid taal id' });
+    }
+    const taal = await Taal.findByIdAndDelete(id);
+    if (!taal) {
+      return res.status(404).json({ success: false, message: 'Taal not found' });
+    }
+    res.json({
+      success: true,
+      message: 'Taal deleted successfully',
+      data: { deletedId: id, deletedName: taal.name?.value || '' }
+    });
+  } catch (error) {
+    console.error('Error in deleteTaal:', error);
+    res.status(500).json({ success: false, message: 'Error deleting taal' });
+  }
+};
+
+exports.bulkDeleteTaals = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Taal IDs array is required' });
+    }
+    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({ success: false, message: `Invalid taal IDs: ${invalidIds.join(', ')}` });
+    }
+    const taalsToDelete = await Taal.find({ _id: { $in: ids } }).select('name.value');
+    const deletedNames = taalsToDelete.map(t => t.name.value);
+    const result = await Taal.deleteMany({ _id: { $in: ids } });
+    res.json({
+      success: true,
+      message: `${result.deletedCount} taals deleted successfully`,
+      data: { deletedCount: result.deletedCount, deletedIds: ids, deletedNames }
+    });
+  } catch (error) {
+    console.error('Error in bulkDeleteTaals:', error);
+    res.status(500).json({ success: false, message: 'Error deleting taals' });
+  }
+};
+
+exports.exportSingleTaal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { format = 'json' } = req.query;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid taal id' });
+    }
+    const taal = await Taal.findById(id);
+    if (!taal) {
+      return res.status(404).json({ success: false, message: 'Taal not found' });
+    }
+    const exportData = formatTaalForExport(taal);
+    switch (format.toLowerCase()) {
+      case 'markdown': {
+        const md = generateTaalMarkdown([exportData]);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${(taal.name?.value || 'taal').replace(/[^a-zA-Z0-9]/g, '-')}.md"`);
+        res.send(md);
+        break;
+      }
+      default:
+        res.json({ success: true, data: exportData });
+    }
+  } catch (error) {
+    console.error('Error in exportSingleTaal:', error);
+    res.status(500).json({ success: false, message: 'Error exporting taal' });
+  }
+};
+
+exports.exportTaals = async (req, res) => {
+  try {
+    const { format = 'json', ids } = req.body || {};
+    let query = {};
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+      if (invalidIds.length > 0) {
+        return res.status(400).json({ success: false, message: `Invalid taal IDs: ${invalidIds.join(', ')}` });
+      }
+      query = { _id: { $in: ids } };
+    }
+    const taals = await Taal.find(query).sort({ 'name.value': 1 });
+    if (taals.length === 0) {
+      return res.status(404).json({ success: false, message: 'No taals found to export' });
+    }
+    const exportData = taals.map(t => formatTaalForExport(t));
+    const filename = ids && ids.length > 0 ? `selected-taals-${ids.length}` : `all-taals-${taals.length}`;
+    switch (format.toLowerCase()) {
+      case 'markdown': {
+        const md = generateTaalMarkdown(exportData);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
+        res.send(md);
+        break;
+      }
+      default:
+        res.json({
+          success: true,
+          data: { taals: exportData, count: taals.length, exported: new Date().toISOString() }
+        });
+    }
+  } catch (error) {
+    console.error('Error in exportTaals:', error);
+    res.status(500).json({ success: false, message: 'Error exporting taals' });
+  }
+};
+
+function formatTaalForExport(taal) {
+  return {
+    id: taal._id,
+    name: taal.name?.value || 'N/A',
+    numberOfBeats: taal.numberOfBeats?.value || 'N/A',
+    divisions: taal.divisions?.value || 'N/A',
+    taaliCount: taal.taali?.count?.value || 'N/A',
+    taaliBeatNumbers: taal.taali?.beatNumbers?.value || 'N/A',
+    khaaliCount: taal.khaali?.count?.value || 'N/A',
+    khaaliBeatNumbers: taal.khaali?.beatNumbers?.value || 'N/A',
+    jaati: taal.jaati?.value || 'N/A',
+    verification: {
+      name: taal.name?.verified || false,
+      numberOfBeats: taal.numberOfBeats?.verified || false,
+      divisions: taal.divisions?.verified || false,
+      taaliCount: taal.taali?.count?.verified || false,
+      taaliBeatNumbers: taal.taali?.beatNumbers?.verified || false,
+      khaaliCount: taal.khaali?.count?.verified || false,
+      khaaliBeatNumbers: taal.khaali?.beatNumbers?.verified || false,
+      jaati: taal.jaati?.verified || false
+    },
+    sources: {
+      name: taal.name?.reference || 'N/A',
+      numberOfBeats: taal.numberOfBeats?.reference || 'N/A',
+      divisions: taal.divisions?.reference || 'N/A',
+      taaliCount: taal.taali?.count?.reference || 'N/A',
+      taaliBeatNumbers: taal.taali?.beatNumbers?.reference || 'N/A',
+      khaaliCount: taal.khaali?.count?.reference || 'N/A',
+      khaaliBeatNumbers: taal.khaali?.beatNumbers?.reference || 'N/A',
+      jaati: taal.jaati?.reference || 'N/A'
+    },
+    metadata: {
+      createdAt: taal.createdAt,
+      updatedAt: taal.updatedAt,
+      verificationPercentage: calculateTaalVerificationPercentage(taal)
+    }
+  };
+}
+
+function calculateTaalVerificationPercentage(taal) {
+  const flags = [
+    taal.name?.verified,
+    taal.numberOfBeats?.verified,
+    taal.divisions?.verified,
+    taal.taali?.count?.verified,
+    taal.taali?.beatNumbers?.verified,
+    taal.khaali?.count?.verified,
+    taal.khaali?.beatNumbers?.verified,
+    taal.jaati?.verified,
+  ];
+  const valid = flags.filter(Boolean).length;
+  return Math.round((valid / flags.length) * 100);
+}
+
+function generateTaalMarkdown(taals) {
+  let markdown = '# Indian Classical Music Taals\n\n';
+  markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
+  markdown += `**Total Taals:** ${taals.length}\n\n`;
+  markdown += '---\n\n';
+  taals.forEach((t, index) => {
+    markdown += `## ${index + 1}. ${t.name}\n\n`;
+    markdown += '### Rhythmic Details\n\n';
+    if (t.numberOfBeats !== 'N/A') markdown += `**Beats:** ${t.numberOfBeats}\n\n`;
+    if (t.divisions !== 'N/A') markdown += `**Divisions:** ${t.divisions}\n\n`;
+    if (t.taaliCount !== 'N/A') markdown += `**Taali Count:** ${t.taaliCount}\n\n`;
+    if (t.taaliBeatNumbers !== 'N/A') markdown += `**Taali Beats:** ${t.taaliBeatNumbers}\n\n`;
+    if (t.khaaliCount !== 'N/A') markdown += `**Khaali Count:** ${t.khaaliCount}\n\n`;
+    if (t.khaaliBeatNumbers !== 'N/A') markdown += `**Khaali Beats:** ${t.khaaliBeatNumbers}\n\n`;
+    if (t.jaati !== 'N/A') markdown += `**Jaati:** ${t.jaati}\n\n`;
+
+    markdown += '### Verification Status\n\n';
+    markdown += `- **Verification Progress:** ${t.metadata.verificationPercentage}%\n`;
+    markdown += `- **Name:** ${t.verification.name ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Beats:** ${t.verification.numberOfBeats ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Divisions:** ${t.verification.divisions ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Taali Count:** ${t.verification.taaliCount ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Taali Beats:** ${t.verification.taaliBeatNumbers ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Khaali Count:** ${t.verification.khaaliCount ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Khaali Beats:** ${t.verification.khaaliBeatNumbers ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Jaati:** ${t.verification.jaati ? '✅ Verified' : '❌ Unverified'}\n\n`;
+
+    markdown += '---\n\n';
+  });
+  return markdown;
+}

@@ -4,6 +4,7 @@ const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
 const { aiLimiter, webScrapingLimiter } = require('../middleware/rateLimiter');
+const mongoose = require('mongoose');
 
 exports.searchArtist = async (req, res) => {
   try {
@@ -625,3 +626,4 @@ exports.generateMarkdown = (artists) => {
   });
   
   return markdown;
+};
