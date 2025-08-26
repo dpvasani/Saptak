@@ -173,7 +173,9 @@ exports.getUnverifiedArtists = async (req, res) => {
         'gharana.verified': false,
         'notableAchievements.verified': false,
         'disciples.verified': false
-      };
+      }
+      'disciples.verified': false,
+      'summary.verified': false
     }
     
     const artists = await Artist.find(query).sort({ createdAt: -1 });
@@ -197,7 +199,6 @@ exports.getVerificationStats = async (req, res) => {
     const gharanaVerified = await Artist.countDocuments({ 'gharana.verified': true });
     const achievementsVerified = await Artist.countDocuments({ 'notableAchievements.verified': true });
     const disciplesVerified = await Artist.countDocuments({ 'disciples.verified': true });
-    const summaryVerified = await Artist.countDocuments({ 'summary.verified': true });
     
     // Count artists with at least one verified field
     const partiallyVerified = await Artist.countDocuments({
@@ -206,9 +207,7 @@ exports.getVerificationStats = async (req, res) => {
         { 'guru.verified': true },
         { 'gharana.verified': true },
         { 'notableAchievements.verified': true },
-        { 'disciples.verified': true },
-        { 'summary.verified': true }
-        { 'summary.verified': true }
+        { 'disciples.verified': true }
       ]
     });
     
@@ -218,8 +217,7 @@ exports.getVerificationStats = async (req, res) => {
       'guru.verified': true,
       'gharana.verified': true,
       'notableAchievements.verified': true,
-      'disciples.verified': true,
-      'summary.verified': true
+      'disciples.verified': true
     });
     
     const unverified = totalArtists - partiallyVerified;
@@ -234,8 +232,7 @@ exports.getVerificationStats = async (req, res) => {
         guru: guruVerified,
         gharana: gharanaVerified,
         notableAchievements: achievementsVerified,
-        disciples: disciplesVerified,
-        summary: summaryVerified
+        disciples: disciplesVerified
       },
       percentages: {
         fullyVerified: totalArtists > 0 ? ((fullyVerified / totalArtists) * 100).toFixed(2) : 0,
