@@ -83,41 +83,42 @@ After conducting this comprehensive research, provide the information in this ex
 {
   "name": {
     "value": "${name}",
-    "reference": "Most authoritative source URL (prefer official website, then Wikipedia)",
+    "reference": "Primary source URL - verify this link works and is accessible",
     "verified": false
   },
   "guru": {
-    "value": "Complete name of primary guru/teacher with titles (Ustad/Pandit if applicable)",
-    "reference": "Specific URL or source where guru/teacher information is clearly mentioned",
+    "value": "Complete name of primary guru/teacher with titles (Ustad/Pandit if applicable) - if multiple gurus, list primary one",
+    "reference": "Primary source URL | Secondary source URL (if multiple sources found) - ensure URLs are working and accessible",
     "verified": false
   },
   "gharana": {
-    "value": "Complete gharana name with proper suffix (e.g., 'Punjab Gharana', 'Kirana Gharana', 'Gwalior Gharana')",
-    "reference": "URL or source specifically mentioning gharana tradition/lineage",
+    "value": "Complete gharana name with proper suffix (e.g., 'Punjab Gharana', 'Kirana Gharana', 'Gwalior Gharana') - be specific about the tradition",
+    "reference": "Primary source URL | Secondary source URL (if multiple sources confirm) - verify links work",
     "verified": false
   },
   "notableAchievements": {
-    "value": "Comprehensive list of major awards, honors, recognitions with years if available (Padma Shri, Padma Bhushan, Sangeet Natak Akademi, Grammy, etc.)",
-    "reference": "URL or source listing achievements, awards, or official recognition",
+    "value": "Comprehensive list of major awards with years: Padma Shri (year), Padma Bhushan (year), Grammy Awards (years), Sangeet Natak Akademi (year), etc.",
+    "reference": "Awards source URL | Official recognition URL | Wikipedia URL (if multiple sources list different awards) - ensure all links are accessible",
     "verified": false
   },
   "disciples": {
-    "value": "Names of notable disciples, students, or proteges separated by commas with their instruments/specialization if mentioned",
-    "reference": "URL or source mentioning disciples, students, or teaching legacy",
+    "value": "Names of notable disciples/students with instruments: Name 1 (tabla), Name 2 (percussion), etc. - if no specific disciples found, state 'No specific disciples documented in available sources'",
+    "reference": "Teaching source URL | Student mention URL | Interview URL (if multiple sources mention students) - if no disciples found, state 'No authoritative sources found listing specific disciples'",
     "verified": false
   }
 }
 
 CRITICAL REQUIREMENTS:
+- **URL VALIDATION**: Test each URL before including - ensure they are accessible and working
+- **REFERENCE FORMATTING**: Use format "Primary URL | Secondary URL | Third URL" for multiple sources
+- **LINK VERIFICATION**: Only include URLs that actually contain the mentioned information
+- **SOURCE QUALITY**: Prioritize official websites, verified social media, Wikipedia, academic institutions
+- **BROKEN LINK HANDLING**: If a source seems relevant but link is broken, note as "Source found but link inaccessible: [description]"
+- **NO FABRICATION**: If information is not found in accessible sources, clearly state this in the reference
 - Conduct thorough multi-step research as outlined above
-- Use ONLY verified information found in your comprehensive search
-- Provide REAL, accessible URLs as references (test that they work)
-- For missing information, use empty string but explain in reference why not found
-- Do NOT fabricate, assume, or hallucinate any information
-- Prioritize: Official websites > Social media profiles > Wikipedia > Academic sources > Music institutions
-- Pay special attention to gharana and disciple information as these are often missed
-- Look for biographical interviews, artist statements, and detailed profiles
-- Return ONLY the JSON object without any additional text or formatting`;
+- **MULTIPLE SOURCE VERIFICATION**: When multiple sources confirm the same information, list them separated by " | "
+- **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
+- **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -675,6 +676,9 @@ Always provide accurate information with verifiable sources. Return only valid J
         
         // Convert verified to boolean if it's not already
         data[field].verified = Boolean(data[field].verified);
+        
+        // Clean and format references
+        data[field].reference = this.cleanReference(data[field].reference);
       }
     });
     
@@ -685,6 +689,9 @@ Always provide accurate information with verifiable sources. Return only valid J
         if (typeof data[field].reference === 'undefined') data[field].reference = 'Information found but source not specified';
         if (typeof data[field].verified === 'undefined') data[field].verified = false;
         data[field].verified = Boolean(data[field].verified);
+        
+        // Clean and format references
+        data[field].reference = this.cleanReference(data[field].reference);
       }
     });
 
@@ -692,58 +699,89 @@ Always provide accurate information with verifiable sources. Return only valid J
     if (data.taali) {
       if (!data.taali.count) data.taali.count = { value: '', reference: 'Information not found', verified: false };
       if (!data.taali.beatNumbers) data.taali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
+      
+      // Clean references for nested fields
+      data.taali.count.reference = this.cleanReference(data.taali.count.reference);
+      data.taali.beatNumbers.reference = this.cleanReference(data.taali.beatNumbers.reference);
     }
     
     if (data.khaali) {
       if (!data.khaali.count) data.khaali.count = { value: '', reference: 'Information not found', verified: false };
       if (!data.khaali.beatNumbers) data.khaali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
+      
+      // Clean references for nested fields
+      data.khaali.count.reference = this.cleanReference(data.khaali.count.reference);
+      data.khaali.beatNumbers.reference = this.cleanReference(data.khaali.beatNumbers.reference);
     }
+  }
 
-    // Clean up URLs - ensure they're valid
-    Object.keys(data).forEach(key => {
-      if (data[key] && data[key].reference) {
-        const ref = data[key].reference;
-        // Enhanced URL validation and cleanup
-        if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not') && !ref.includes('search results') && !ref.includes('comprehensive search')) {
-          // If it looks like it should be a URL but isn't formatted properly
-          if (ref.includes('.com') || ref.includes('.org') || ref.includes('.edu') || ref.includes('wikipedia')) {
-            data[key].reference = 'Improperly formatted URL: ' + ref;
-          } else {
-            data[key].reference = 'Non-URL reference: ' + ref;
-          }
-        }
-      }
-    });
+  cleanReference(reference) {
+    if (!reference) return 'No source provided';
     
-    // Handle nested taal fields URL validation
-    if (data.taali) {
-      ['count', 'beatNumbers'].forEach(subField => {
-        if (data.taali[subField] && data.taali[subField].reference) {
-          const ref = data.taali[subField].reference;
-          if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not')) {
-            if (ref.includes('.com') || ref.includes('.org') || ref.includes('.edu') || ref.includes('wikipedia')) {
-              data.taali[subField].reference = 'Improperly formatted URL: ' + ref;
-            } else {
-              data.taali[subField].reference = 'Non-URL reference: ' + ref;
-            }
-          }
-        }
-      });
+    // Handle multiple URLs separated by various delimiters
+    const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
+    let cleanRef = reference;
+    
+    // Check if it contains multiple URLs
+    let hasMultipleUrls = false;
+    for (const separator of urlSeparators) {
+      if (cleanRef.includes(separator)) {
+        hasMultipleUrls = true;
+        break;
+      }
     }
     
-    if (data.khaali) {
-      ['count', 'beatNumbers'].forEach(subField => {
-        if (data.khaali[subField] && data.khaali[subField].reference) {
-          const ref = data.khaali[subField].reference;
-          if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not')) {
-            if (ref.includes('.com') || ref.includes('.org') || ref.includes('.edu') || ref.includes('wikipedia')) {
-              data.khaali[subField].reference = 'Improperly formatted URL: ' + ref;
-            } else {
-              data.khaali[subField].reference = 'Non-URL reference: ' + ref;
-            }
-          }
+    if (hasMultipleUrls) {
+      // Split and clean multiple URLs
+      let urls = cleanRef;
+      for (const separator of urlSeparators) {
+        urls = urls.split(separator).join(' | ');
+      }
+      
+      // Clean each URL
+      const urlList = urls.split(' | ').map(url => {
+        const trimmedUrl = url.trim();
+        
+        // Remove parenthetical descriptions
+        const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
+        
+        // Validate URL format
+        if (this.isValidUrl(cleanUrl)) {
+          return cleanUrl;
+        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
+          return `Invalid URL format: ${cleanUrl}`;
+        } else {
+          return `Non-URL reference: ${cleanUrl}`;
         }
-      });
+      }).filter(url => url.length > 0);
+      
+      return urlList.join(' | ');
+    } else {
+      // Single reference
+      const trimmedRef = cleanRef.trim();
+      
+      // Remove parenthetical descriptions
+      const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
+      
+      // Validate single URL
+      if (this.isValidUrl(cleanSingleRef)) {
+        return cleanSingleRef;
+      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
+        return `Invalid URL format: ${cleanSingleRef}`;
+      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
+        return cleanSingleRef; // Keep explanatory messages as-is
+      } else {
+        return `Non-URL reference: ${cleanSingleRef}`;
+      }
+    }
+  }
+  
+  isValidUrl(string) {
+    try {
+      const url = new URL(string);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+      return false;
     }
   }
 }
