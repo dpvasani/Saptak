@@ -105,27 +105,33 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
       name: 'Google Gemini',
       models: [
         {
-          id: 'gemini-1.5-flash',
-          name: 'Gemini 1.5 Flash (via Google)',
-          description: 'Fast and efficient Gemini model',
+          id: 'gemini-2.5-flash',
+          name: 'Gemini 2.5 Flash',
+          description: 'Efficient model for speed and cost-effectiveness, ideal for high-throughput metadata collection',
           source: 'Google Direct'
         },
         {
-          id: 'gemini-1.5-pro',
-          name: 'Gemini 1.5 Pro (via Google)',
-          description: 'Most capable Gemini model',
+          id: 'gemini-2.5-pro',
+          name: 'Gemini 2.5 Pro',
+          description: 'Most advanced model for complex reasoning and comprehensive research tasks',
           source: 'Google Direct'
         },
         {
-          id: 'gemini-pro-vision',
-          name: 'Gemini Pro Vision (via Google)',
-          description: 'Gemini with multimodal capabilities',
+          id: 'gemini-2.5-flash-lite',
+          name: 'Gemini 2.5 Flash-Lite',
+          description: 'Most cost-effective and fastest model for high-throughput metadata extraction',
           source: 'Google Direct'
         },
         {
-          id: 'gemini-ultra',
-          name: 'Gemini Ultra (via Google)',
-          description: 'Most advanced Gemini model',
+          id: 'gemini-embedding',
+          name: 'Gemini Embedding',
+          description: 'Specialized for semantic search and text classification tasks',
+          source: 'Google Direct'
+        },
+        {
+          id: 'gemma-3',
+          name: 'Gemma 3',
+          description: 'Lightweight open model for efficient execution and multimodal input',
           source: 'Google Direct'
         }
       ]

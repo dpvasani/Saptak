@@ -3,15 +3,29 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 class GeminiResearcher {
   constructor() {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Use the most advanced model for comprehensive research
+    this.defaultModel = "gemini-2.5-pro";
+    this.fallbackModels = [
+      'gemini-2.5-flash', // Fast and efficient for most tasks
+      'gemini-2.5-flash-lite', // Most cost-effective
+      'gemma-3' // Lightweight fallback
+    ];
   }
 
-  async researchArtist(name) {
+  getModel(modelName = null) {
+    const model = modelName || this.defaultModel;
+    return this.genAI.getGenerativeModel({ model });
+  }
+
+  async researchArtist(name, modelName = null) {
     console.log('Starting Gemini AI research for artist:', name);
     
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
       throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
     }
+    
+    const model = this.getModel(modelName);
+    console.log(`Using Gemini model: ${modelName || this.defaultModel}`);
     
     // Multi-step enhanced prompt for comprehensive artist research
     const prompt = `I need you to conduct a comprehensive, multi-step research about the Indian Classical Music artist "${name}". Please search systematically through these sources in order:
@@ -127,7 +141,7 @@ CRITICAL REQUIREMENTS:
 - **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information`;
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
@@ -136,20 +150,26 @@ CRITICAL REQUIREMENTS:
       return this.parseAIResponse(text);
     } catch (error) {
       console.error('Error in Gemini research:', error);
-      if (error.response) {
-        console.error('Gemini API error:', error.response.data);
-        throw new Error(`Gemini API error: ${error.response.data.error?.message || error.message}`);
+      
+      // Try fallback models if primary model fails
+      if (error.message.includes('model') || error.status === 400) {
+        console.log('Trying with fallback models...');
+        return await this.researchWithFallbackModel(name, prompt, 'artist');
       }
+      
       throw new Error('Failed to research artist using Gemini AI: ' + error.message);
     }
   }
 
-  async researchRaag(name) {
+  async researchRaag(name, modelName = null) {
     console.log('Starting Gemini AI research for raag:', name);
     
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
       throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
     }
+    
+    const model = this.getModel(modelName);
+    console.log(`Using Gemini model: ${modelName || this.defaultModel}`);
     
     const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
 
@@ -253,7 +273,7 @@ REQUIREMENTS:
 - Use real, accessible URLs as references that can be verified`;
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
@@ -262,20 +282,25 @@ REQUIREMENTS:
       return this.parseAIResponse(text);
     } catch (error) {
       console.error('Error in Gemini research:', error);
-      if (error.response) {
-        console.error('Gemini API error:', error.response.data);
-        throw new Error(`Gemini API error: ${error.response.data.error?.message || error.message}`);
+      
+      if (error.message.includes('model') || error.status === 400) {
+        console.log('Trying with fallback models...');
+        return await this.researchWithFallbackModel(name, prompt, 'raag');
       }
+      
       throw new Error('Failed to research raag using Gemini AI: ' + error.message);
     }
   }
 
-  async researchTaal(name) {
+  async researchTaal(name, modelName = null) {
     console.log('Starting Gemini AI research for taal:', name);
     
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
       throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
     }
+    
+    const model = this.getModel(modelName);
+    console.log(`Using Gemini model: ${modelName || this.defaultModel}`);
     
     const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
 
@@ -373,7 +398,7 @@ REQUIREMENTS:
 - Use real, accessible URLs as references that can be verified`;
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
@@ -382,10 +407,12 @@ REQUIREMENTS:
       return this.parseAIResponse(text);
     } catch (error) {
       console.error('Error in Gemini research:', error);
-      if (error.response) {
-        console.error('Gemini API error:', error.response.data);
-        throw new Error(`Gemini API error: ${error.response.data.error?.message || error.message}`);
+      
+      if (error.message.includes('model') || error.status === 400) {
+        console.log('Trying with fallback models...');
+        return await this.researchWithFallbackModel(name, prompt, 'taal');
       }
+      
       throw new Error('Failed to research taal using Gemini AI: ' + error.message);
     }
   }
@@ -563,6 +590,27 @@ REQUIREMENTS:
     } catch (_) {
       return false;
     }
+  }
+
+  async researchWithFallbackModel(name, prompt, type) {
+    for (const modelName of this.fallbackModels) {
+      try {
+        console.log(`Trying Gemini fallback model: ${modelName}`);
+        const model = this.getModel(modelName);
+        
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
+        
+        console.log(`Gemini fallback model ${modelName} worked!`);
+        return this.parseAIResponse(text);
+      } catch (fallbackError) {
+        console.log(`Gemini fallback model ${modelName} failed:`, fallbackError.message);
+        continue;
+      }
+    }
+
+    throw new Error('All Gemini models failed. Please check your API access and model availability.');
   }
 }
 

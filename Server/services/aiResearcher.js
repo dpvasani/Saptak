@@ -7,12 +7,15 @@ class AIResearcher {
     });
   }
 
-  async researchArtist(name) {
+  async researchArtist(name, modelName = null) {
     console.log('Starting AI research for artist:', name);
     
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
       throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
     }
+    
+    const model = modelName || "gpt-4-turbo";
+    console.log(`Using OpenAI model: ${model}`);
     
     // Multi-step enhanced prompt for comprehensive artist research
     const prompt = `I need you to conduct a comprehensive, multi-step research about the Indian Classical Music artist "${name}". Please search systematically through these sources in order:
