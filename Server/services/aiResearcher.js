@@ -195,15 +195,12 @@ RESPONSE REQUIREMENTS:
     }
   }
 
-  async researchRaag(name, modelName = null) {
+  async researchRaag(name) {
     console.log('Starting AI research for raag:', name);
     
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
       throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
     }
-    
-    const model = modelName || "gpt-4-turbo";
-    console.log(`Using OpenAI model: ${model}`);
     
     const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
 
@@ -362,12 +359,15 @@ CRITICAL REQUIREMENTS:
     }
   }
 
-  async researchTaal(name) {
+  async researchTaal(name, modelName = null) {
     console.log('Starting AI research for taal:', name);
     
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
       throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
     }
+    
+    const model = modelName || "gpt-4-turbo";
+    console.log(`Using OpenAI model: ${model}`);
     
     const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
 
