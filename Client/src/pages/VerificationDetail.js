@@ -10,7 +10,8 @@ import {
   ExclamationTriangleIcon,
   PencilIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const VerificationDetail = () => {
