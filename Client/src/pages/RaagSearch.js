@@ -226,6 +226,100 @@ const RaagSearch = () => {
     }
   };
 
+  const renderSources = (reference) => {
+    if (!reference) return null;
+
+    // Check if it's a "no source" message
+    const noSourceIndicators = [
+      'no authoritative sources',
+      'information not found',
+      'no reliable information',
+      'no specific',
+      'not available',
+      'no official',
+      'sources not found'
+    ];
+
+    const isNoSourceMessage = noSourceIndicators.some(indicator => 
+      reference.toLowerCase().includes(indicator)
+    );
+
+    if (isNoSourceMessage) {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">No Sources Available</p>
+              <p className="text-sm text-amber-700 mt-1">{reference}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Check if it contains multiple sources (separated by |)
+    const sources = reference.split(' | ').map(source => source.trim()).filter(source => source.length > 0);
+
+    if (sources.length === 1) {
+      // Single source
+      const source = sources[0];
+      const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
+      
+      if (isValidUrl) {
+        return (
+          <a
+            href={source}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-sm text-purple-700 hover:underline break-all"
+          >
+            {source}
+            <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+          </a>
+        );
+      } else {
+        return (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-sm text-gray-700">{source}</p>
+          </div>
+        );
+      }
+    }
+
+    // Multiple sources
+    return (
+      <div className="space-y-2">
+        {sources.map((source, index) => {
+          const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
+          
+          return (
+            <div key={index} className="flex items-start space-x-2">
+              <span className="text-sm font-medium text-gray-600 mt-1 flex-shrink-0">
+                Link {index + 1}:
+              </span>
+              {isValidUrl ? (
+                <a
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm text-purple-700 hover:underline break-all"
+                >
+                  {source}
+                  <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+                </a>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 flex-1">
+                  <p className="text-sm text-gray-700">{source}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderField = (field) => {
     if (!raag) return null;
 
@@ -317,15 +411,7 @@ const RaagSearch = () => {
             {reference && (
               <div className="border-t pt-4">
                 <p className="text-sm font-medium text-gray-700 mb-2">Source:</p>
-                <a
-                  href={reference}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-sm text-purple-700 hover:underline break-all"
-                >
-                  {reference}
-                  <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
-                </a>
+                {renderSources(reference)}
               </div>
             )}
           </>
