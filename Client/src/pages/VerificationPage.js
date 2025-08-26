@@ -1,561 +1,257 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-import { 
-  CheckCircleIcon, 
-  XCircleIcon, 
-  ClockIcon,
-  EyeIcon,
-  PencilIcon,
-  ChartBarIcon,
-  ArrowLeftIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline';
+const Taal = require('../models/Taal');
+const scraperService = require('../services/scraper');
+const aiResearcher = require('../services/aiResearcher');
+const geminiResearcher = require('../services/geminiResearcher');
+const perplexityResearcher = require('../services/perplexityResearcher');
+const { webScrapingLimiter } = require('../middleware/rateLimiter');
 
-const VerificationPage = () => {
-  const { category } = useParams();
-  const [activeTab, setActiveTab] = useState('all');
-  const [data, setData] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedField, setSelectedField] = useState('');
-  const [selectedItems, setSelectedItems] = useState(new Set());
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [bulkAction, setBulkAction] = useState('');
-
-  const categoryConfig = {
-    artists: {
-      title: 'Artists',
-      fields: ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'],
-      color: 'green'
-    },
-    raags: {
-      title: 'Raags',
-      fields: ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition'],
-      color: 'purple'
-    },
-    taals: {
-      title: 'Taals',
-      fields: ['name', 'numberOfBeats', 'divisions', 'taali.count', 'taali.beatNumbers', 'khaali.count', 'khaali.beatNumbers', 'jaati'],
-      color: 'orange'
-    }
-  };
-
-  const config = categoryConfig[category];
-  const colorClasses = {
-    green: {
-      bg: 'bg-green-50',
-      text: 'text-green-700',
-      border: 'border-green-200',
-      button: 'bg-green-600 hover:bg-green-700',
-      badge: 'bg-green-100 text-green-800'
-    },
-    purple: {
-      bg: 'bg-purple-50',
-      text: 'text-purple-700',
-      border: 'border-purple-200',
-      button: 'bg-purple-600 hover:bg-purple-700',
-      badge: 'bg-purple-100 text-purple-800'
-    },
-    orange: {
-      bg: 'bg-orange-50',
-      text: 'text-orange-700',
-      border: 'border-orange-200',
-      button: 'bg-orange-600 hover:bg-orange-700',
-      badge: 'bg-orange-100 text-orange-800'
-    }
-  };
-
-  const colors = colorClasses[config?.color] || colorClasses.green;
-
-  useEffect(() => {
-    if (config) {
-      fetchData();
-      fetchStats();
-    }
-  }, [category, activeTab, selectedField]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      let url = `http://localhost:5000/api/${category}`;
-      
-      if (activeTab === 'verified') {
-        url += '/verified';
-      } else if (activeTab === 'unverified') {
-        url += '/unverified';
-      }
-      
-      if (selectedField) {
-        url += `?field=${selectedField}`;
-      }
-      
-      const response = await axios.get(url);
-      let fetchedData = response.data.data || response.data;
-      
-      // Handle partial verification filtering on frontend since we don't have a backend endpoint
-      if (activeTab === 'partial') {
-        fetchedData = fetchedData.filter(item => {
-          const verifiedFields = config.fields.filter(field => getFieldVerified(item, field));
-          return verifiedFields.length > 0 && verifiedFields.length < config.fields.length;
-        });
-      }
-      
-      setData(fetchedData);
-    } catch (error) {
-      console.error(`Error fetching ${category}:`, error);
-      setError(`Failed to load ${category}. Please try again.`);
-      toast.error(`Failed to load ${category}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/${category}/stats`);
-      setStats(response.data);
-    } catch (error) {
-      console.error(`Error fetching ${category} stats:`, error);
-    }
-  };
-
-  const handleVerification = async (id, field, currentStatus) => {
-    try {
-      const item = data.find(d => d._id === id);
-      if (!item) return;
-
-      const updatedItem = {
-        ...item,
-        [field]: {
-          ...item[field],
-          verified: !currentStatus
-        }
-      };
-
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
-      
-      // Update local state
-      setData(prevData => 
-        prevData.map(d => 
-          d._id === id ? updatedItem : d
-        )
-      );
-      
-      toast.success(`${field} verification updated successfully`);
-      fetchStats(); // Refresh stats
-    } catch (error) {
-      console.error('Error updating verification:', error);
-      toast.error('Failed to update verification status');
-    }
-  };
-
-  const handleItemSelect = (itemId) => {
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(itemId)) {
-      newSelected.delete(itemId);
-    } else {
-      newSelected.add(itemId);
-    }
-    setSelectedItems(newSelected);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedItems.size === data.length) {
-      setSelectedItems(new Set());
-    } else {
-      setSelectedItems(new Set(data.map(item => item._id)));
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedItems.size === 0) {
-      toast.warning('Please select items to delete');
-      return;
-    }
-
-    try {
-      const deletePromises = Array.from(selectedItems).map(id =>
-        axios.delete(`http://localhost:5000/api/${category}/${id}`)
-      );
-      
-      await Promise.all(deletePromises);
-      
-      toast.success(`${selectedItems.size} ${category} deleted successfully`);
-      setSelectedItems(new Set());
-      setShowDeleteModal(false);
-      fetchData();
-      fetchStats();
-    } catch (error) {
-      console.error('Error deleting items:', error);
-      toast.error('Failed to delete items');
-    }
-  };
-
-  const exportData = async (format) => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/${category}/export?format=${format}`, {
-        responseType: format === 'pdf' ? 'blob' : 'text'
-      });
-      
-      const blob = new Blob([response.data], {
-        type: format === 'pdf' ? 'application/pdf' : 
-              format === 'word' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
-              'text/markdown'
-      });
-      
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${category}-export.${format === 'word' ? 'docx' : format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success(`${category} exported as ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error('Error exporting data:', error);
-      toast.error('Failed to export data');
-    }
-  };
-
-  const getFieldValue = (item, field) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.value || '';
-    }
-    return item[field]?.value || '';
-  };
-
-  const getFieldVerified = (item, field) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.verified || false;
-    }
-    return item[field]?.verified || false;
-  };
-
-  const getFieldReference = (item, field) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.reference || '';
-    }
-    return item[field]?.reference || '';
-  };
-
-  const getVerificationStatus = (item) => {
-    const verifiedFields = config.fields.filter(field => getFieldVerified(item, field));
-    const totalFields = config.fields.length;
+exports.searchTaal = async (req, res) => {
+  try {
+    const { name, useAI, aiProvider, aiModel } = req.query;
+    console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
-    if (verifiedFields.length === totalFields) return 'fully';
-    if (verifiedFields.length > 0) return 'partial';
-    return 'none';
-  };
+    if (!name) {
+      return res.status(400).json({ message: 'Taal name is required' });
+    }
 
-  const StatCard = ({ title, value, subtitle, icon: Icon }) => (
-    <div className={`${colors.bg} rounded-lg p-4 ${colors.border} border`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className={`text-sm font-medium ${colors.text} uppercase tracking-wide`}>{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
-        </div>
-        <Icon className={`h-8 w-8 ${colors.text}`} />
-      </div>
-    </div>
-  );
+    let data;
+    if (useAI === 'true') {
+      // Use AI research - always get fresh data
+      const provider = aiProvider || 'openai'; // Default to OpenAI
+      const model = aiModel || 'default';
+      console.log(`Using ${provider} AI research (${model}) for taal:`, name);
+      try {
+        if (provider === 'perplexity') {
+          data = await perplexityResearcher.researchTaal(name, model);
+          console.log('Perplexity AI research successful, data received:', data);
+        } else if (provider === 'gemini') {
+          data = await geminiResearcher.researchTaal(name, model);
+          console.log('Gemini AI research successful, data received:', data);
+        } else {
+          data = await aiResearcher.researchTaal(name, model);
+          console.log('OpenAI research successful, data received:', data);
+        }
+      } catch (aiError) {
+        console.error(`${provider} AI research failed:`, aiError);
+        return res.status(500).json({ message: `${provider} AI research (${model}) failed: ` + aiError.message });
+      }
+    } else {
+      // Use traditional scraping
+      // Apply web scraping rate limiting
+      await new Promise((resolve, reject) => {
+        webScrapingLimiter(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      console.log('Using traditional scraping for taal:', name);
+      data = await scraperService.scrapeTaal(name);
+    }
 
-  if (!config) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600">Invalid category: {category}</p>
-          <Link to="/dashboard" className="text-primary-600 hover:text-primary-700 mt-2 inline-block">
-            ← Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
+    // Create new taal with the researched data
+    const taal = new Taal(data);
+    await taal.save();
+    console.log('Saved taal to database:', taal);
+
+    res.json(taal);
+  } catch (error) {
+    console.error('Error in searchTaal:', error);
+    res.status(500).json({ message: error.message || 'Error searching for taal' });
   }
-
-  if (loading && !data.length) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading {config.title.toLowerCase()}...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <Link 
-              to="/dashboard" 
-              className="mr-4 p-2 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-            >
-              <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
-            </Link>
-            <h1 className="text-4xl font-bold text-gray-900">{config.title} Verification</h1>
-          </div>
-          <p className="text-gray-600">Manage and verify {config.title.toLowerCase()} data</p>
-        </div>
-
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="Total"
-              value={stats.total}
-              icon={ChartBarIcon}
-            />
-            <StatCard
-              title="Fully Verified"
-              value={stats.fullyVerified}
-              subtitle={`${stats.percentages.fullyVerified}%`}
-              icon={CheckCircleIcon}
-            />
-            <StatCard
-              title="Partially Verified"
-              value={stats.partiallyVerified}
-              subtitle={`${stats.percentages.partiallyVerified}%`}
-              icon={ClockIcon}
-            />
-            <StatCard
-              title="Unverified"
-              value={stats.unverified}
-              subtitle={`${stats.percentages.unverified}%`}
-              icon={XCircleIcon}
-            />
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-              {['all', 'verified', 'partial', 'unverified'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    activeTab === tab
-                      ? `${colors.button} text-white`
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {tab === 'partial' ? 'Partially Verified' : 
-                   tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            {/* Field Filter */}
-            <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">Filter by field:</label>
-              <select
-                value={selectedField}
-                onChange={(e) => setSelectedField(e.target.value)}
-                className="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
-              >
-                <option value="">All fields</option>
-                {config.fields.map((field) => (
-                  <option key={field} value={field}>
-                    {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Bulk Actions */}
-          <div className="bg-gray-50 rounded-lg p-4 mt-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={handleSelectAll}
-                  className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
-                >
-                  {selectedItems.size === data.length ? 'Unselect All' : 'Select All'}
-                </button>
-                <span className="text-sm text-gray-600">
-                  {selectedItems.size} of {data.length} items selected
-                </span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                {selectedItems.size > 0 && (
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
-                  >
-                    <XCircleIcon className="h-4 w-4 mr-1" />
-                    Delete Selected ({selectedItems.size})
-                  </button>
-                )}
-                
-                <div className="relative">
-                  <select
-                    onChange={(e) => e.target.value && exportData(e.target.value)}
-                    className="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
-                    defaultValue=""
-                  >
-                    <option value="">Export As...</option>
-                    <option value="markdown">Markdown</option>
-                    <option value="pdf">PDF</option>
-                    <option value="word">Word Document</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Data Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          {error ? (
-            <div className="p-8 text-center">
-              <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <p className="text-red-600 mb-4">{error}</p>
-              <button 
-                onClick={fetchData}
-                className={`px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200`}
-              >
-                Retry
-              </button>
-            </div>
-          ) : data.length === 0 ? (
-            <div className="p-8 text-center">
-              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No {config.title.toLowerCase()} found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.size === data.length && data.length > 0}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-                      />
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Verified Fields
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((item) => {
-                    const status = getVerificationStatus(item);
-                    const verifiedCount = config.fields.filter(field => getFieldVerified(item, field)).length;
-                    
-                    return (
-                      <tr key={item._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(item._id)}
-                            onChange={() => handleItemSelect(item._id)}
-                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {getFieldValue(item, 'name')}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            status === 'fully' ? 'bg-green-100 text-green-800' :
-                            status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {status === 'fully' ? 'Fully Verified' :
-                             status === 'partial' ? 'Partially Verified' :
-                             'Unverified'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {verifiedCount}/{config.fields.length} fields
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(item.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Link
-                            to={`/verification/${category}/${item._id}`}
-                            className={`${colors.text} hover:opacity-75 mr-4`}
-                          >
-                            <EyeIcon className="h-5 w-5 inline" />
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3 text-center">
-                <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-500" />
-                <h3 className="text-lg font-medium text-gray-900 mt-2">Delete {selectedItems.size} {category}?</h3>
-                <p className="text-sm text-gray-500 mt-2">
-                  This action cannot be undone. All selected {category} and their data will be permanently deleted.
-                </p>
-                <div className="flex justify-center space-x-4 mt-6">
-                  <button
-                    onClick={() => setShowDeleteModal(false)}
-                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors duration-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 };
 
-export default VerificationPage;
+exports.updateTaal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Only allow updating verified fields
+    const taal = await Taal.findById(id);
+    if (!taal) {
+      return res.status(404).json({ message: 'Taal not found' });
+    }
+
+    // Update only verified fields
+    Object.keys(updates).forEach(field => {
+      if (taal[field] && updates[field].verified) {
+        taal[field] = updates[field];
+      }
+    });
+
+    taal.updatedAt = Date.now();
+    await taal.save();
+
+    res.json(taal);
+  } catch (error) {
+    console.error('Error in updateTaal:', error);
+    res.status(500).json({ message: 'Error updating taal' });
+  }
+};
+
+exports.getAllTaals = async (req, res) => {
+  try {
+    const taals = await Taal.find();
+    res.json(taals);
+  } catch (error) {
+    console.error('Error in getAllTaals:', error);
+    res.status(500).json({ message: 'Error fetching taals' });
+  }
+};
+
+exports.getTaalById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const taal = await Taal.findById(id);
+    
+    if (!taal) {
+      return res.status(404).json({ message: 'Taal not found' });
+    }
+
+    res.json(taal);
+  } catch (error) {
+    console.error('Error in getTaalById:', error);
+    res.status(500).json({ message: 'Error fetching taal' });
+  }
+};
+
+exports.getVerifiedTaals = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      if (field.includes('.')) {
+        // Handle nested fields like taali.count, khaali.beatNumbers
+        query[`${field}.verified`] = true;
+      } else {
+        query[`${field}.verified`] = true;
+      }
+    } else {
+      query = {
+        $or: [
+          { 'name.verified': true },
+          { 'numberOfBeats.verified': true },
+          { 'divisions.verified': true },
+          { 'taali.count.verified': true },
+          { 'taali.beatNumbers.verified': true },
+          { 'khaali.count.verified': true },
+          { 'khaali.beatNumbers.verified': true },
+          { 'jaati.verified': true }
+        ]
+      };
+    }
+    
+    const taals = await Taal.find(query).sort({ updatedAt: -1 });
+    res.json({
+      count: taals.length,
+      data: taals
+    });
+  } catch (error) {
+    console.error('Error in getVerifiedTaals:', error);
+    res.status(500).json({ message: 'Error fetching verified taals' });
+  }
+};
+
+exports.getUnverifiedTaals = async (req, res) => {
+  try {
+    const { field } = req.query;
+    let query = {};
+    
+    if (field) {
+      if (field.includes('.')) {
+        query[`${field}.verified`] = false;
+      } else {
+        query[`${field}.verified`] = false;
+      }
+    } else {
+      query = {
+        $and: [
+          { 'name.verified': { $ne: true } },
+          { 'numberOfBeats.verified': { $ne: true } },
+          { 'divisions.verified': { $ne: true } },
+          { 'taali.count.verified': { $ne: true } },
+          { 'taali.beatNumbers.verified': { $ne: true } },
+          { 'khaali.count.verified': { $ne: true } },
+          { 'khaali.beatNumbers.verified': { $ne: true } },
+          { 'jaati.verified': { $ne: true } }
+        ]
+      };
+    }
+    
+    const taals = await Taal.find(query).sort({ updatedAt: -1 });
+    res.json({
+      count: taals.length,
+      data: taals
+    });
+  } catch (error) {
+    console.error('Error in getUnverifiedTaals:', error);
+    res.status(500).json({ message: 'Error fetching unverified taals' });
+  }
+};
+
+exports.getVerificationStats = async (req, res) => {
+  try {
+    const totalTaals = await Taal.countDocuments();
+    
+    const nameVerified = await Taal.countDocuments({ 'name.verified': true });
+    const numberOfBeatsVerified = await Taal.countDocuments({ 'numberOfBeats.verified': true });
+    const divisionsVerified = await Taal.countDocuments({ 'divisions.verified': true });
+    const taaliCountVerified = await Taal.countDocuments({ 'taali.count.verified': true });
+    const taaliBeatNumbersVerified = await Taal.countDocuments({ 'taali.beatNumbers.verified': true });
+    const khaaliCountVerified = await Taal.countDocuments({ 'khaali.count.verified': true });
+    const khaaliBeatNumbersVerified = await Taal.countDocuments({ 'khaali.beatNumbers.verified': true });
+    const jaatiVerified = await Taal.countDocuments({ 'jaati.verified': true });
+    
+    const partiallyVerified = await Taal.countDocuments({
+      $or: [
+        { 'name.verified': true },
+        { 'numberOfBeats.verified': true },
+        { 'divisions.verified': true },
+        { 'taali.count.verified': true },
+        { 'taali.beatNumbers.verified': true },
+        { 'khaali.count.verified': true },
+        { 'khaali.beatNumbers.verified': true },
+        { 'jaati.verified': true }
+      ]
+    });
+    
+    const fullyVerified = await Taal.countDocuments({
+      'name.verified': true,
+      'numberOfBeats.verified': true,
+      'divisions.verified': true,
+      'taali.count.verified': true,
+      'taali.beatNumbers.verified': true,
+      'khaali.count.verified': true,
+      'khaali.beatNumbers.verified': true,
+      'jaati.verified': true
+    });
+    
+    const unverified = totalTaals - partiallyVerified;
+    
+    res.json({
+      total: totalTaals,
+      fullyVerified,
+      partiallyVerified,
+      unverified,
+      fieldStats: {
+        name: nameVerified,
+        numberOfBeats: numberOfBeatsVerified,
+        divisions: divisionsVerified,
+        taaliCount: taaliCountVerified,
+        taaliBeatNumbers: taaliBeatNumbersVerified,
+        khaaliCount: khaaliCountVerified,
+        khaaliBeatNumbers: khaaliBeatNumbersVerified,
+        jaati: jaatiVerified
+      },
+      percentages: {
+        fullyVerified: totalTaals > 0 ? ((fullyVerified / totalTaals) * 100).toFixed(2) : 0,
+        partiallyVerified: totalTaals > 0 ? ((partiallyVerified / totalTaals) * 100).toFixed(2) : 0,
+        unverified: totalTaals > 0 ? ((unverified / totalTaals) * 100).toFixed(2) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Error in getVerificationStats:', error);
+    res.status(500).json({ message: 'Error fetching verification statistics' });
+  }
+};
