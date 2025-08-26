@@ -523,7 +523,7 @@ CRITICAL REQUIREMENTS:
       cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/g, '');
       
       // Remove markdown code blocks if present
-      cleanResponse = cleanResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      cleanResponse = cleanResponse.replace(/``\`json\n?/g, '').replace(/```\n?/g, '');
       
       // More aggressive cleaning to handle various response formats
       cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/s, '');
@@ -545,15 +545,15 @@ CRITICAL REQUIREMENTS:
         // Validate and clean the data
         this.validateAndCleanData(parsed);
         
-        console.log('Parsed AI response:', parsed);
+        console.log('Parsed OpenAI response:', parsed);
         return parsed;
       }
       
-      throw new Error('No valid JSON found in AI response');
+      throw new Error('No valid JSON found in OpenAI response');
     } catch (error) {
-      console.error('Error parsing AI response:', error);
+      console.error('Error parsing OpenAI response:', error);
       console.error('Raw response:', response);
-      throw new Error('Failed to parse AI research results: ' + error.message);
+      throw new Error('Failed to parse OpenAI research results: ' + error.message);
     }
   }
 
@@ -641,6 +641,76 @@ CRITICAL REQUIREMENTS:
       data.khaali.count.reference = this.cleanReference(data.khaali.count.reference);
       data.khaali.beatNumbers.reference = this.cleanReference(data.khaali.beatNumbers.reference);
   cleanReference(reference) {
+
+  cleanReference(reference) {
+    if (!reference) return 'No source provided';
+    
+    // Handle multiple URLs separated by various delimiters
+    const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
+    let cleanRef = reference;
+    
+    // Check if it contains multiple URLs
+    let hasMultipleUrls = false;
+    for (const separator of urlSeparators) {
+      if (cleanRef.includes(separator)) {
+        hasMultipleUrls = true;
+        break;
+      }
+    }
+    
+    if (hasMultipleUrls) {
+      // Split and clean multiple URLs
+      let urls = cleanRef;
+      for (const separator of urlSeparators) {
+        urls = urls.split(separator).join(' | ');
+      }
+      
+      // Clean each URL
+      const urlList = urls.split(' | ').map(url => {
+        const trimmedUrl = url.trim();
+        
+        // Remove parenthetical descriptions
+        const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
+        
+        // Validate URL format
+        if (this.isValidUrl(cleanUrl)) {
+          return cleanUrl;
+        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
+          return `Invalid URL format: ${cleanUrl}`;
+        } else {
+          return `Non-URL reference: ${cleanUrl}`;
+        }
+      }).filter(url => url.length > 0);
+      
+      return urlList.join(' | ');
+    } else {
+      // Single reference
+      const trimmedRef = cleanRef.trim();
+      
+      // Remove parenthetical descriptions
+      const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
+      
+      // Validate single URL
+      if (this.isValidUrl(cleanSingleRef)) {
+        return cleanSingleRef;
+      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
+        return `Invalid URL format: ${cleanSingleRef}`;
+      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
+        return cleanSingleRef; // Keep explanatory messages as-is
+      } else {
+        return `Non-URL reference: ${cleanSingleRef}`;
+      }
+    }
+  }
+  
+  isValidUrl(string) {
+    try {
+      const url = new URL(string);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+      return false;
+    }
+  }
     if (!reference) return 'No source provided';
     
     // Handle multiple URLs separated by various delimiters
