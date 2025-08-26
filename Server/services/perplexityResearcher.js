@@ -119,6 +119,7 @@ CRITICAL REQUIREMENTS:
 - **MULTIPLE SOURCE VERIFICATION**: When multiple sources confirm the same information, list them separated by " | "
 - **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
 - **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
+`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -127,8 +128,6 @@ CRITICAL REQUIREMENTS:
           {
             role: "system",
             content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
-  }
-}
 
 RESEARCH EXPERTISE:
 - Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
@@ -174,7 +173,7 @@ RESPONSE REQUIREMENTS:
         presence_penalty: 0.2 // Encourage diverse information sources
       }, {
         headers: {
-          'Authorization': \`Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
         timeout: 45000 // 45 second timeout for comprehensive research
@@ -195,7 +194,7 @@ RESPONSE REQUIREMENTS:
           return await this.researchWithFallbackModel(name, prompt, 'artist');
         }
         
-        throw new Error(\`Perplexity API error: ${error.response.data.error?.message || error.message}`);
+        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
       throw new Error('Failed to research artist using Perplexity AI: ' + error.message);
     }
@@ -208,10 +207,10 @@ RESPONSE REQUIREMENTS:
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    const prompt = \`Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
+    const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
 
 **STEP 1: Primary Musical Sources**
-- Search Wikipedia for detailed "${name}\" raag article
+- Search Wikipedia for detailed "${name}" raag article
 - Look for "${name}" in specialized raga databases and music theory websites
 - Check classical music learning platforms and educational resources
 - Find "${name}" in music institution websites (Sangeet Natak Akademi, ITC SRA)
@@ -224,7 +223,7 @@ RESPONSE REQUIREMENTS:
 
 **STEP 3: Practical Music Sources**
 - Search for "${name}" in tabla/sitar/vocal learning websites
-- Look for "${name}\" performance guides and tutorials
+- Look for "${name}" performance guides and tutorials
 - Check music teacher resources and instructional materials
 - Find "${name}" in concert programs and performance notes
 
@@ -314,7 +313,7 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: \`You are an expert Indian Classical Music theorist and raga researcher with comprehensive knowledge of:
+            content: `You are an expert Indian Classical Music theorist and raga researcher with comprehensive knowledge of:
 
 MUSICAL EXPERTISE:
 - Deep understanding of raga theory, thaat system, and melodic structures
@@ -350,7 +349,7 @@ CRITICAL REQUIREMENTS:
         presence_penalty: 0.2
       }, {
         headers: {
-          'Authorization': \`Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
         timeout: 45000
@@ -370,7 +369,7 @@ CRITICAL REQUIREMENTS:
           return await this.researchWithFallbackModel(name, prompt, 'raag');
         }
         
-        throw new Error(\`Perplexity API error: ${error.response.data.error?.message || error.message}`);
+        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
       throw new Error('Failed to research raag using Perplexity AI: ' + error.message);
     }
@@ -383,10 +382,10 @@ CRITICAL REQUIREMENTS:
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    const prompt = \`Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
+    const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
 
 **STEP 1: Primary Rhythm Sources**
-- Search Wikipedia for detailed "${name}\" taal article
+- Search Wikipedia for detailed "${name}" taal article
 - Look for "${name}" in tabla learning websites and percussion resources
 - Check rhythm and taal databases, music theory websites
 - Find "${name}" in classical music institution websites
@@ -483,7 +482,7 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: \`You are an expert Indian Classical Music rhythmist and taal researcher with comprehensive knowledge of:
+            content: `You are an expert Indian Classical Music rhythmist and taal researcher with comprehensive knowledge of:
 
 RHYTHMIC EXPERTISE:
 - Deep understanding of taal theory, matra systems, and rhythmic structures
@@ -519,7 +518,7 @@ CRITICAL REQUIREMENTS:
         presence_penalty: 0.2
       }, {
         headers: {
-          'Authorization': \`Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
         timeout: 45000
@@ -539,7 +538,7 @@ CRITICAL REQUIREMENTS:
           return await this.researchWithFallbackModel(name, prompt, 'taal');
         }
         
-        throw new Error(\`Perplexity API error: ${error.response.data.error?.message || error.message}`);
+        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
       throw new Error('Failed to research taal using Perplexity AI: ' + error.message);
     }
@@ -548,13 +547,13 @@ CRITICAL REQUIREMENTS:
   async researchWithFallbackModel(name, prompt, type) {
     for (const model of this.fallbackModels) {
       try {
-        console.log(\`Trying fallback model: ${model}`);
+        console.log(`Trying fallback model: ${model}`);
         const response = await axios.post(this.baseURL, {
           model: model,
           messages: [
             {
               role: "system",
-              content: \`You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
+              content: `You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
 - Deep knowledge of Indian Classical Music traditions
 - Access to academic and institutional sources
 - Ability to verify information across multiple sources
@@ -571,17 +570,17 @@ Always provide accurate information with verifiable sources. Return only valid J
           top_p: 0.9
         }, {
           headers: {
-            'Authorization': \`Bearer ${this.apiKey}`,
+            'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json'
           },
           timeout: 45000
         });
 
-        console.log(\`Fallback model ${model} worked!`);
+        console.log(`Fallback model ${model} worked!`);
         const responseText = response.data.choices[0].message.content;
         return this.parseAIResponse(responseText);
       } catch (fallbackError) {
-        console.log(\`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
+        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
         continue;
       }
     }
@@ -751,9 +750,9 @@ Always provide accurate information with verifiable sources. Return only valid J
         if (this.isValidUrl(cleanUrl)) {
           return cleanUrl;
         } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
-          return \`Invalid URL format: ${cleanUrl}`;
+          return `Invalid URL format: ${cleanUrl}`;
         } else {
-          return \`Non-URL reference: ${cleanUrl}`;
+          return `Non-URL reference: ${cleanUrl}`;
         }
       }).filter(url => url.length > 0);
       
@@ -769,11 +768,11 @@ Always provide accurate information with verifiable sources. Return only valid J
       if (this.isValidUrl(cleanSingleRef)) {
         return cleanSingleRef;
       } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
-        return \`Invalid URL format: ${cleanSingleRef}`;
+        return `Invalid URL format: ${cleanSingleRef}`;
       } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
         return cleanSingleRef; // Keep explanatory messages as-is
       } else {
-        return \`Non-URL reference: ${cleanSingleRef}`;
+        return `Non-URL reference: ${cleanSingleRef}`;
       }
     }
   }
