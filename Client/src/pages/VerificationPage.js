@@ -28,7 +28,7 @@ const VerificationPage = () => {
   const categoryConfig = {
     artists: {
       title: 'Artists',
-      fields: ['name', 'guru', 'gharana', 'notableAchievements', 'disciples'],
+      fields: ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'],
       color: 'green'
     },
     raags: {

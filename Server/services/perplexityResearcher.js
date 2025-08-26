@@ -36,6 +36,8 @@ class PerplexityResearcher {
 - Look for "${name}" social media profiles (Facebook, Instagram, Twitter, YouTube)
 - Check "${name}" artist pages on music platforms and streaming services
 - Find "${name}" profiles on concert hall and festival websites
+- Search for "${name}" comprehensive biography or detailed artist profile
+- Look for "${name}" birth details, full name, and personal background
 
 **STEP 2: Institutional and Academic Sources**
 - Search Wikipedia for "${name}" detailed biography
@@ -43,6 +45,8 @@ class PerplexityResearcher {
 - Look for "${name}" in university music department faculty/alumni pages
 - Search academic papers, journals, and musicology publications mentioning "${name}"
 - Check cultural institution archives and music organization websites
+- Find detailed biographical articles and interviews about "${name}"
+- Search for "${name}" career timeline and major milestones
 
 **STEP 3: Specific Information Hunting**
 For GHARANA: Search specifically for:
@@ -71,6 +75,17 @@ For ACHIEVEMENTS: Search for:
 - "${name} Sangeet Natak Akademi award"
 - "${name} Grammy recognition"
 - "${name} national international awards"
+- "${name} major performances collaborations"
+- "${name} concert tours festivals"
+- "${name} recordings albums discography"
+
+For COMPREHENSIVE BIOGRAPHY: Search for:
+- "${name} full biography life story"
+- "${name} birth date birthplace family background"
+- "${name} career timeline major milestones"
+- "${name} contributions to Indian classical music"
+- "${name} cultural significance global impact"
+- "${name} detailed artist profile comprehensive overview"
 
 **STEP 4: Cross-Reference and Verify**
 - Cross-check information from multiple sources
@@ -104,6 +119,11 @@ After conducting this comprehensive research, provide the information in this ex
   "disciples": {
     "value": "Names of notable disciples/students with instruments: Name 1 (tabla), Name 2 (percussion), etc. - if no specific disciples found, state 'No specific disciples documented in available sources'",
     "reference": "Teaching source URL | Student mention URL | Interview URL (if multiple sources mention students) - if no disciples found, state 'No authoritative sources found listing specific disciples'",
+    "verified": false
+  },
+  "summary": {
+    "value": "Comprehensive biographical summary (200-300 words) covering: Full name & birth details, primary profession/role, guru/teacher lineage, gharana/style/school, notable achievements & awards, major performances/collaborations, disciples/students, and cultural significance. Include background, lineage details, achievements, contributions to the art form, and global impact.",
+    "reference": "Primary biographical source URL | Official website URL | Major interview/article URL",
     "verified": false
   }
 }

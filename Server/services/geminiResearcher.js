@@ -41,6 +41,11 @@ Please provide information in the following JSON format:
     "value": "Names of notable disciples/students",
     "reference": "Source URL or reference for disciples",
     "verified": false
+  },
+  "summary": {
+    "value": "Comprehensive biographical summary (200-300 words) covering: Full name & birth details, primary profession/role, guru/teacher lineage, gharana/style/school, notable achievements & awards, major performances/collaborations, disciples/students, and cultural significance.",
+    "reference": "Primary biographical source URL",
+    "verified": false
   }
 }
 

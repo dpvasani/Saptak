@@ -197,6 +197,7 @@ exports.getVerificationStats = async (req, res) => {
     const gharanaVerified = await Artist.countDocuments({ 'gharana.verified': true });
     const achievementsVerified = await Artist.countDocuments({ 'notableAchievements.verified': true });
     const disciplesVerified = await Artist.countDocuments({ 'disciples.verified': true });
+    const summaryVerified = await Artist.countDocuments({ 'summary.verified': true });
     
     // Count artists with at least one verified field
     const partiallyVerified = await Artist.countDocuments({
@@ -205,7 +206,9 @@ exports.getVerificationStats = async (req, res) => {
         { 'guru.verified': true },
         { 'gharana.verified': true },
         { 'notableAchievements.verified': true },
-        { 'disciples.verified': true }
+        { 'disciples.verified': true },
+        { 'summary.verified': true }
+        { 'summary.verified': true }
       ]
     });
     
@@ -215,7 +218,8 @@ exports.getVerificationStats = async (req, res) => {
       'guru.verified': true,
       'gharana.verified': true,
       'notableAchievements.verified': true,
-      'disciples.verified': true
+      'disciples.verified': true,
+      'summary.verified': true
     });
     
     const unverified = totalArtists - partiallyVerified;
@@ -230,7 +234,8 @@ exports.getVerificationStats = async (req, res) => {
         guru: guruVerified,
         gharana: gharanaVerified,
         notableAchievements: achievementsVerified,
-        disciples: disciplesVerified
+        disciples: disciplesVerified,
+        summary: summaryVerified
       },
       percentages: {
         fullyVerified: totalArtists > 0 ? ((fullyVerified / totalArtists) * 100).toFixed(2) : 0,

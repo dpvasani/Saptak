@@ -84,6 +84,11 @@ class ScraperService {
         value: '', 
         reference: 'Web search failed - use AI research for better results', 
         verified: false 
+      },
+      summary: { 
+        value: '', 
+        reference: 'Web search failed - use AI research for better results', 
+        verified: false 
       }
     };
   }
