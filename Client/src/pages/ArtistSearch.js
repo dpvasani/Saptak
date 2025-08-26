@@ -12,7 +12,6 @@ import {
   XMarkIcon,
   ClockIcon,
   ExclamationTriangleIcon
-  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const ArtistSearch = () => {
