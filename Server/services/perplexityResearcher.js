@@ -28,54 +28,96 @@ class PerplexityResearcher {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Enhanced prompt optimized for deep research model
-    const prompt = `Search for comprehensive information about the Indian Classical Music artist "${name}". Focus on finding information from these specific types of sources:
+    // Multi-step enhanced prompt for comprehensive artist research
+    const prompt = `I need you to conduct a comprehensive, multi-step research about the Indian Classical Music artist "${name}". Please search systematically through these sources in order:
 
-1. Wikipedia articles about the artist
-2. Official music institution websites (Sangeet Natak Akademi, ITC Sangeet Research Academy)
-3. Academic music journals and publications
-4. Verified artist biographies from music organizations
-5. Concert hall and festival websites with artist profiles
-6. Music conservatory and university websites
-7. Cultural institution archives and databases
+**STEP 1: Official Artist Presence**
+- Search for "${name}" official website, biography page, or artist profile
+- Look for "${name}" social media profiles (Facebook, Instagram, Twitter, YouTube)
+- Check "${name}" artist pages on music platforms and streaming services
+- Find "${name}" profiles on concert hall and festival websites
 
-For the artist "${name}", provide ONLY factual, verifiable information in this exact JSON format:
+**STEP 2: Institutional and Academic Sources**
+- Search Wikipedia for "${name}" detailed biography
+- Check Sangeet Natak Akademi, ITC Sangeet Research Academy databases
+- Look for "${name}" in university music department faculty/alumni pages
+- Search academic papers, journals, and musicology publications mentioning "${name}"
+- Check cultural institution archives and music organization websites
+
+**STEP 3: Specific Information Hunting**
+For GHARANA: Search specifically for:
+- "${name} gharana tradition"
+- "${name} musical lineage"
+- "${name} school of music"
+- "${name} musical heritage"
+
+For GURU/TEACHER: Search for:
+- "${name} guru teacher"
+- "${name} trained under"
+- "${name} student of"
+- "${name} learned from"
+- "${name} musical education"
+
+For DISCIPLES/STUDENTS: Search for:
+- "${name} disciples students"
+- "${name} taught"
+- "students of ${name}"
+- "${name} musical legacy"
+- "${name} proteges"
+
+For ACHIEVEMENTS: Search for:
+- "${name} awards honors"
+- "${name} Padma Shri Padma Bhushan"
+- "${name} Sangeet Natak Akademi award"
+- "${name} Grammy recognition"
+- "${name} national international awards"
+
+**STEP 4: Cross-Reference and Verify**
+- Cross-check information from multiple sources
+- Prioritize official websites and verified social media accounts
+- Use academic and institutional sources for verification
+- Include recent interviews, articles, and biographical content
+
+After conducting this comprehensive research, provide the information in this exact JSON format:
 
 {
   "name": {
     "value": "${name}",
-    "reference": "Most authoritative source URL (prefer Wikipedia or official music institutions)",
+    "reference": "Most authoritative source URL (prefer official website, then Wikipedia)",
     "verified": false
   },
   "guru": {
-    "value": "Full name of the primary guru/teacher (if found, otherwise empty string)",
-    "reference": "Specific URL where guru information is mentioned",
+    "value": "Complete name of primary guru/teacher with titles (Ustad/Pandit if applicable)",
+    "reference": "Specific URL or source where guru/teacher information is clearly mentioned",
     "verified": false
   },
   "gharana": {
-    "value": "Complete gharana name with 'Gharana' suffix (e.g., 'Kirana Gharana', 'Gwalior Gharana')",
-    "reference": "URL specifically mentioning the gharana affiliation",
+    "value": "Complete gharana name with proper suffix (e.g., 'Punjab Gharana', 'Kirana Gharana', 'Gwalior Gharana')",
+    "reference": "URL or source specifically mentioning gharana tradition/lineage",
     "verified": false
   },
   "notableAchievements": {
-    "value": "Major awards, honors, recognitions separated by commas (Padma awards, Sangeet Natak Akademi, Grammy, etc.)",
-    "reference": "URL listing achievements or awards",
+    "value": "Comprehensive list of major awards, honors, recognitions with years if available (Padma Shri, Padma Bhushan, Sangeet Natak Akademi, Grammy, etc.)",
+    "reference": "URL or source listing achievements, awards, or official recognition",
     "verified": false
   },
   "disciples": {
-    "value": "Names of famous disciples/students separated by commas (if found, otherwise empty string)",
-    "reference": "URL mentioning disciples or students",
+    "value": "Names of notable disciples, students, or proteges separated by commas with their instruments/specialization if mentioned",
+    "reference": "URL or source mentioning disciples, students, or teaching legacy",
     "verified": false
   }
 }
 
 CRITICAL REQUIREMENTS:
-- Use ONLY information found in your web search results
-- Provide REAL, working URLs as references
-- If information is not found, use empty string for value but provide a reference explaining why
-- Do NOT make up, assume, or hallucinate information
-- Prefer authoritative sources like Wikipedia, Sangeet Natak Akademi, ITC SRA, academic institutions
-- Return ONLY the JSON object, no additional text or formatting`;
+- Conduct thorough multi-step research as outlined above
+- Use ONLY verified information found in your comprehensive search
+- Provide REAL, accessible URLs as references (test that they work)
+- For missing information, use empty string but explain in reference why not found
+- Do NOT fabricate, assume, or hallucinate any information
+- Prioritize: Official websites > Social media profiles > Wikipedia > Academic sources > Music institutions
+- Pay special attention to gharana and disciple information as these are often missed
+- Look for biographical interviews, artist statements, and detailed profiles
+- Return ONLY the JSON object without any additional text or formatting`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -83,40 +125,56 @@ CRITICAL REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are a specialized deep researcher for Indian Classical Music with expertise in musicology and cultural studies. Your task is to conduct thorough, multi-step research to find accurate, verifiable information about musicians from authoritative sources.
+            content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
 
-SEARCH STRATEGY:
-1. Conduct comprehensive search across multiple authoritative sources
-2. Cross-reference information from academic and institutional sources
-3. Verify biographical details from multiple independent sources
-4. Prioritize scholarly publications and official music institutions
-5. Check for recent updates and contemporary information
-6. Analyze source credibility and reliability
-7. Synthesize information from diverse perspectives
+RESEARCH EXPERTISE:
+- Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
+- Advanced web research techniques for finding official artist information
+- Social media intelligence for extracting biographical details
+- Academic and institutional database navigation
+- Cross-referencing and fact-verification across multiple sources
+- Understanding of gharana systems, guru-shishya traditions, and musical lineages
 
-RESPONSE FORMAT:
-- Return ONLY valid JSON
-- Use real, working URLs
-- Be precise with names and terminology
-- If uncertain, leave fields empty rather than guessing
-- Focus on factual, biographical information`
+SEARCH METHODOLOGY:
+1. **Official Source Priority**: Always search for official websites, verified social media, artist biographies first
+2. **Social Media Mining**: Extract valuable biographical information from Facebook, Instagram, Twitter, YouTube profiles and posts
+3. **Institutional Deep Dive**: Thoroughly search music institutions, academies, universities, and cultural organizations
+4. **Academic Cross-Reference**: Use scholarly articles, research papers, and academic publications for verification
+5. **Contemporary Sources**: Include recent interviews, articles, and current biographical content
+6. **Lineage Tracking**: Pay special attention to guru-shishya relationships and gharana affiliations
+7. **Legacy Documentation**: Focus on finding information about disciples and teaching contributions
+
+CRITICAL SUCCESS FACTORS:
+- Conduct multi-step, systematic research as outlined in the user prompt
+- Never skip the specific searches for gharana, guru, disciples, and achievements
+- Use official websites and verified social media as primary sources when available
+- Cross-verify information from multiple independent sources
+- Return comprehensive, accurate information with working URLs
+- If information is genuinely not available, clearly state this in the reference field
+
+RESPONSE REQUIREMENTS:
+- Return ONLY valid JSON without any additional text
+- Use real, accessible URLs that can be verified
+- Be precise with Indian music terminology and proper names
+- Include titles (Ustad, Pandit) when mentioned in sources
+- Focus on factual, verifiable biographical and musical information`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.05, // Very low temperature for maximum factual accuracy
-        max_tokens: 2000, // More tokens for comprehensive research
-        top_p: 0.85, // Focus on most reliable information
+        temperature: 0.02, // Extremely low temperature for maximum factual accuracy
+        max_tokens: 3000, // More tokens for comprehensive research
+        top_p: 0.9, // Slightly higher for better source diversity
         frequency_penalty: 0.1, // Reduce repetition
-        presence_penalty: 0.1 // Encourage diverse information
+        presence_penalty: 0.2 // Encourage diverse information sources
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 45000 // 45 second timeout for comprehensive research
       });
 
       console.log('Perplexity API response received');
@@ -147,17 +205,43 @@ RESPONSE FORMAT:
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    const prompt = `Search for detailed information about the Indian Classical Music raag "${name}". Look specifically for:
+    const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
 
-1. Wikipedia articles about the raag
-2. Academic musicology papers and journals
-3. University music department resources
-2. Music theory websites and academic sources
-3. Raga databases and music institution websites
-4. Classical music learning platforms
-5. Scholarly articles on Indian music theory
+**STEP 1: Primary Musical Sources**
+- Search Wikipedia for detailed "${name}" raag article
+- Look for "${name}" in specialized raga databases and music theory websites
+- Check classical music learning platforms and educational resources
+- Find "${name}" in music institution websites (Sangeet Natak Akademi, ITC SRA)
 
-For raag "${name}", provide accurate musical information in this JSON format:
+**STEP 2: Academic and Scholarly Sources**
+- Search academic musicology papers mentioning "${name}"
+- Look for university music department resources and course materials
+- Check scholarly articles on Indian music theory featuring "${name}"
+- Find research publications and dissertations about "${name}"
+
+**STEP 3: Practical Music Sources**
+- Search for "${name}" in tabla/sitar/vocal learning websites
+- Look for "${name}" performance guides and tutorials
+- Check music teacher resources and instructional materials
+- Find "${name}" in concert programs and performance notes
+
+**STEP 4: Specific Technical Information**
+For AROHA/AVROHA: Search for:
+- "${name} aroha avroha notes"
+- "${name} scale ascending descending"
+- "${name} swaras sequence"
+
+For THAAT: Search for:
+- "${name} thaat parent scale"
+- "${name} belongs to thaat"
+- "${name} classification"
+
+For VADI/SAMVADI: Search for:
+- "${name} vadi samvadi notes"
+- "${name} important notes"
+- "${name} dominant subdominant"
+
+Provide accurate musical information in this JSON format:
 
 {
   "name": {
@@ -166,58 +250,60 @@ For raag "${name}", provide accurate musical information in this JSON format:
     "verified": false
   },
   "aroha": {
-    "value": "Ascending note sequence using sargam notation (Sa Re Ga Ma Pa Dha Ni Sa format)",
-    "reference": "URL where aroha is specifically mentioned",
+    "value": "Complete ascending note sequence using proper sargam notation (Sa Re Ga Ma Pa Dha Ni Sa format with komal/tivra markings)",
+    "reference": "Specific URL where aroha/ascending scale is clearly mentioned",
     "verified": false
   },
   "avroha": {
-    "value": "Descending note sequence using sargam notation",
-    "reference": "URL where avroha is specifically mentioned",
+    "value": "Complete descending note sequence using proper sargam notation with komal/tivra markings",
+    "reference": "Specific URL where avroha/descending scale is clearly mentioned",
     "verified": false
   },
   "chalan": {
-    "value": "Characteristic melodic phrases or pakad",
-    "reference": "URL mentioning chalan or pakad",
+    "value": "Characteristic melodic phrases, pakad, or typical note movements that define the raag",
+    "reference": "URL mentioning chalan, pakad, or characteristic phrases",
     "verified": false
   },
   "vadi": {
-    "value": "Most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni)",
-    "reference": "URL mentioning vadi swara",
+    "value": "Most important/dominant note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
+    "reference": "URL specifically mentioning vadi swara or dominant note",
     "verified": false
   },
   "samvadi": {
-    "value": "Second most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni)",
-    "reference": "URL mentioning samvadi swara",
+    "value": "Second most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
+    "reference": "URL specifically mentioning samvadi swara or subdominant note",
     "verified": false
   },
   "thaat": {
-    "value": "Parent thaat name (e.g., Bilawal, Khamaj, Kafi, etc.)",
-    "reference": "URL mentioning thaat classification",
+    "value": "Parent thaat/scale name (e.g., Bilawal, Khamaj, Kafi, Kalyan, Bhairav, etc.)",
+    "reference": "URL specifically mentioning thaat classification or parent scale",
     "verified": false
   },
   "rasBhaav": {
-    "value": "Emotional content and mood (e.g., devotional, romantic, peaceful)",
-    "reference": "URL discussing emotional aspects",
+    "value": "Emotional content, mood, and aesthetic expression (e.g., devotional, romantic, peaceful, heroic, melancholic)",
+    "reference": "URL discussing emotional aspects, mood, or aesthetic qualities",
     "verified": false
   },
   "tanpuraTuning": {
-    "value": "Tanpura tuning notes (e.g., Sa Pa Sa Sa)",
-    "reference": "URL mentioning tanpura tuning",
+    "value": "Recommended tanpura tuning notes (e.g., Sa Pa Sa Sa, Sa Ma Sa Sa)",
+    "reference": "URL mentioning tanpura tuning or drone notes",
     "verified": false
   },
   "timeOfRendition": {
-    "value": "Traditional performance time (morning, evening, night, etc.)",
-    "reference": "URL mentioning time of performance",
+    "value": "Traditional time of performance with specific periods (early morning, late morning, afternoon, evening, night, late night)",
+    "reference": "URL mentioning traditional performance time or time theory",
     "verified": false
   }
 }
 
 REQUIREMENTS:
-- Use proper sargam notation (Sa Re Ga Ma Pa Dha Ni)
-- Provide specific note names for vadi/samvadi
-- Use standard thaat names
-- Return only factual information found in sources
-- Use real URLs as references`;
+- Conduct systematic multi-step research as outlined above
+- Use proper sargam notation with komal (♭) and tivra (♯) markings when applicable
+- Provide specific note names for vadi/samvadi with proper notation
+- Use standard, recognized thaat names from Indian music theory
+- Include detailed aroha/avroha sequences as found in authoritative sources
+- Return only verified musical information found in your comprehensive search
+- Use real, accessible URLs as references that can be verified`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -225,24 +311,46 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are a deep research specialist in Indian Classical Music theory and ragas with advanced knowledge of musicology. Conduct comprehensive multi-step research to find accurate information about ragas from authoritative music sources. Focus on technical accuracy, use proper Indian music terminology, and verify information across multiple academic and institutional sources before including it.`
+            content: `You are an expert Indian Classical Music theorist and raga researcher with comprehensive knowledge of:
+
+MUSICAL EXPERTISE:
+- Deep understanding of raga theory, thaat system, and melodic structures
+- Expertise in sargam notation, swara relationships, and musical scales
+- Knowledge of traditional performance practices and time theory
+- Understanding of emotional aesthetics (rasa-bhava) in Indian music
+- Familiarity with both Hindustani and Carnatic traditions
+
+RESEARCH METHODOLOGY:
+1. **Technical Source Priority**: Focus on music theory websites, academic papers, and educational resources
+2. **Cross-Reference Verification**: Verify technical details across multiple authoritative sources
+3. **Notation Accuracy**: Ensure proper sargam notation with correct komal/tivra markings
+4. **Traditional Knowledge**: Include traditional performance practices and cultural context
+5. **Contemporary Resources**: Use modern learning platforms and digital music resources
+
+CRITICAL REQUIREMENTS:
+- Conduct thorough multi-step research as specified in the user prompt
+- Pay special attention to technical musical details (aroha, avroha, vadi, samvadi)
+- Use proper Indian music terminology and notation systems
+- Verify information across multiple independent musical sources
+- Include both theoretical and practical aspects of the raga
+- Return comprehensive, technically accurate information with working URLs`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.05,
-        max_tokens: 2000,
-        top_p: 0.85,
+        temperature: 0.02,
+        max_tokens: 3000,
+        top_p: 0.9,
         frequency_penalty: 0.1,
-        presence_penalty: 0.1
+        presence_penalty: 0.2
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000
+        timeout: 45000
       });
 
       console.log('Perplexity API response received');
@@ -272,17 +380,43 @@ REQUIREMENTS:
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    const prompt = `Search for detailed information about the Indian Classical Music taal "${name}". Look for:
+    const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
 
-1. Wikipedia articles about the taal
-2. Academic papers on Indian rhythm systems
-3. Music conservatory and university resources
-2. Rhythm and percussion websites
-3. Music theory and tabla learning resources
-4. Academic sources on Indian rhythm systems
-5. Classical music institution websites
+**STEP 1: Primary Rhythm Sources**
+- Search Wikipedia for detailed "${name}" taal article
+- Look for "${name}" in tabla learning websites and percussion resources
+- Check rhythm and taal databases, music theory websites
+- Find "${name}" in classical music institution websites
 
-For taal "${name}", provide accurate rhythmic information in this JSON format:
+**STEP 2: Educational and Academic Sources**
+- Search academic papers on Indian rhythm systems mentioning "${name}"
+- Look for music conservatory and university resources about "${name}"
+- Check scholarly articles on taal theory and rhythmic systems
+- Find research publications about Indian percussion and rhythm
+
+**STEP 3: Practical Learning Sources**
+- Search tabla tutorial websites and learning platforms for "${name}"
+- Look for "${name}" in music teacher resources and instructional materials
+- Check percussion method books and educational content
+- Find "${name}" in concert programs and performance guides
+
+**STEP 4: Specific Technical Information**
+For BEAT STRUCTURE: Search for:
+- "${name} beats matras structure"
+- "${name} rhythm pattern"
+- "${name} time signature"
+
+For TAALI/KHAALI: Search for:
+- "${name} taali khaali positions"
+- "${name} clap wave pattern"
+- "${name} beat emphasis"
+
+For DIVISIONS: Search for:
+- "${name} vibhag divisions"
+- "${name} sections structure"
+- "${name} rhythmic grouping"
+
+Provide accurate rhythmic information in this JSON format:
 
 {
   "name": {
@@ -291,51 +425,54 @@ For taal "${name}", provide accurate rhythmic information in this JSON format:
     "verified": false
   },
   "numberOfBeats": {
-    "value": "Total number of matras/beats (as a number, e.g., 16, 12, 10)",
-    "reference": "URL mentioning beat count",
+    "value": "Total number of matras/beats as a number (e.g., 16, 12, 10, 14, 7)",
+    "reference": "URL specifically mentioning the total beat count or matra structure",
     "verified": false
   },
   "divisions": {
-    "value": "Vibhag structure description (e.g., '4 vibhags of 4 beats each')",
-    "reference": "URL describing vibhag structure",
+    "value": "Complete vibhag/section structure description (e.g., '4 vibhags of 4 beats each', '3 vibhags: 4+2+2')",
+    "reference": "URL describing vibhag structure or rhythmic divisions",
     "verified": false
   },
   "taali": {
     "count": {
-      "value": "Number of taali positions (as number)",
-      "reference": "URL mentioning taali count",
+      "value": "Number of taali (clap) positions as a number",
+      "reference": "URL mentioning taali count or clap positions",
       "verified": false
     },
     "beatNumbers": {
-      "value": "Beat numbers where taali occurs (e.g., '1, 5, 13')",
-      "reference": "URL showing taali positions",
+      "value": "Specific beat numbers where taali/claps occur (e.g., '1, 5, 13' or '1, 4, 7')",
+      "reference": "URL showing exact taali positions or clap beats",
       "verified": false
     }
   },
   "khaali": {
     "count": {
-      "value": "Number of khaali positions (as number)",
-      "reference": "URL mentioning khaali count",
+      "value": "Number of khaali (wave) positions as a number",
+      "reference": "URL mentioning khaali count or wave positions",
       "verified": false
     },
     "beatNumbers": {
-      "value": "Beat numbers where khaali occurs (e.g., '9')",
-      "reference": "URL showing khaali positions",
+      "value": "Specific beat numbers where khaali/waves occur (e.g., '9' or '5, 9')",
+      "reference": "URL showing exact khaali positions or wave beats",
       "verified": false
     }
   },
   "jaati": {
-    "value": "Jaati classification (Chatusra, Tisra, Khanda, Misra, or Sankeerna)",
-    "reference": "URL mentioning jaati",
+    "value": "Jaati classification based on subdivision (Chatusra, Tisra, Khanda, Misra, or Sankeerna)",
+    "reference": "URL mentioning jaati classification or rhythmic subdivision",
     "verified": false
   }
 }
 
 REQUIREMENTS:
-- Provide exact beat numbers and counts
-- Use standard jaati terminology
-- Ensure mathematical accuracy (taali + khaali should relate to total beats)
-- Use real URLs as references`;
+- Conduct systematic multi-step research as outlined above
+- Provide exact beat numbers, counts, and mathematical relationships
+- Use standard jaati terminology from Indian rhythm theory
+- Ensure mathematical accuracy (taali + khaali positions should align with total beats)
+- Include complete vibhag structure with proper divisions
+- Return only verified rhythmic information found in your comprehensive search
+- Use real, accessible URLs as references that can be verified`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -343,24 +480,46 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are a deep research specialist in Indian Classical Music rhythm and talas with expertise in rhythmic analysis and percussion studies. Conduct thorough multi-step research to find precise information about talas from authoritative academic and institutional sources. Focus on mathematical accuracy of beat structures, use proper terminology for Indian rhythm systems, and verify rhythmic patterns across multiple sources.`
+            content: `You are an expert Indian Classical Music rhythmist and taal researcher with comprehensive knowledge of:
+
+RHYTHMIC EXPERTISE:
+- Deep understanding of taal theory, matra systems, and rhythmic structures
+- Expertise in taali-khaali patterns, vibhag divisions, and beat mathematics
+- Knowledge of jaati classifications and rhythmic subdivisions
+- Understanding of tabla, pakhawaj, and other percussion traditions
+- Familiarity with both theoretical and practical aspects of Indian rhythm
+
+RESEARCH METHODOLOGY:
+1. **Percussion Source Priority**: Focus on tabla websites, rhythm learning platforms, and percussion resources
+2. **Mathematical Verification**: Ensure all beat counts, divisions, and patterns are mathematically accurate
+3. **Pattern Analysis**: Verify taali-khaali patterns across multiple authoritative sources
+4. **Traditional Knowledge**: Include traditional performance practices and cultural context
+5. **Educational Resources**: Use modern learning platforms and digital rhythm resources
+
+CRITICAL REQUIREMENTS:
+- Conduct thorough multi-step research as specified in the user prompt
+- Pay special attention to mathematical accuracy of beat structures
+- Verify taali-khaali patterns and vibhag divisions across multiple sources
+- Use proper Indian rhythm terminology and classification systems
+- Include both theoretical framework and practical performance aspects
+- Return comprehensive, mathematically accurate information with working URLs`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.05,
-        max_tokens: 2000,
-        top_p: 0.85,
+        temperature: 0.02,
+        max_tokens: 3000,
+        top_p: 0.9,
         frequency_penalty: 0.1,
-        presence_penalty: 0.1
+        presence_penalty: 0.2
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000
+        timeout: 45000
       });
 
       console.log('Perplexity API response received');
@@ -404,15 +563,15 @@ Always provide accurate information with verifiable sources. Return only valid J
               content: prompt
             }
           ],
-          temperature: 0.05,
-          max_tokens: 2000,
-          top_p: 0.85
+          temperature: 0.02,
+          max_tokens: 3000,
+          top_p: 0.9
         }, {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 30000
+          timeout: 45000
         });
 
         console.log(`Fallback model ${model} worked!`);
@@ -438,8 +597,14 @@ Always provide accurate information with verifiable sources. Return only valid J
       // Remove markdown code blocks if present
       cleanResponse = cleanResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       
-      // Remove any extra text before or after JSON
-      cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+      // More aggressive cleaning to handle various response formats
+      cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/s, '');
+      
+      // Handle cases where there might be explanatory text after JSON
+      const jsonEndIndex = cleanResponse.lastIndexOf('}');
+      if (jsonEndIndex !== -1) {
+        cleanResponse = cleanResponse.substring(0, jsonEndIndex + 1);
+      }
       
       // Find JSON object
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
@@ -496,18 +661,29 @@ Always provide accurate information with verifiable sources. Return only valid J
 
   validateAndCleanData(data) {
     // Ensure all required fields exist with proper structure
-    const requiredFields = ['name', 'guru', 'gharana', 'notableAchievements', 'disciples'];
+    const requiredFields = ['name'];
+    const optionalFields = ['guru', 'gharana', 'notableAchievements', 'disciples', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition', 'numberOfBeats', 'divisions', 'jaati'];
     
     requiredFields.forEach(field => {
       if (!data[field]) {
-        data[field] = { value: '', reference: 'Information not found in search results', verified: false };
+        data[field] = { value: '', reference: 'Required field - information not found in comprehensive search', verified: false };
       } else {
         // Ensure each field has the required structure
         if (typeof data[field].value === 'undefined') data[field].value = '';
-        if (typeof data[field].reference === 'undefined') data[field].reference = 'No reference provided';
+        if (typeof data[field].reference === 'undefined') data[field].reference = 'Source reference not provided';
         if (typeof data[field].verified === 'undefined') data[field].verified = false;
         
         // Convert verified to boolean if it's not already
+        data[field].verified = Boolean(data[field].verified);
+      }
+    });
+    
+    // Handle optional fields
+    optionalFields.forEach(field => {
+      if (data[field]) {
+        if (typeof data[field].value === 'undefined') data[field].value = '';
+        if (typeof data[field].reference === 'undefined') data[field].reference = 'Information found but source not specified';
+        if (typeof data[field].verified === 'undefined') data[field].verified = false;
         data[field].verified = Boolean(data[field].verified);
       }
     });
@@ -527,12 +703,48 @@ Always provide accurate information with verifiable sources. Return only valid J
     Object.keys(data).forEach(key => {
       if (data[key] && data[key].reference) {
         const ref = data[key].reference;
-        // Basic URL validation and cleanup
-        if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not')) {
-          data[key].reference = 'Invalid URL provided: ' + ref;
+        // Enhanced URL validation and cleanup
+        if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not') && !ref.includes('search results') && !ref.includes('comprehensive search')) {
+          // If it looks like it should be a URL but isn't formatted properly
+          if (ref.includes('.com') || ref.includes('.org') || ref.includes('.edu') || ref.includes('wikipedia')) {
+            data[key].reference = 'Improperly formatted URL: ' + ref;
+          } else {
+            data[key].reference = 'Non-URL reference: ' + ref;
+          }
         }
       }
     });
+    
+    // Handle nested taal fields URL validation
+    if (data.taali) {
+      ['count', 'beatNumbers'].forEach(subField => {
+        if (data.taali[subField] && data.taali[subField].reference) {
+          const ref = data.taali[subField].reference;
+          if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not')) {
+            if (ref.includes('.com') || ref.includes('.org') || ref.includes('.edu') || ref.includes('wikipedia')) {
+              data.taali[subField].reference = 'Improperly formatted URL: ' + ref;
+            } else {
+              data.taali[subField].reference = 'Non-URL reference: ' + ref;
+            }
+          }
+        }
+      });
+    }
+    
+    if (data.khaali) {
+      ['count', 'beatNumbers'].forEach(subField => {
+        if (data.khaali[subField] && data.khaali[subField].reference) {
+          const ref = data.khaali[subField].reference;
+          if (ref && !ref.startsWith('http') && !ref.includes('not found') && !ref.includes('Information not')) {
+            if (ref.includes('.com') || ref.includes('.org') || ref.includes('.edu') || ref.includes('wikipedia')) {
+              data.khaali[subField].reference = 'Improperly formatted URL: ' + ref;
+            } else {
+              data.khaali[subField].reference = 'Non-URL reference: ' + ref;
+            }
+          }
+        }
+      });
+    }
   }
 }
 
