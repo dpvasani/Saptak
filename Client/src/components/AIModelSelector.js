@@ -12,33 +12,57 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
       models: [
         {
           id: 'sonar-pro',
-          name: 'Perplexity Fast Model',
-          description: 'Fast web search with real-time data',
+          name: 'Sonar Pro',
+          description: 'Comprehensive answers with large context window',
           source: 'Perplexity'
         },
         {
-          id: 'gpt-4-turbo-perplexity',
-          name: 'GPT-4.1 (via Perplexity)',
-          description: 'OpenAI GPT-4 through Perplexity API',
+          id: 'sonar-deep-research',
+          name: 'Sonar Deep Research',
+          description: 'Multi-step reasoning and deep research tasks',
+          source: 'Perplexity'
+        },
+        {
+          id: 'sonar-reasoning-pro',
+          name: 'Sonar Reasoning Pro',
+          description: 'Advanced reasoning for challenging inquiries',
+          source: 'Perplexity'
+        },
+        {
+          id: 'sonar-reasoning',
+          name: 'Sonar Reasoning',
+          description: 'Fast and efficient for general reasoning tasks',
+          source: 'Perplexity'
+        },
+        {
+          id: 'r1-1776',
+          name: 'R1-1776',
+          description: 'Specialized model focused on factuality and precision',
+          source: 'Perplexity'
+        },
+        {
+          id: 'sonar',
+          name: 'Sonar',
+          description: 'Lightweight, scalable Q&A model for speedy responses',
+          source: 'Perplexity'
+        },
+        {
+          id: 'gpt-4-turbo',
+          name: 'GPT-4 Turbo (via Perplexity)',
+          description: 'OpenAI GPT-4 Turbo through Perplexity Pro',
           source: 'OpenAI via Perplexity'
         },
         {
-          id: 'claude-3-sonnet-perplexity',
+          id: 'claude-3-sonnet',
           name: 'Claude 3 Sonnet (via Perplexity)',
-          description: 'Anthropic Claude through Perplexity',
+          description: 'Anthropic Claude 3 through Perplexity Pro',
           source: 'Anthropic via Perplexity'
         },
         {
-          id: 'gemini-pro-perplexity',
+          id: 'gemini-1.5-pro',
           name: 'Gemini 1.5 Pro (via Perplexity)',
-          description: 'Google Gemini through Perplexity API',
+          description: 'Google Gemini 1.5 Pro through Perplexity Pro',
           source: 'Google via Perplexity'
-        },
-        {
-          id: 'llama-3-1-sonar-large',
-          name: 'Llama 3.1 Sonar Large',
-          description: 'Meta Llama with web search capabilities',
-          source: 'Meta via Perplexity'
         }
       ]
     },

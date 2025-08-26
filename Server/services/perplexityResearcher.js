@@ -4,12 +4,20 @@ class PerplexityResearcher {
   constructor() {
     this.apiKey = process.env.PERPLEXITY_API_KEY;
     this.baseURL = 'https://api.perplexity.ai/chat/completions';
-    // Use sonar-pro for better web search and accuracy
-    this.model = 'sonar-pro'; // More accurate than sonar-reasoning
+    // Use sonar-deep-research for comprehensive music research
+    this.model = 'sonar-deep-research'; // Best for detailed research tasks
     this.fallbackModels = [
-      'sonar-reasoning',
-      'llama-3.1-sonar-large-128k-online',
-      'llama-3.1-sonar-small-128k-online'
+      'sonar-pro', // Comprehensive answers with large context
+      'sonar-reasoning-pro', // Advanced reasoning for complex queries
+      'sonar-reasoning', // Fast reasoning for general tasks
+      'r1-1776', // Specialized for factuality and precision
+      'sonar', // Lightweight for quick responses
+      // Third-party models for fallback
+      'gpt-4-turbo', // OpenAI GPT-4 Turbo
+      'claude-3-sonnet', // Anthropic Claude 3
+      'gemini-1.5-pro', // Google Gemini 1.5 Pro
+      'mistral-large', // Mistral AI large model
+      'grok-1' // xAI Grok for general reasoning
     ];
   }
 
@@ -20,7 +28,7 @@ class PerplexityResearcher {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Enhanced prompt with specific search terms and source requirements
+    // Enhanced prompt optimized for deep research model
     const prompt = `Search for comprehensive information about the Indian Classical Music artist "${name}". Focus on finding information from these specific types of sources:
 
 1. Wikipedia articles about the artist
@@ -28,6 +36,8 @@ class PerplexityResearcher {
 3. Academic music journals and publications
 4. Verified artist biographies from music organizations
 5. Concert hall and festival websites with artist profiles
+6. Music conservatory and university websites
+7. Cultural institution archives and databases
 
 For the artist "${name}", provide ONLY factual, verifiable information in this exact JSON format:
 
@@ -63,8 +73,8 @@ CRITICAL REQUIREMENTS:
 - Use ONLY information found in your web search results
 - Provide REAL, working URLs as references
 - If information is not found, use empty string for value but provide a reference explaining why
-- Do NOT make up or assume information
-- Prefer authoritative sources like Wikipedia, Sangeet Natak Akademi, ITC SRA
+- Do NOT make up, assume, or hallucinate information
+- Prefer authoritative sources like Wikipedia, Sangeet Natak Akademi, ITC SRA, academic institutions
 - Return ONLY the JSON object, no additional text or formatting`;
 
     try {
@@ -73,14 +83,16 @@ CRITICAL REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are a specialized researcher for Indian Classical Music. Your task is to find accurate, verifiable information about musicians from authoritative sources. 
+            content: `You are a specialized deep researcher for Indian Classical Music with expertise in musicology and cultural studies. Your task is to conduct thorough, multi-step research to find accurate, verifiable information about musicians from authoritative sources.
 
 SEARCH STRATEGY:
-1. First search for the artist on Wikipedia
-2. Look for official music institution websites
-3. Check academic and scholarly sources
-4. Verify information across multiple sources
-5. Prioritize recent and authoritative sources
+1. Conduct comprehensive search across multiple authoritative sources
+2. Cross-reference information from academic and institutional sources
+3. Verify biographical details from multiple independent sources
+4. Prioritize scholarly publications and official music institutions
+5. Check for recent updates and contemporary information
+6. Analyze source credibility and reliability
+7. Synthesize information from diverse perspectives
 
 RESPONSE FORMAT:
 - Return ONLY valid JSON
@@ -94,9 +106,9 @@ RESPONSE FORMAT:
             content: prompt
           }
         ],
-        temperature: 0.1, // Lower temperature for more factual responses
-        max_tokens: 1500, // More tokens for detailed responses
-        top_p: 0.9, // Focus on most likely tokens
+        temperature: 0.05, // Very low temperature for maximum factual accuracy
+        max_tokens: 2000, // More tokens for comprehensive research
+        top_p: 0.85, // Focus on most reliable information
         frequency_penalty: 0.1, // Reduce repetition
         presence_penalty: 0.1 // Encourage diverse information
       }, {
@@ -119,7 +131,7 @@ RESPONSE FORMAT:
         // Try fallback models if primary model fails
         if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
           console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt);
+          return await this.researchWithFallbackModel(name, prompt, 'artist');
         }
         
         throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
@@ -138,6 +150,8 @@ RESPONSE FORMAT:
     const prompt = `Search for detailed information about the Indian Classical Music raag "${name}". Look specifically for:
 
 1. Wikipedia articles about the raag
+2. Academic musicology papers and journals
+3. University music department resources
 2. Music theory websites and academic sources
 3. Raga databases and music institution websites
 4. Classical music learning platforms
@@ -211,16 +225,16 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are an expert in Indian Classical Music theory and ragas. Search for accurate information about ragas from authoritative music sources. Focus on technical accuracy and use proper Indian music terminology. Verify information across multiple sources before including it.`
+            content: `You are a deep research specialist in Indian Classical Music theory and ragas with advanced knowledge of musicology. Conduct comprehensive multi-step research to find accurate information about ragas from authoritative music sources. Focus on technical accuracy, use proper Indian music terminology, and verify information across multiple academic and institutional sources before including it.`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 1500,
-        top_p: 0.9,
+        temperature: 0.05,
+        max_tokens: 2000,
+        top_p: 0.85,
         frequency_penalty: 0.1,
         presence_penalty: 0.1
       }, {
@@ -242,7 +256,7 @@ REQUIREMENTS:
         
         if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
           console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt);
+          return await this.researchWithFallbackModel(name, prompt, 'raag');
         }
         
         throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
@@ -261,6 +275,8 @@ REQUIREMENTS:
     const prompt = `Search for detailed information about the Indian Classical Music taal "${name}". Look for:
 
 1. Wikipedia articles about the taal
+2. Academic papers on Indian rhythm systems
+3. Music conservatory and university resources
 2. Rhythm and percussion websites
 3. Music theory and tabla learning resources
 4. Academic sources on Indian rhythm systems
@@ -327,16 +343,16 @@ REQUIREMENTS:
         messages: [
           {
             role: "system",
-            content: `You are an expert in Indian Classical Music rhythm and talas. Search for precise information about talas from authoritative sources. Focus on mathematical accuracy of beat structures and use proper terminology for Indian rhythm systems.`
+            content: `You are a deep research specialist in Indian Classical Music rhythm and talas with expertise in rhythmic analysis and percussion studies. Conduct thorough multi-step research to find precise information about talas from authoritative academic and institutional sources. Focus on mathematical accuracy of beat structures, use proper terminology for Indian rhythm systems, and verify rhythmic patterns across multiple sources.`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 1500,
-        top_p: 0.9,
+        temperature: 0.05,
+        max_tokens: 2000,
+        top_p: 0.85,
         frequency_penalty: 0.1,
         presence_penalty: 0.1
       }, {
@@ -358,7 +374,7 @@ REQUIREMENTS:
         
         if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
           console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt);
+          return await this.researchWithFallbackModel(name, prompt, 'taal');
         }
         
         throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
@@ -367,7 +383,7 @@ REQUIREMENTS:
     }
   }
 
-  async researchWithFallbackModel(name, prompt) {
+  async researchWithFallbackModel(name, prompt, type) {
     for (const model of this.fallbackModels) {
       try {
         console.log(`Trying fallback model: ${model}`);
@@ -376,16 +392,21 @@ REQUIREMENTS:
           messages: [
             {
               role: "system",
-              content: "You are an expert researcher specializing in Indian Classical Music. Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting."
+              content: `You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
+- Deep knowledge of Indian Classical Music traditions
+- Access to academic and institutional sources
+- Ability to verify information across multiple sources
+- Understanding of proper musicological terminology
+Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting.`
             },
             {
               role: "user",
               content: prompt
             }
           ],
-          temperature: 0.1,
-          max_tokens: 1500,
-          top_p: 0.9
+          temperature: 0.05,
+          max_tokens: 2000,
+          top_p: 0.85
         }, {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
@@ -403,7 +424,7 @@ REQUIREMENTS:
       }
     }
 
-    throw new Error('All Perplexity models failed. Please check the Perplexity API documentation for available models.');
+    throw new Error('All Perplexity models failed. Please check your API access and model availability.');
   }
 
   parseAIResponse(response) {
