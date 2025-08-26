@@ -411,7 +411,9 @@ const RaagSearch = () => {
             {reference && (
               <div className="border-t pt-4">
                 <p className="text-sm font-medium text-gray-700 mb-2">Source:</p>
-                {renderSources(reference)}
+                <div className="space-y-2">
+                  {renderSources(reference)}
+                </div>
               </div>
             )}
           </>
