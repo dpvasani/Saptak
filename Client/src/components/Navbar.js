@@ -50,12 +50,14 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-primary-50/80 backdrop-blur supports-[backdrop-filter]:bg-primary-50/60 border-b border-primary-100">
+      <nav className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 backdrop-blur supports-[backdrop-filter]:bg-emerald-50/80 border-b border-emerald-200 shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <span className="text-xl font-extrabold tracking-tight text-primary-700">RagaBot</span>
+                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                  🎵 RagaBot
+                </span>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-1">
                 {navLinks.map((link) => (
@@ -64,8 +66,8 @@ const Navbar = () => {
                     to={link.path}
                     className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive(link.path)
-                        ? 'bg-primary-100 text-primary-800'
-                        : 'text-gray-700 hover:text-gray-900 hover:bg-primary-50'
+                        ? 'bg-emerald-100 text-emerald-800 shadow-sm'
+                        : 'text-gray-700 hover:text-emerald-700 hover:bg-emerald-50'
                     }`}
                   >
                     {link.label}
@@ -119,7 +121,7 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={() => setShowLoginModal(true)}
-                  className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-colors"
+                  className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-sm transition-all duration-200 transform hover:scale-105"
                 >
                   Login
                 </button>
