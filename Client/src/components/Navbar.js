@@ -50,24 +50,22 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-white shadow-lg">
+      <nav className="bg-primary-50/80 backdrop-blur supports-[backdrop-filter]:bg-primary-50/60 border-b border-primary-100">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <span className="text-xl font-bold text-primary-600">
-                  Indian Classical Music
-                </span>
+                <span className="text-xl font-extrabold tracking-tight text-primary-700">RagaBot</span>
               </div>
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-1">
                 {navLinks.map((link) => (
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive(link.path)
-                        ? 'border-primary-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                        ? 'bg-primary-100 text-primary-800'
+                        : 'text-gray-700 hover:text-gray-900 hover:bg-primary-50'
                     }`}
                   >
                     {link.label}
@@ -121,7 +119,7 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={() => setShowLoginModal(true)}
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                  className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-colors"
                 >
                   Login
                 </button>
