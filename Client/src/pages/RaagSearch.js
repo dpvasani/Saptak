@@ -388,24 +388,6 @@ const RaagSearch = () => {
     );
   };
 
-  // All About search function
-  const handleAllAboutSearch = async (query) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`http://localhost:5000/api/raags/all-about?name=${encodeURIComponent(query)}`);
-      setAllAboutData(response.data.data);
-      toast.success('All About search completed successfully');
-    } catch (error) {
-      if (error.response?.status === 429) {
-        toast.error('Rate limit exceeded. Please try again later.');
-      } else {
-        toast.error(error.response?.data?.message || 'Error in All About search');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const renderSources = (reference) => {
     if (!reference) return null;
 
