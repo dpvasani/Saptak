@@ -20,6 +20,13 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    console.log('API Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      hasToken: !!token
+    });
+    
     return config;
   },
   (error) => {
@@ -30,6 +37,11 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
+    console.log('API Response:', {
+      status: response.status,
+      url: response.config.url,
+      dataType: typeof response.data
+    });
     return response;
   },
   (error) => {
@@ -42,16 +54,25 @@ api.interceptors.response.use(
       // Server responded with error status
       const { status, data } = error.response;
       
+      console.error('API Error Details:', {
+        status,
+        message: data.message,
+        url: error.config?.url
+      });
+      
       switch (status) {
         case 400:
           toast.error(data.message || 'Invalid request');
           break;
         case 401:
-          toast.error('Authentication required. Please login.');
+          console.log('Authentication failed, redirecting to login...');
           // Redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          window.location.href = '/';
+          // Don't show toast here as it will be handled by the component
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 100);
           break;
         case 403:
           toast.error('Access denied. Insufficient permissions.');

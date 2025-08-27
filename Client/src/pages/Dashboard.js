@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
   ChartBarIcon, 
@@ -12,14 +12,16 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 
-const Dashboard = () => {
+const Dashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [pendingItems, setPendingItems] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData();
+    if (user) {
+      fetchDashboardData();
+    }
   }, []);
 
   const fetchDashboardData = async () => {
@@ -28,16 +30,21 @@ const Dashboard = () => {
       setError(null);
       
       const [statsResponse, pendingResponse] = await Promise.all([
-        axios.get('http://localhost:5000/api/dashboard/stats'),
-        axios.get('http://localhost:5000/api/dashboard/pending-verification?limit=5')
+        api.get('/api/dashboard/stats'),
+        api.get('/api/dashboard/pending-verification?limit=5')
       ]);
       
       setStats(statsResponse.data);
       setPendingItems(pendingResponse.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setError('Failed to load dashboard data. Please try again.');
-      toast.error('Failed to load dashboard data');
+      if (error.response?.status === 401) {
+        setError('Authentication required. Please login again.');
+        toast.error('Please login to access dashboard');
+      } else {
+        setError('Failed to load dashboard data. Please try again.');
+        toast.error('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }

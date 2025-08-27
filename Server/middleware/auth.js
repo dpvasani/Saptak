@@ -7,24 +7,40 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+    console.log('Auth middleware - Token received:', !!token);
+    console.log('Auth middleware - Request URL:', req.url);
+
     if (!token) {
+      console.log('Auth middleware - No token provided');
       return res.status(401).json({
         success: false,
         message: 'Access token required'
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Auth middleware - Token decoded successfully for user:', decoded.userId);
+    } catch (jwtError) {
+      console.log('Auth middleware - JWT verification failed:', jwtError.message);
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+    }
     
     // Check if user still exists and is active
     const user = await User.findById(decoded.userId).select('-password');
     if (!user || !user.isActive) {
+      console.log('Auth middleware - User not found or inactive:', decoded.userId);
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired token'
       });
     }
 
+    console.log('Auth middleware - Authentication successful for user:', user.username);
     req.user = { userId: decoded.userId, ...user.toObject() };
     next();
   } catch (error) {
