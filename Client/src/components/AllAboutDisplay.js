@@ -7,7 +7,6 @@ import {
   PhotoIcon,
   LinkIcon,
   ClockIcon,
-  QuestionMarkCircleIcon,
   CheckCircleIcon,
   XCircleIcon,
   PencilIcon,
@@ -16,8 +15,6 @@ import {
 } from '@heroicons/react/24/outline';
 
 const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
-  if (!data) return null;
-
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [localData, setLocalData] = useState(data);
@@ -25,6 +22,8 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   useEffect(() => {
     setLocalData(data);
   }, [data]);
+
+  if (!data) return null;
 
   const handleEdit = (field) => {
     setEditingField(field);
@@ -34,7 +33,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   const handleSave = async () => {
     try {
       // Update the All About data in database
-      const response = await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
+      await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
         [editingField]: {
           ...localData[editingField],
           value: editValue
@@ -72,7 +71,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
+      await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
         [field]: {
           ...localData[field],
           verified: !currentStatus
@@ -304,27 +303,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
     );
   };
 
-  const renderRelatedQuestions = () => {
-    if (!localData.relatedQuestions || localData.relatedQuestions.length === 0) {
-      return null;
-    }
-
-    return (
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-3 flex items-center">
-          <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
-          Related Questions
-        </h4>
-        <div className="space-y-2">
-          {localData.relatedQuestions.map((question, index) => (
-            <div key={index} className="text-sm text-blue-800 bg-white rounded px-3 py-2">
-              {question}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  
 
   return (
     <div className="space-y-8">
@@ -435,15 +414,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
         {renderSources()}
       </div>
 
-      {/* Related Questions Section */}
-      {localData.relatedQuestions && localData.relatedQuestions.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
-            Related Questions
-          </h4>
-          {renderRelatedQuestions()}
-        </div>
-      )}
+      
 
       {/* Citations Section */}
       {localData.citations && localData.citations.length > 0 && (

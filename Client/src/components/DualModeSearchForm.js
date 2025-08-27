@@ -207,27 +207,29 @@ const DualModeSearchForm = ({
                 <div className="space-y-6">
                   {/* Option 1: Structured Mode */}
                   <div className="bg-white rounded-lg p-4 border-2 border-blue-200">
-                    <label className="flex items-start space-x-3">
+                    <div className="flex items-start space-x-3">
                       <input
+                        id="structured-mode-checkbox"
                         type="checkbox"
                         checked={useStructuredMode}
                         onChange={(e) => handleStructuredModeToggle(e.target.checked)}
                         className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                       />
                       <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          📊 Option 1: Structured Mode
-                        </span>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Uses structured prompts to generate organized field data (Name, Guru, Gharana, etc.)
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">
-                          ✅ Perfect for verification workflows and data management
-                        </p>
-                        
+                        <label htmlFor="structured-mode-checkbox" className="cursor-pointer select-none block">
+                          <span className="text-sm font-medium text-gray-900">
+                            📊 Option 1: Structured Mode
+                          </span>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Uses structured prompts to generate organized field data (Name, Guru, Gharana, etc.)
+                          </p>
+                          <p className="text-xs text-blue-600 mt-1">
+                            ✅ Perfect for verification workflows and data management
+                          </p>
+                        </label>
                         {/* AI Settings for Structured Mode */}
                         {structuredExpanded && (
-                          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleStructuredModelChange}
                               selectedProvider={structuredProvider}
@@ -237,32 +239,34 @@ const DualModeSearchForm = ({
                           </div>
                         )}
                       </div>
-                    </label>
+                    </div>
                   </div>
 
                   {/* Option 2: All About Mode */}
                   <div className="bg-white rounded-lg p-4 border-2 border-purple-200">
-                    <label className="flex items-start space-x-3">
+                    <div className="flex items-start space-x-3">
                       <input
+                        id="allabout-mode-checkbox"
                         type="checkbox"
                         checked={useAllAboutMode}
                         onChange={(e) => handleAllAboutModeToggle(e.target.checked)}
                         className="mt-1 rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
                       />
                       <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          📝 Option 2: "All About" Mode
-                        </span>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Runs "all about {name}" and displays raw AI response with Answer, Images, and Sources
-                        </p>
-                        <p className="text-xs text-purple-600 mt-1">
-                          ⚡ No prompt optimization - pure raw response in markdown format
-                        </p>
-                        
+                        <label htmlFor="allabout-mode-checkbox" className="cursor-pointer select-none block">
+                          <span className="text-sm font-medium text-gray-900">
+                            📝 Option 2: "All About" Mode
+                          </span>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Runs "all about {searchQuery}" and displays raw AI response with Answer, Images, and Sources
+                          </p>
+                          <p className="text-xs text-purple-600 mt-1">
+                            ⚡ No prompt optimization - pure raw response in markdown format
+                          </p>
+                        </label>
                         {/* AI Settings for All About Mode */}
                         {allAboutExpanded && (
-                          <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleAllAboutModelChange}
                               selectedProvider={allAboutProvider}
@@ -280,7 +284,7 @@ const DualModeSearchForm = ({
                           </div>
                         )}
                       </div>
-                    </label>
+                    </div>
                   </div>
                 </div>
               </div>
