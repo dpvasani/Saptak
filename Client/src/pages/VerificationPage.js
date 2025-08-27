@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { apiService } from '../utils/api';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { 
   CheckCircleIcon, 
@@ -111,14 +111,7 @@ const VerificationPage = () => {
       setLoading(true);
       setError(null);
       
-      let response;
-      if (category === 'artists') {
-        response = await apiService.getArtistById(id);
-      } else if (category === 'raags') {
-        response = await apiService.getRaagById(id);
-      } else if (category === 'taals') {
-        response = await apiService.getTaalById(id);
-      }
+      let endpoint = '';
       switch (activeTab) {
         case 'verified':
           endpoint = `http://localhost:5000/api/${category}/verified`;
@@ -133,13 +126,13 @@ const VerificationPage = () => {
           endpoint = `http://localhost:5000/api/${category}`;
       }
       
-      const response = await axios.get(endpoint);
+      const res = await axios.get(endpoint);
       
       // Handle different response formats
-      if (response.data.data) {
-        setItems(response.data.data);
-      } else if (Array.isArray(response.data)) {
-        setItems(response.data);
+      if (res.data.data) {
+        setItems(res.data.data);
+      } else if (Array.isArray(res.data)) {
+        setItems(res.data);
       } else {
         setItems([]);
       }
@@ -210,7 +203,7 @@ const VerificationPage = () => {
 
     setBulkLoading(true);
     try {
-      const response = await axios.delete('http://localhost:5000/api/artists', {
+      const response = await axios.delete(`http://localhost:5000/api/${category}`, {
         data: { ids: Array.from(selectedItems) }
       });
 
