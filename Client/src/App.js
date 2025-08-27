@@ -16,7 +16,7 @@ import TaalSearch from './pages/TaalSearch';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-emerald-900">
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <Routes>

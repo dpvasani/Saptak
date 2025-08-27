@@ -2,17 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global greenish theme */
+/* Dark greenish theme like Advanced-Auth */
 body {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 25%, #bbf7d0 50%, #86efac 75%, #10b981 100%);
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 25%, #047857 50%, #059669 75%, #10b981 100%);
   background-attachment: fixed;
   min-height: 100vh;
+  color: #f3f4f6;
 }
 
-/* Markdown content styling */
+/* Glass morphism cards */
+.glass-card {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* Markdown content styling with dark green theme */
 .markdown-content {
   line-height: 1.7;
-  color: #374151;
+  color: #d1d5db;
 }
 
 .markdown-content h1,
@@ -24,28 +32,29 @@ body {
   font-weight: 600;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
-  color: #065f46;
+  color: #34d399;
 }
 
 .markdown-content h1 {
   font-size: 1.875rem;
   border-bottom: 2px solid #10b981;
   padding-bottom: 0.5rem;
-  color: #064e3b;
+  color: #6ee7b7;
 }
 
 .markdown-content h2 {
   font-size: 1.5rem;
-  color: #065f46;
+  color: #34d399;
 }
 
 .markdown-content h3 {
   font-size: 1.25rem;
-  color: #047857;
+  color: #10b981;
 }
 
 .markdown-content p {
   margin-bottom: 1em;
+  color: #d1d5db;
 }
 
 .markdown-content ul,
@@ -56,6 +65,7 @@ body {
 
 .markdown-content li {
   margin-bottom: 0.5em;
+  color: #d1d5db;
 }
 
 .markdown-content blockquote {
@@ -63,28 +73,28 @@ body {
   padding-left: 1rem;
   margin: 1rem 0;
   font-style: italic;
-  color: #047857;
-  background-color: #f0fdf4;
+  color: #34d399;
+  background-color: rgba(16, 185, 129, 0.1);
   border-radius: 0.5rem;
   padding: 1rem;
 }
 
 .markdown-content code {
-  background-color: #dcfce7;
+  background-color: rgba(16, 185, 129, 0.2);
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-family: 'Courier New', monospace;
   font-size: 0.875em;
-  color: #065f46;
+  color: #6ee7b7;
 }
 
 .markdown-content pre {
-  background-color: #f0fdf4;
+  background-color: rgba(17, 24, 39, 0.8);
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
   margin: 1rem 0;
-  border: 1px solid #bbf7d0;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .markdown-content pre code {
@@ -100,34 +110,34 @@ body {
 
 .markdown-content th,
 .markdown-content td {
-  border: 1px solid #bbf7d0;
+  border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 0.5rem;
   text-align: left;
 }
 
 .markdown-content th {
-  background-color: #dcfce7;
+  background-color: rgba(16, 185, 129, 0.2);
   font-weight: 600;
-  color: #065f46;
+  color: #34d399;
 }
 
 .markdown-content a {
-  color: #059669;
+  color: #10b981;
   text-decoration: underline;
 }
 
 .markdown-content a:hover {
-  color: #047857;
+  color: #34d399;
 }
 
 .markdown-content strong {
   font-weight: 600;
-  color: #065f46;
+  color: #6ee7b7;
 }
 
 .markdown-content em {
   font-style: italic;
-  color: #047857;
+  color: #34d399;
 }
 
 /* Custom scrollbar for green theme */
@@ -136,7 +146,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f0fdf4;
+  background: rgba(17, 24, 39, 0.5);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -145,5 +155,24 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #059669;
+  background: #34d399;
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
