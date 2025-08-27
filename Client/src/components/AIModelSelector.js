@@ -268,16 +268,14 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                            <span className="text-green-400 flex-shrink-0">✓</span>
-                        <span className="font-medium truncate">{model.name}</span>
+                      <div className="flex items-center space-x-2">
                         {selectedModel === model.id && (
-                        )
-                        }
-                        <p className="text-sm text-gray-400 mt-1">{model.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">Source: {model.source}</p>
+                          <span className="text-green-400 flex-shrink-0">✓</span>
+                        )}
+                        <span className="font-medium truncate">{model.name}</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{model.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">Source: {model.source}</p>
+                      <p className="text-sm text-gray-400 mt-1">{model.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Source: {model.source}</p>
                     </div>
                   </div>
                 </button>
