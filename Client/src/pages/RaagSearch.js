@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
-import AIModelSelector from '../components/AIModelSelector';
+import DualModeSearchForm from '../components/DualModeSearchForm';
+import AllAboutDisplay from '../components/AllAboutDisplay';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -10,18 +11,14 @@ import {
   PencilIcon,
   CheckIcon,
   XMarkIcon,
-  ClockIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const RaagSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [raag, setRaag] = useState(null);
+  const [allAboutData, setAllAboutData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [useAI, setUseAI] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [modelData, setModelData] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [selectedFields, setSelectedFields] = useState(new Set());
@@ -39,18 +36,8 @@ const RaagSearch = () => {
     { key: 'timeOfRendition', label: 'Time of Rendition' }
   ];
 
-  // Debounced search function
-  const debouncedSearch = debounce(async (query, aiEnabled, provider, model) => {
-    if (!query.trim()) {
-      toast.error('Please enter a raag name');
-      return;
-    }
-
-    if (aiEnabled && (!provider || !model)) {
-      toast.error('Please select both AI provider and model');
-      return;
-    }
-
+  // Debounced structured search function
+  const debouncedStructuredSearch = debounce(async (query, aiEnabled, provider, model, modelData) => {
     setLoading(true);
     try {
       const response = await axios.get(`http://localhost:5000/api/raags/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
@@ -67,15 +54,22 @@ const RaagSearch = () => {
     }
   }, 1000);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    debouncedSearch(searchQuery, useAI, selectedProvider, selectedModel);
-  };
-
-  const handleModelChange = ({ provider, model, modelData: data }) => {
-    setSelectedProvider(provider);
-    setSelectedModel(model);
-    setModelData(data);
+  // All About search function
+  const handleAllAboutSearch = async (query) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`http://localhost:5000/api/raags/all-about?name=${encodeURIComponent(query)}`);
+      setAllAboutData(response.data.data);
+      toast.success('All About search completed successfully');
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error(error.response?.data?.message || 'Error in All About search');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateRaagField = (field, updates) => {
@@ -86,30 +80,6 @@ const RaagSearch = () => {
         ...updates
       }
     }));
-  };
-
-  const handleFieldUpdate = async (field, value) => {
-    if (!raag) return;
-
-    const updatedRaag = {
-      ...raag,
-      [field]: {
-        ...raag[field],
-        value,
-      },
-    };
-
-    try {
-      const response = await axios.put(`http://localhost:5000/api/raags/${raag._id}`, updatedRaag);
-      setRaag(response.data);
-      toast.success('Raag updated successfully');
-    } catch (error) {
-      if (error.response?.status === 429) {
-        toast.error('Rate limit exceeded. Please try again later.');
-      } else {
-        toast.error(error.response?.data?.message || 'Error updating raag');
-      }
-    }
   };
 
   const handleVerification = async (field, currentStatus) => {
@@ -177,6 +147,96 @@ const RaagSearch = () => {
     setEditValue('');
   };
 
+  const renderSources = (reference) => {
+    if (!reference) return null;
+
+    const noSourceIndicators = [
+      'no authoritative sources',
+      'information not found',
+      'no reliable information',
+      'no specific',
+      'not available',
+      'no official',
+      'sources not found'
+    ];
+
+    const isNoSourceMessage = noSourceIndicators.some(indicator => 
+      reference.toLowerCase().includes(indicator)
+    );
+
+    if (isNoSourceMessage) {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">No Sources Available</p>
+              <p className="text-sm text-amber-700 mt-1">{reference}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const sources = reference.split(' | ').map(source => source.trim()).filter(source => source.length > 0);
+
+    if (sources.length === 1) {
+      const source = sources[0];
+      const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
+      
+      if (isValidUrl) {
+        return (
+          <a
+            href={source}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-sm text-purple-700 hover:underline break-all"
+          >
+            {source}
+            <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+          </a>
+        );
+      } else {
+        return (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-sm text-gray-700">{source}</p>
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div className="space-y-2">
+        {sources.map((source, index) => {
+          const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
+          
+          return (
+            <div key={index} className="flex items-start space-x-2">
+              <span className="text-sm font-medium text-gray-600 mt-1 flex-shrink-0">
+                Link {index + 1}:
+              </span>
+              {isValidUrl ? (
+                <a
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm text-purple-700 hover:underline break-all"
+                >
+                  {source}
+                  <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+                </a>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 flex-1">
+                  <p className="text-sm text-gray-700">{source}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Bulk verification functions
   const handleSelectAll = () => {
     if (selectedFields.size === fields.length) {
@@ -226,10 +286,129 @@ const RaagSearch = () => {
     }
   };
 
+  const renderField = (field) => {
+    if (!raag) return null;
+
+    const value = raag[field.key]?.value || '';
+    const verified = raag[field.key]?.verified || false;
+    const reference = raag[field.key]?.reference || '';
+    const isEditing = editingField === field.key;
+    const isSelected = selectedFields.has(field.key);
+
+    return (
+      <div key={field.key} className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-200 hover:border-purple-300 transition-colors duration-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => handleFieldSelect(field.key)}
+              className="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
+            />
+            <h3 className="text-lg font-semibold text-gray-900">{field.label}</h3>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleEdit(field.key)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 rounded-lg hover:bg-gray-100"
+              title="Edit field"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleVerification(field.key, verified)}
+              className={`flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                verified
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 shadow-sm'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200 shadow-sm'
+              }`}
+            >
+              {verified ? (
+                <>
+                  <CheckCircleIcon className="h-4 w-4 mr-1" />
+                  Verified
+                </>
+              ) : (
+                <>
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  Unverified
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-4">
+            <textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              rows={3}
+              placeholder={`Enter ${field.label.toLowerCase()}...`}
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSave}
+                className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <CheckIcon className="h-4 w-4 mr-1" />
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4">
+              {value ? (
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{value}</p>
+              ) : (
+                <p className="text-gray-500 italic">No data available</p>
+              )}
+            </div>
+
+            {reference && (
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Source:</p>
+                <div className="space-y-2">
+                  {renderSources(reference)}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // All About search function
+  const handleAllAboutSearch = async (query) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`http://localhost:5000/api/raags/all-about?name=${encodeURIComponent(query)}`);
+      setAllAboutData(response.data.data);
+      toast.success('All About search completed successfully');
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error(error.response?.data?.message || 'Error in All About search');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderSources = (reference) => {
     if (!reference) return null;
 
-    // Check if it's a "no source" message
     const noSourceIndicators = [
       'no authoritative sources',
       'information not found',
@@ -258,11 +437,9 @@ const RaagSearch = () => {
       );
     }
 
-    // Check if it contains multiple sources (separated by |)
     const sources = reference.split(' | ').map(source => source.trim()).filter(source => source.length > 0);
 
     if (sources.length === 1) {
-      // Single source
       const source = sources[0];
       const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
       
@@ -287,7 +464,6 @@ const RaagSearch = () => {
       }
     }
 
-    // Multiple sources
     return (
       <div className="space-y-2">
         {sources.map((source, index) => {
@@ -318,6 +494,55 @@ const RaagSearch = () => {
         })}
       </div>
     );
+  };
+
+  // Bulk verification functions
+  const handleSelectAll = () => {
+    if (selectedFields.size === fields.length) {
+      setSelectedFields(new Set());
+    } else {
+      setSelectedFields(new Set(fields.map(field => field.key)));
+    }
+  };
+
+  const handleFieldSelect = (fieldKey) => {
+    const newSelected = new Set(selectedFields);
+    if (newSelected.has(fieldKey)) {
+      newSelected.delete(fieldKey);
+    } else {
+      newSelected.add(fieldKey);
+    }
+    setSelectedFields(newSelected);
+  };
+
+  const handleBulkVerification = async (verify) => {
+    if (selectedFields.size === 0) {
+      toast.warning('Please select fields to verify/unverify');
+      return;
+    }
+
+    try {
+      const updatedRaag = { ...raag };
+      
+      selectedFields.forEach(field => {
+        updatedRaag[field] = {
+          ...updatedRaag[field],
+          verified: verify
+        };
+      });
+
+      await axios.put(`http://localhost:5000/api/raags/${raag._id}`, updatedRaag);
+      setRaag(updatedRaag);
+      setSelectedFields(new Set());
+      
+      toast.success(`${selectedFields.size} fields ${verify ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error('Failed to update verification status');
+      }
+    }
   };
 
   const renderField = (field) => {
@@ -426,139 +651,103 @@ const RaagSearch = () => {
   const verificationPercentage = raag && verifiedFields.length >= 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Search Form */}
-      <div className="bg-white shadow-lg rounded-xl mb-8">
-        <div className="px-6 py-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            Search for a Raag
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Enter the name of a Raag to search for its information.
-          </p>
-          
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent shadow-sm"
-                  placeholder="Enter raag name"
-                />
+    <div className="max-w-6xl mx-auto">
+      {/* Dual Mode Search Form */}
+      <DualModeSearchForm
+        onStructuredSearch={debouncedStructuredSearch}
+        onAllAboutSearch={handleAllAboutSearch}
+        loading={loading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        placeholder="Enter raag name"
+        category="raag"
+      />
+
+      {/* Results Container */}
+      <div className="space-y-8">
+        {/* Option 1: Structured Mode Results */}
+        {raag && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                📊 Structured Mode Results
+              </h3>
+              <p className="text-gray-600">
+                Organized field data with verification capabilities
+              </p>
+            </div>
+
+            {/* Header with Progress */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {raag.name?.value || 'Raag Information'}
+                </h3>
+                <span className="text-sm text-gray-600">
+                  {verifiedFields.length}/{fields.length} fields verified ({verificationPercentage}%)
+                </span>
               </div>
               
-              <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={useAI}
-                    onChange={(e) => setUseAI(e.target.checked)}
-                    className="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 font-medium">Use AI Research</span>
-                </label>
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    verificationPercentage === 100 ? 'bg-green-500' :
+                    verificationPercentage > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${verificationPercentage}%` }}
+                ></div>
               </div>
-            </div>
-            
-            {/* AI Model Selection */}
-            {useAI && (
-              <div className="mt-4">
-                <AIModelSelector
-                  onModelChange={handleModelChange}
-                  selectedProvider={selectedProvider}
-                  selectedModel={selectedModel}
-                />
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <ClockIcon className="animate-spin h-5 w-5 mr-2" />
-                  {useAI ? `${modelData?.name || 'AI'} Researching...` : 'Web Searching...'}
-                </div>
-              ) : (
-                useAI ? 'AI Research' : 'Web Search'
-              )}
-            </button>
-          </form>
-        </div>
-      </div>
 
-      {/* Raag Information */}
-      {raag && (
-        <div className="space-y-6">
-          {/* Header with Progress */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-gray-900">
-                {raag.name?.value || 'Raag Information'}
-              </h3>
-              <span className="text-sm text-gray-600">
-                {verifiedFields.length}/{fields.length} fields verified ({verificationPercentage}%)
-              </span>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-              <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  verificationPercentage === 100 ? 'bg-green-500' :
-                  verificationPercentage > 50 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${verificationPercentage}%` }}
-              ></div>
-            </div>
-
-            {/* Bulk Actions */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handleSelectAll}
-                    className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
-                  >
-                    {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {selectedFields.size} of {fields.length} fields selected
-                  </span>
-                </div>
-                
-                {selectedFields.size > 0 && (
-                  <div className="flex items-center space-x-2">
+              {/* Bulk Actions */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4">
                     <button
-                      onClick={() => handleBulkVerification(true)}
-                      className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      onClick={handleSelectAll}
+                      className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
                     >
-                      <CheckCircleIcon className="h-4 w-4 mr-1" />
-                      Verify Selected ({selectedFields.size})
+                      {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
                     </button>
-                    <button
-                      onClick={() => handleBulkVerification(false)}
-                      className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
-                    >
-                      <XCircleIcon className="h-4 w-4 mr-1" />
-                      Unverify Selected ({selectedFields.size})
-                    </button>
+                    <span className="text-sm text-gray-600">
+                      {selectedFields.size} of {fields.length} fields selected
+                    </span>
                   </div>
-                )}
+                  
+                  {selectedFields.size > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleBulkVerification(true)}
+                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <CheckCircleIcon className="h-4 w-4 mr-1" />
+                        Verify Selected ({selectedFields.size})
+                      </button>
+                      <button
+                        onClick={() => handleBulkVerification(false)}
+                        className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <XCircleIcon className="h-4 w-4 mr-1" />
+                        Unverify Selected ({selectedFields.size})
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Fields */}
-          <div className="space-y-6">
-            {fields.map(renderField)}
+            {/* Fields */}
+            <div className="space-y-6">
+              {fields.map(renderField)}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Option 2: All About Mode Results */}
+        {allAboutData && (
+          <AllAboutDisplay data={allAboutData} category="raag" />
+        )}
+      </div>
     </div>
   );
 };

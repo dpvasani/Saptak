@@ -5,6 +5,9 @@ const taalController = require('../controllers/taalController');
 // Search for a taal
 router.get('/search', taalController.searchTaal);
 
+// "All About" search for a taal
+router.get('/all-about', taalController.getAllAboutTaal);
+
 // Get verified taals
 router.get('/verified', taalController.getVerifiedTaals);
 

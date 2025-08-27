@@ -5,6 +5,9 @@ const raagController = require('../controllers/raagController');
 // Search for a raag
 router.get('/search', raagController.searchRaag);
 
+// "All About" search for a raag
+router.get('/all-about', raagController.getAllAboutRaag);
+
 // Get verified raags
 router.get('/verified', raagController.getVerifiedRaags);
 

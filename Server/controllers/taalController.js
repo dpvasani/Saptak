@@ -3,6 +3,7 @@ const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
+const perplexityAllAboutService = require('../services/perplexityAllAboutService');
 const { webScrapingLimiter } = require('../middleware/rateLimiter');
 const mongoose = require('mongoose');
 
@@ -59,6 +60,36 @@ exports.searchTaal = async (req, res) => {
   } catch (error) {
     console.error('Error in searchTaal:', error);
     res.status(500).json({ message: error.message || 'Error searching for taal' });
+  }
+};
+
+exports.getAllAboutTaal = async (req, res) => {
+  try {
+    const { name } = req.query;
+    console.log('All About search request received for taal:', name);
+    
+    if (!name) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Taal name is required' 
+      });
+    }
+
+    console.log('Using Perplexity "All About" mode for taal:', name);
+    const allAboutData = await perplexityAllAboutService.getAllAboutTaal(name);
+    
+    res.json({
+      success: true,
+      data: allAboutData,
+      mode: 'all-about',
+      searchQuery: name
+    });
+  } catch (error) {
+    console.error('Error in getAllAboutTaal:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Error in "All About" search for taal' 
+    });
   }
 };
 

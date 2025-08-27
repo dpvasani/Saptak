@@ -8,6 +8,9 @@ const { aiLimiter, searchLimiter, updateLimiter } = require('../middleware/rateL
 // Search for an artist
 router.get('/search', searchLimiter, validateSearch, asyncHandler(artistController.searchArtist));
 
+// "All About" search for an artist
+router.get('/all-about', searchLimiter, validateSearch, asyncHandler(artistController.getAllAboutArtist));
+
 // Get verified artists
 router.get('/verified', asyncHandler(artistController.getVerifiedArtists));
 

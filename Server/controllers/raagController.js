@@ -3,6 +3,7 @@ const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
+const perplexityAllAboutService = require('../services/perplexityAllAboutService');
 const { webScrapingLimiter } = require('../middleware/rateLimiter');
 const mongoose = require('mongoose');
 
@@ -59,6 +60,36 @@ exports.searchRaag = async (req, res) => {
   } catch (error) {
     console.error('Error in searchRaag:', error);
     res.status(500).json({ message: error.message || 'Error searching for raag' });
+  }
+};
+
+exports.getAllAboutRaag = async (req, res) => {
+  try {
+    const { name } = req.query;
+    console.log('All About search request received for raag:', name);
+    
+    if (!name) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Raag name is required' 
+      });
+    }
+
+    console.log('Using Perplexity "All About" mode for raag:', name);
+    const allAboutData = await perplexityAllAboutService.getAllAboutRaag(name);
+    
+    res.json({
+      success: true,
+      data: allAboutData,
+      mode: 'all-about',
+      searchQuery: name
+    });
+  } catch (error) {
+    console.error('Error in getAllAboutRaag:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Error in "All About" search for raag' 
+    });
   }
 };
 

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
-import AIModelSelector from '../components/AIModelSelector';
+import DualModeSearchForm from '../components/DualModeSearchForm';
+import AllAboutDisplay from '../components/AllAboutDisplay';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -10,18 +11,14 @@ import {
   PencilIcon,
   CheckIcon,
   XMarkIcon,
-  ClockIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const ArtistSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [artist, setArtist] = useState(null);
+  const [allAboutData, setAllAboutData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [useAI, setUseAI] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [modelData, setModelData] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [selectedFields, setSelectedFields] = useState(new Set());
@@ -35,18 +32,8 @@ const ArtistSearch = () => {
     { key: 'summary', label: 'Comprehensive Summary' }
   ];
 
-  // Debounced search function
-  const debouncedSearch = debounce(async (query, aiEnabled, provider, model) => {
-    if (!query.trim()) {
-      toast.error('Please enter an artist name');
-      return;
-    }
-
-    if (aiEnabled && (!provider || !model)) {
-      toast.error('Please select both AI provider and model');
-      return;
-    }
-
+  // Debounced structured search function
+  const debouncedStructuredSearch = debounce(async (query, aiEnabled, provider, model, modelData) => {
     setLoading(true);
     try {
       const response = await axios.get(`http://localhost:5000/api/artists/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
@@ -63,15 +50,22 @@ const ArtistSearch = () => {
     }
   }, 1000);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    debouncedSearch(searchQuery, useAI, selectedProvider, selectedModel);
-  };
-
-  const handleModelChange = ({ provider, model, modelData: data }) => {
-    setSelectedProvider(provider);
-    setSelectedModel(model);
-    setModelData(data);
+  // All About search function
+  const handleAllAboutSearch = async (query) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`http://localhost:5000/api/artists/all-about?name=${encodeURIComponent(query)}`);
+      setAllAboutData(response.data.data);
+      toast.success('All About search completed successfully');
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error(error.response?.data?.message || 'Error in All About search');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateArtistField = (field, updates) => {
@@ -82,30 +76,6 @@ const ArtistSearch = () => {
         ...updates
       }
     }));
-  };
-
-  const handleFieldUpdate = async (field, value) => {
-    if (!artist) return;
-
-    const updatedArtist = {
-      ...artist,
-      [field]: {
-        ...artist[field],
-        value,
-      },
-    };
-
-    try {
-      const response = await axios.put(`http://localhost:5000/api/artists/${artist._id}`, updatedArtist);
-      setArtist(response.data);
-      toast.success('Artist updated successfully');
-    } catch (error) {
-      if (error.response?.status === 429) {
-        toast.error('Rate limit exceeded. Please try again later.');
-      } else {
-        toast.error(error.response?.data?.message || 'Error updating artist');
-      }
-    }
   };
 
   const handleVerification = async (field, currentStatus) => {
@@ -266,6 +236,7 @@ const ArtistSearch = () => {
       </div>
     );
   };
+
   // Bulk verification functions
   const handleSelectAll = () => {
     if (selectedFields.size === fields.length) {
@@ -373,7 +344,7 @@ const ArtistSearch = () => {
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-              rows={3}
+              rows={field.key === 'summary' ? 8 : 3}
               placeholder={`Enter ${field.label.toLowerCase()}...`}
             />
             <div className="flex space-x-2">
@@ -419,139 +390,103 @@ const ArtistSearch = () => {
   const verificationPercentage = artist && verifiedFields.length >= 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Search Form */}
-      <div className="bg-white shadow-lg rounded-xl mb-8">
-        <div className="px-6 py-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            Search for an Artist
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Enter the name of an Indian Classical Music artist to search for their information.
-          </p>
-          
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-sm"
-                  placeholder="Enter artist name"
-                />
+    <div className="max-w-6xl mx-auto">
+      {/* Dual Mode Search Form */}
+      <DualModeSearchForm
+        onStructuredSearch={debouncedStructuredSearch}
+        onAllAboutSearch={handleAllAboutSearch}
+        loading={loading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        placeholder="Enter artist name"
+        category="artist"
+      />
+
+      {/* Results Container */}
+      <div className="space-y-8">
+        {/* Option 1: Structured Mode Results */}
+        {artist && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                📊 Structured Mode Results
+              </h3>
+              <p className="text-gray-600">
+                Organized field data with verification capabilities
+              </p>
+            </div>
+
+            {/* Header with Progress */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {artist.name?.value || 'Artist Information'}
+                </h3>
+                <span className="text-sm text-gray-600">
+                  {verifiedFields.length}/{fields.length} fields verified ({verificationPercentage}%)
+                </span>
               </div>
               
-              <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={useAI}
-                    onChange={(e) => setUseAI(e.target.checked)}
-                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 font-medium">Use AI Research</span>
-                </label>
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    verificationPercentage === 100 ? 'bg-green-500' :
+                    verificationPercentage > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${verificationPercentage}%` }}
+                ></div>
               </div>
-            </div>
-            
-            {/* AI Model Selection */}
-            {useAI && (
-              <div className="mt-4">
-                <AIModelSelector
-                  onModelChange={handleModelChange}
-                  selectedProvider={selectedProvider}
-                  selectedModel={selectedModel}
-                />
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <ClockIcon className="animate-spin h-5 w-5 mr-2" />
-                  {useAI ? `${modelData?.name || 'AI'} Researching...` : 'Web Searching...'}
-                </div>
-              ) : (
-                useAI ? 'AI Research' : 'Web Search'
-              )}
-            </button>
-          </form>
-        </div>
-      </div>
 
-      {/* Artist Information */}
-      {artist && (
-        <div className="space-y-6">
-          {/* Header with Progress */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-gray-900">
-                {artist.name?.value || 'Artist Information'}
-              </h3>
-              <span className="text-sm text-gray-600">
-                {verifiedFields.length}/{fields.length} fields verified ({verificationPercentage}%)
-              </span>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-              <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  verificationPercentage === 100 ? 'bg-green-500' :
-                  verificationPercentage > 50 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${verificationPercentage}%` }}
-              ></div>
-            </div>
-
-            {/* Bulk Actions */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handleSelectAll}
-                    className="flex items-center px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors duration-200 text-sm font-medium"
-                  >
-                    {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {selectedFields.size} of {fields.length} fields selected
-                  </span>
-                </div>
-                
-                {selectedFields.size > 0 && (
-                  <div className="flex items-center space-x-2">
+              {/* Bulk Actions */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4">
                     <button
-                      onClick={() => handleBulkVerification(true)}
-                      className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      onClick={handleSelectAll}
+                      className="flex items-center px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors duration-200 text-sm font-medium"
                     >
-                      <CheckCircleIcon className="h-4 w-4 mr-1" />
-                      Verify Selected ({selectedFields.size})
+                      {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
                     </button>
-                    <button
-                      onClick={() => handleBulkVerification(false)}
-                      className="flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
-                    >
-                      <XCircleIcon className="h-4 w-4 mr-1" />
-                      Unverify Selected ({selectedFields.size})
-                    </button>
+                    <span className="text-sm text-gray-600">
+                      {selectedFields.size} of {fields.length} fields selected
+                    </span>
                   </div>
-                )}
+                  
+                  {selectedFields.size > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleBulkVerification(true)}
+                        className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <CheckCircleIcon className="h-4 w-4 mr-1" />
+                        Verify Selected ({selectedFields.size})
+                      </button>
+                      <button
+                        onClick={() => handleBulkVerification(false)}
+                        className="flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <XCircleIcon className="h-4 w-4 mr-1" />
+                        Unverify Selected ({selectedFields.size})
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Fields */}
-          <div className="space-y-6">
-            {fields.map(renderField)}
+            {/* Fields */}
+            <div className="space-y-6">
+              {fields.map(renderField)}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Option 2: All About Mode Results */}
+        {allAboutData && (
+          <AllAboutDisplay data={allAboutData} category="artist" />
+        )}
+      </div>
     </div>
   );
 };
