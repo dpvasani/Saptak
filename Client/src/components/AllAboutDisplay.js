@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { 
@@ -15,38 +15,52 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const AllAboutDisplay = ({ data, category }) => {
+const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   if (!data) return null;
 
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [localData, setLocalData] = useState(data);
+
+  useEffect(() => {
+    setLocalData(data);
+  }, [data]);
 
   const handleEdit = (field) => {
     setEditingField(field);
-    setEditValue(data[field]?.value || '');
+    setEditValue(localData[field]?.value || '');
   };
 
   const handleSave = async () => {
     try {
       // Update the All About data in database
-      const response = await axios.put(`http://localhost:5000/api/all-about/${data._id}`, {
+      const response = await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
         [editingField]: {
-          ...data[editingField],
+          ...localData[editingField],
           value: editValue
         }
       });
       
       // Update local state
-      data[editingField] = {
-        ...data[editingField],
-        value: editValue
+      const updatedData = {
+        ...localData,
+        [editingField]: {
+          ...localData[editingField],
+          value: editValue
+        }
       };
+      
+      setLocalData(updatedData);
+      if (onDataUpdate) {
+        onDataUpdate(updatedData);
+      }
       
       setEditingField(null);
       setEditValue('');
       
       toast.success('Field updated successfully');
     } catch (error) {
+      console.error('Error updating field:', error);
       toast.error('Failed to update field');
     }
   };
@@ -58,24 +72,104 @@ const AllAboutDisplay = ({ data, category }) => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/all-about/${data._id}`, {
+      const response = await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
         [field]: {
-          ...data[field],
+          ...localData[field],
           verified: !currentStatus
         }
       });
       
       // Update local state
-      data[field].verified = !currentStatus;
+      const updatedData = {
+        ...localData,
+        [field]: {
+          ...localData[field],
+          verified: !currentStatus
+        }
+      };
+      
+      setLocalData(updatedData);
+      if (onDataUpdate) {
+        onDataUpdate(updatedData);
+      }
       
       toast.success(`${field} verification updated successfully`);
     } catch (error) {
+      console.error('Error updating verification:', error);
       toast.error('Failed to update verification status');
     }
   };
 
+  const renderMarkdown = (text) => {
+    if (!text) return null;
+
+    // Convert markdown to HTML-like structure for React
+    let formattedText = text;
+
+    // Handle headers
+    formattedText = formattedText.replace(/### (.*?)(\n|$)/g, '<h3>$1</h3>');
+    formattedText = formattedText.replace(/## (.*?)(\n|$)/g, '<h2>$1</h2>');
+    formattedText = formattedText.replace(/# (.*?)(\n|$)/g, '<h1>$1</h1>');
+
+    // Handle bold text
+    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Handle bullet points
+    formattedText = formattedText.replace(/^- (.*?)$/gm, '<li>$1</li>');
+    
+    // Wrap consecutive list items in ul tags
+    formattedText = formattedText.replace(/(<li>.*<\/li>)/gs, (match) => {
+      return '<ul>' + match + '</ul>';
+    });
+
+    // Handle line breaks
+    formattedText = formattedText.replace(/\n\n/g, '</p><p>');
+    formattedText = '<p>' + formattedText + '</p>';
+
+    // Clean up empty paragraphs and fix nested tags
+    formattedText = formattedText.replace(/<p><\/p>/g, '');
+    formattedText = formattedText.replace(/<p>(<h[1-6]>.*?<\/h[1-6]>)<\/p>/g, '$1');
+    formattedText = formattedText.replace(/<p>(<ul>.*?<\/ul>)<\/p>/gs, '$1');
+
+    // Split by HTML tags and render as React elements
+    const parts = formattedText.split(/(<[^>]+>.*?<\/[^>]+>|<[^>]+\/>)/g);
+    
+    return (
+      <div className="markdown-content">
+        {parts.map((part, index) => {
+          if (part.startsWith('<h1>')) {
+            return <h1 key={index} className="text-2xl font-bold text-gray-900 mt-6 mb-3 border-b-2 border-gray-200 pb-2">{part.replace(/<\/?h1>/g, '')}</h1>;
+          } else if (part.startsWith('<h2>')) {
+            return <h2 key={index} className="text-xl font-semibold text-gray-800 mt-5 mb-3">{part.replace(/<\/?h2>/g, '')}</h2>;
+          } else if (part.startsWith('<h3>')) {
+            return <h3 key={index} className="text-lg font-medium text-gray-800 mt-4 mb-2">{part.replace(/<\/?h3>/g, '')}</h3>;
+          } else if (part.startsWith('<strong>')) {
+            return <strong key={index} className="font-semibold text-gray-900">{part.replace(/<\/?strong>/g, '')}</strong>;
+          } else if (part.startsWith('<ul>')) {
+            const listItems = part.match(/<li>(.*?)<\/li>/g) || [];
+            return (
+              <ul key={index} className="list-disc list-inside space-y-1 my-3 ml-4">
+                {listItems.map((item, liIndex) => (
+                  <li key={liIndex} className="text-gray-700">
+                    {item.replace(/<\/?li>/g, '')}
+                  </li>
+                ))}
+              </ul>
+            );
+          } else if (part.startsWith('<p>') && part !== '<p></p>') {
+            const content = part.replace(/<\/?p>/g, '');
+            if (content.trim()) {
+              return <p key={index} className="text-gray-700 leading-relaxed mb-3">{content}</p>;
+            }
+          }
+          return part.trim() ? <span key={index} className="text-gray-700">{part}</span> : null;
+        }).filter(Boolean)}
+      </div>
+    );
+  };
+
   const renderImages = () => {
-    if (!data.images || data.images.length === 0) {
+    if (!localData.images || localData.images.length === 0) {
       return (
         <div className="text-center py-8 text-gray-500">
           <PhotoIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -86,7 +180,7 @@ const AllAboutDisplay = ({ data, category }) => {
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data.images.map((image, index) => (
+        {localData.images.map((image, index) => (
           <div key={index} className="bg-white rounded-lg shadow-sm overflow-hidden border">
             <div className="aspect-w-16 aspect-h-9">
               <img
@@ -133,7 +227,7 @@ const AllAboutDisplay = ({ data, category }) => {
   };
 
   const renderSources = () => {
-    if (!data.sources || data.sources.length === 0) {
+    if (!localData.sources || localData.sources.length === 0) {
       return (
         <div className="text-center py-8 text-gray-500">
           <LinkIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -144,7 +238,7 @@ const AllAboutDisplay = ({ data, category }) => {
 
     return (
       <div className="space-y-4">
-        {data.sources.map((source, index) => (
+        {localData.sources.map((source, index) => (
           <div key={index} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
@@ -184,7 +278,7 @@ const AllAboutDisplay = ({ data, category }) => {
   };
 
   const renderRelatedQuestions = () => {
-    if (!data.relatedQuestions || data.relatedQuestions.length === 0) {
+    if (!localData.relatedQuestions || localData.relatedQuestions.length === 0) {
       return null;
     }
 
@@ -195,7 +289,7 @@ const AllAboutDisplay = ({ data, category }) => {
           Related Questions
         </h4>
         <div className="space-y-2">
-          {data.relatedQuestions.map((question, index) => (
+          {localData.relatedQuestions.map((question, index) => (
             <div key={index} className="text-sm text-blue-800 bg-white rounded px-3 py-2">
               {question}
             </div>
@@ -215,18 +309,18 @@ const AllAboutDisplay = ({ data, category }) => {
           </h3>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <ClockIcon className="h-4 w-4" />
-            <span>{new Date(data.metadata?.timestamp).toLocaleString()}</span>
+            <span>{new Date(localData.metadata?.timestamp).toLocaleString()}</span>
           </div>
         </div>
         
         <div className="bg-white rounded-lg p-4 border border-purple-100">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-purple-700">Search Query:</span>
-            <span className="text-gray-600 font-mono">{data.metadata?.searchQuery}</span>
+            <span className="text-gray-600 font-mono">{localData.metadata?.searchQuery}</span>
           </div>
           <div className="flex items-center justify-between text-sm mt-2">
             <span className="font-medium text-purple-700">AI Provider:</span>
-            <span className="text-gray-600">{data.metadata?.aiProvider} - {data.metadata?.aiModel}</span>
+            <span className="text-gray-600">{localData.metadata?.aiProvider} - {localData.metadata?.aiModel}</span>
           </div>
         </div>
       </div>
@@ -236,7 +330,7 @@ const AllAboutDisplay = ({ data, category }) => {
         <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
           <h4 className="text-xl font-semibold text-gray-900 flex items-center">
             📝 Answer
-            {data.answer?.verified ? (
+            {localData.answer?.verified ? (
               <CheckCircleIcon className="h-5 w-5 text-green-500 ml-2" />
             ) : (
               <XCircleIcon className="h-5 w-5 text-red-500 ml-2" />
@@ -251,14 +345,14 @@ const AllAboutDisplay = ({ data, category }) => {
               <PencilIcon className="h-4 w-4" />
             </button>
             <button
-              onClick={() => handleVerification('answer', data.answer?.verified)}
+              onClick={() => handleVerification('answer', localData.answer?.verified)}
               className={`flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
-                data.answer?.verified
+                localData.answer?.verified
                   ? 'bg-green-100 text-green-800 hover:bg-green-200 shadow-sm'
                   : 'bg-red-100 text-red-800 hover:bg-red-200 shadow-sm'
               }`}
             >
-              {data.answer?.verified ? 'Verified' : 'Unverified'}
+              {localData.answer?.verified ? 'Verified' : 'Unverified'}
             </button>
           </div>
         </div>
@@ -290,10 +384,8 @@ const AllAboutDisplay = ({ data, category }) => {
             </div>
           </div>
         ) : (
-          <div className="prose prose-lg max-w-none">
-            <div className="text-gray-800 leading-relaxed whitespace-pre-wrap markdown-content">
-              {data.answer?.value || 'No answer provided'}
-            </div>
+          <div className="prose prose-lg max-w-none markdown-content">
+            {renderMarkdown(localData.answer?.value || 'No answer provided')}
           </div>
         )}
       </div>
@@ -302,7 +394,7 @@ const AllAboutDisplay = ({ data, category }) => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2 flex items-center">
           <PhotoIcon className="h-6 w-6 mr-2 text-blue-600" />
-          Images ({data.images?.length || 0})
+          Images ({localData.images?.length || 0})
         </h4>
         {renderImages()}
       </div>
@@ -311,13 +403,13 @@ const AllAboutDisplay = ({ data, category }) => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2 flex items-center">
           <LinkIcon className="h-6 w-6 mr-2 text-green-600" />
-          Sources ({data.sources?.length || 0})
+          Sources ({localData.sources?.length || 0})
         </h4>
         {renderSources()}
       </div>
 
       {/* Related Questions Section */}
-      {data.relatedQuestions && data.relatedQuestions.length > 0 && (
+      {localData.relatedQuestions && localData.relatedQuestions.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
             Related Questions
@@ -327,13 +419,13 @@ const AllAboutDisplay = ({ data, category }) => {
       )}
 
       {/* Citations Section */}
-      {data.citations && data.citations.length > 0 && (
+      {localData.citations && localData.citations.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
-            📚 Citations ({data.citations.length})
+            📚 Citations ({localData.citations.length})
           </h4>
           <div className="space-y-3">
-            {data.citations.map((citation, index) => (
+            {localData.citations.map((citation, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-3 text-sm">
                 <div className="font-medium text-gray-900 mb-1">
                   [{index + 1}] {citation.title || 'Citation'}

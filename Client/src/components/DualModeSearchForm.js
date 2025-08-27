@@ -19,6 +19,10 @@ const DualModeSearchForm = ({
   const [useStructuredMode, setUseStructuredMode] = useState(true);
   const [useAllAboutMode, setUseAllAboutMode] = useState(false);
   
+  // Track if AI sections should be expanded
+  const [structuredExpanded, setStructuredExpanded] = useState(true);
+  const [allAboutExpanded, setAllAboutExpanded] = useState(false);
+  
   // Structured Mode AI Settings
   const [structuredProvider, setStructuredProvider] = useState('');
   const [structuredModel, setStructuredModel] = useState('');
@@ -30,16 +34,28 @@ const DualModeSearchForm = ({
   const [allAboutModelData, setAllAboutModelData] = useState(null);
 
   const handleStructuredModelChange = ({ provider, model, modelData: data }) => {
+    // Don't collapse when changing model settings
     setStructuredProvider(provider);
     setStructuredModel(model);
     setStructuredModelData(data);
   };
 
   const handleAllAboutModelChange = ({ provider, model, modelData: data }) => {
+    // Don't collapse when changing model settings
     setAllAboutProvider(provider);
     setAllAboutModel(model);
     setAllAboutModelData(data);
   };
+
+  const handleStructuredModeToggle = (checked) => {
+    setUseStructuredMode(checked);
+    setStructuredExpanded(checked);
+  };
+
+  const handleAllAboutModeToggle = (checked) => {
+    setUseAllAboutMode(checked);
+    setAllAboutExpanded(checked);
+  }
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -187,7 +203,7 @@ const DualModeSearchForm = ({
                       <input
                         type="checkbox"
                         checked={useStructuredMode}
-                        onChange={(e) => setUseStructuredMode(e.target.checked)}
+                        onChange={(e) => handleStructuredModeToggle(e.target.checked)}
                         className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                       />
                       <div className="flex-1">
@@ -202,7 +218,7 @@ const DualModeSearchForm = ({
                         </p>
                         
                         {/* AI Settings for Structured Mode */}
-                        {useStructuredMode && (
+                        {structuredExpanded && (
                           <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                             <AIModelSelector
                               onModelChange={handleStructuredModelChange}
@@ -222,7 +238,7 @@ const DualModeSearchForm = ({
                       <input
                         type="checkbox"
                         checked={useAllAboutMode}
-                        onChange={(e) => setUseAllAboutMode(e.target.checked)}
+                        onChange={(e) => handleAllAboutModeToggle(e.target.checked)}
                         className="mt-1 rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
                       />
                       <div className="flex-1">
@@ -237,7 +253,7 @@ const DualModeSearchForm = ({
                         </p>
                         
                         {/* AI Settings for All About Mode */}
-                        {useAllAboutMode && (
+                        {allAboutExpanded && (
                           <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
                             <AIModelSelector
                               onModelChange={handleAllAboutModelChange}

@@ -288,6 +288,9 @@ const RaagSearch = () => {
     }
   };
 
+  const handleAllAboutDataUpdate = (updatedData) => {
+    setAllAboutData(updatedData);
+  };
   const renderField = (field) => {
     if (!raag) return null;
 
@@ -488,7 +491,11 @@ const RaagSearch = () => {
 
         {/* Option 2: All About Mode Results */}
         {allAboutData && (
-          <AllAboutDisplay data={allAboutData} category="raag" />
+          <AllAboutDisplay 
+            data={allAboutData} 
+            category="raag" 
+            onDataUpdate={handleAllAboutDataUpdate}
+          />
         )}
       </div>
     </div>

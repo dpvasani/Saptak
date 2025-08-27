@@ -357,6 +357,9 @@ const TaalSearch = () => {
     }
   };
 
+  const handleAllAboutDataUpdate = (updatedData) => {
+    setAllAboutData(updatedData);
+  };
   const renderField = (field) => {
     if (!taal) return null;
 
@@ -557,7 +560,11 @@ const TaalSearch = () => {
 
         {/* Option 2: All About Mode Results */}
         {allAboutData && (
-          <AllAboutDisplay data={allAboutData} category="taal" />
+          <AllAboutDisplay 
+            data={allAboutData} 
+            category="taal" 
+            onDataUpdate={handleAllAboutDataUpdate}
+          />
         )}
       </div>
     </div>

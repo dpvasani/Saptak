@@ -286,6 +286,9 @@ const ArtistSearch = () => {
     }
   };
 
+  const handleAllAboutDataUpdate = (updatedData) => {
+    setAllAboutData(updatedData);
+  };
   const renderField = (field) => {
     if (!artist) return null;
 
@@ -484,7 +487,11 @@ const ArtistSearch = () => {
 
         {/* Option 2: All About Mode Results */}
         {allAboutData && (
-          <AllAboutDisplay data={allAboutData} category="artist" />
+          <AllAboutDisplay 
+            data={allAboutData} 
+            category="artist" 
+            onDataUpdate={handleAllAboutDataUpdate}
+          />
         )}
       </div>
     </div>
