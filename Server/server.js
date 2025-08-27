@@ -26,6 +26,7 @@ app.use('/api/raags', require('./routes/raags'));
 app.use('/api/taals', require('./routes/taals'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/all-about', require('./routes/allAbout'));
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

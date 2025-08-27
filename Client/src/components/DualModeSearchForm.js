@@ -14,15 +14,28 @@ const DualModeSearchForm = ({
 }) => {
   const [useStructuredMode, setUseStructuredMode] = useState(true);
   const [useAllAboutMode, setUseAllAboutMode] = useState(false);
-  const [useAI, setUseAI] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [modelData, setModelData] = useState(null);
+  
+  // Structured Mode AI Settings
+  const [structuredUseAI, setStructuredUseAI] = useState(false);
+  const [structuredProvider, setStructuredProvider] = useState('');
+  const [structuredModel, setStructuredModel] = useState('');
+  const [structuredModelData, setStructuredModelData] = useState(null);
+  
+  // All About Mode AI Settings
+  const [allAboutProvider, setAllAboutProvider] = useState('perplexity');
+  const [allAboutModel, setAllAboutModel] = useState('sonar-pro');
+  const [allAboutModelData, setAllAboutModelData] = useState(null);
 
-  const handleModelChange = ({ provider, model, modelData: data }) => {
-    setSelectedProvider(provider);
-    setSelectedModel(model);
-    setModelData(data);
+  const handleStructuredModelChange = ({ provider, model, modelData: data }) => {
+    setStructuredProvider(provider);
+    setStructuredModel(model);
+    setStructuredModelData(data);
+  };
+
+  const handleAllAboutModelChange = ({ provider, model, modelData: data }) => {
+    setAllAboutProvider(provider);
+    setAllAboutModel(model);
+    setAllAboutModelData(data);
   };
 
   const handleSearch = async (e) => {
@@ -34,8 +47,14 @@ const DualModeSearchForm = ({
     }
 
     // Validate AI settings if structured mode with AI is selected
-    if (useStructuredMode && useAI && (!selectedProvider || !selectedModel)) {
+    if (useStructuredMode && structuredUseAI && (!structuredProvider || !structuredModel)) {
       toast.error('Please select both AI provider and model for structured search');
+      return;
+    }
+
+    // Validate AI settings for All About mode
+    if (useAllAboutMode && (!allAboutProvider || !allAboutModel)) {
+      toast.error('Please select both AI provider and model for All About search');
       return;
     }
 
@@ -44,14 +63,14 @@ const DualModeSearchForm = ({
     // Execute structured search if selected
     if (useStructuredMode) {
       searchPromises.push(
-        onStructuredSearch(searchQuery, useAI, selectedProvider, selectedModel, modelData)
+        onStructuredSearch(searchQuery, structuredUseAI, structuredProvider, structuredModel, structuredModelData)
       );
     }
 
     // Execute "All About" search if selected
     if (useAllAboutMode) {
       searchPromises.push(
-        onAllAboutSearch(searchQuery)
+        onAllAboutSearch(searchQuery, allAboutProvider, allAboutModel, allAboutModelData)
       );
     }
 
@@ -114,13 +133,13 @@ const DualModeSearchForm = ({
                         <label className="inline-flex items-center">
                           <input
                             type="checkbox"
-                            checked={useAI}
-                            onChange={(e) => setUseAI(e.target.checked)}
+                            checked={structuredUseAI}
+                            onChange={(e) => setStructuredUseAI(e.target.checked)}
                             className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                           />
                           <span className="ml-2 text-sm text-gray-700 font-medium">Use AI Research</span>
                         </label>
-                        {!useAI && (
+                        {!structuredUseAI && (
                           <span className="text-sm text-gray-500">
                             (Will use web scraping)
                           </span>
@@ -128,12 +147,12 @@ const DualModeSearchForm = ({
                       </div>
                       
                       {/* AI Model Selection */}
-                      {useAI && (
+                      {structuredUseAI && (
                         <div className="mt-3">
                           <AIModelSelector
-                            onModelChange={handleModelChange}
-                            selectedProvider={selectedProvider}
-                            selectedModel={selectedModel}
+                            onModelChange={handleStructuredModelChange}
+                            selectedProvider={structuredProvider}
+                            selectedModel={structuredModel}
                             className="text-sm"
                           />
                         </div>
@@ -158,11 +177,23 @@ const DualModeSearchForm = ({
                     Option 2: "All About" Mode (Perplexity Raw)
                   </span>
                   <p className="text-sm text-gray-600 mt-1">
-                    Automatically runs "all about {name}" and displays raw Perplexity.ai response with Answer, Images, and Sources
+                    Automatically runs "all about {name}" and displays raw AI response with Answer, Images, and Sources
                   </p>
-                  <p className="text-xs text-purple-600 mt-1">
-                    ⚡ Uses Perplexity Sonar Pro - No prompt optimization, pure raw response
-                  </p>
+                  
+                  {/* AI Settings for All About Mode */}
+                  {useAllAboutMode && (
+                    <div className="mt-4 pl-4 border-l-2 border-purple-200">
+                      <AIModelSelector
+                        onModelChange={handleAllAboutModelChange}
+                        selectedProvider={allAboutProvider}
+                        selectedModel={allAboutModel}
+                        className="text-sm"
+                      />
+                      <p className="text-xs text-purple-600 mt-2">
+                        ⚡ No prompt optimization - pure raw "all about" response
+                      </p>
+                    </div>
+                  )}
                 </div>
               </label>
             </div>

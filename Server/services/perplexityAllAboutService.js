@@ -1,14 +1,25 @@
 const axios = require('axios');
+const AllAboutData = require('../models/AllAboutData');
 
 class PerplexityAllAboutService {
   constructor() {
     this.apiKey = process.env.PERPLEXITY_API_KEY;
     this.baseURL = 'https://api.perplexity.ai/chat/completions';
     // Use sonar-pro for comprehensive "all about" responses
-    this.model = 'sonar-pro';
+    this.defaultModel = 'sonar-pro';
+    this.fallbackModels = [
+      'sonar-deep-research',
+      'sonar-reasoning-pro', 
+      'sonar-reasoning',
+      'r1-1776',
+      'sonar',
+      'gpt-4-turbo',
+      'claude-3-sonnet',
+      'gemini-1.5-pro'
+    ];
   }
 
-  async getAllAboutArtist(name) {
+  async getAllAboutArtist(name, modelName = null) {
     console.log('Starting Perplexity "All About" search for artist:', name);
     
     if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
@@ -17,10 +28,12 @@ class PerplexityAllAboutService {
 
     // Simple, direct prompt that mimics typing "all about {artist name}" in Perplexity.ai
     const prompt = `all about ${name}`;
+    const model = modelName || this.defaultModel;
+    console.log(`Using Perplexity model: ${model}`);
 
     try {
       const response = await axios.post(this.baseURL, {
-        model: this.model,
+        model: model,
         messages: [
           {
             role: "user",
@@ -50,27 +63,43 @@ class PerplexityAllAboutService {
       
       // Extract all available data from Perplexity response
       const allAboutData = {
-        answer: message.content || '',
+        category: 'artists',
+        searchQuery: name,
+        name: {
+          value: name,
+          reference: 'Perplexity All About Search',
+          verified: false
+        },
+        answer: {
+          value: message.content || '',
+          reference: 'Perplexity AI Response',
+          verified: false
+        },
         images: this.extractImages(result),
         sources: this.extractSources(result),
         citations: result.citations || [],
         relatedQuestions: result.related_questions || [],
         metadata: {
-          model: this.model,
+          aiProvider: 'perplexity',
+          aiModel: model,
           searchQuery: prompt,
           timestamp: new Date().toISOString(),
           responseTime: result.usage?.total_tokens || 0
         }
       };
 
+      // Save to database
+      const savedData = await this.saveAllAboutData(allAboutData);
+      console.log('Saved All About data to database:', savedData._id);
+
       console.log('Perplexity "All About" data extracted:', {
-        answerLength: allAboutData.answer.length,
+        answerLength: allAboutData.answer.value.length,
         imageCount: allAboutData.images.length,
         sourceCount: allAboutData.sources.length,
         citationCount: allAboutData.citations.length
       });
 
-      return allAboutData;
+      return savedData;
     } catch (error) {
       console.error('Error in Perplexity "All About" search:', error);
       if (error.response) {
@@ -81,7 +110,7 @@ class PerplexityAllAboutService {
     }
   }
 
-  async getAllAboutRaag(name) {
+  async getAllAboutRaag(name, modelName = null) {
     console.log('Starting Perplexity "All About" search for raag:', name);
     
     if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
@@ -89,10 +118,12 @@ class PerplexityAllAboutService {
     }
 
     const prompt = `all about ${name} raag`;
+    const model = modelName || this.defaultModel;
+    console.log(`Using Perplexity model: ${model}`);
 
     try {
       const response = await axios.post(this.baseURL, {
-        model: this.model,
+        model: model,
         messages: [
           {
             role: "user",
@@ -116,25 +147,43 @@ class PerplexityAllAboutService {
       const result = response.data;
       const message = result.choices[0].message;
       
-      return {
-        answer: message.content || '',
+      const allAboutData = {
+        category: 'raags',
+        searchQuery: name,
+        name: {
+          value: name,
+          reference: 'Perplexity All About Search',
+          verified: false
+        },
+        answer: {
+          value: message.content || '',
+          reference: 'Perplexity AI Response',
+          verified: false
+        },
         images: this.extractImages(result),
         sources: this.extractSources(result),
         citations: result.citations || [],
         relatedQuestions: result.related_questions || [],
         metadata: {
-          model: this.model,
+          aiProvider: 'perplexity',
+          aiModel: model,
           searchQuery: prompt,
           timestamp: new Date().toISOString()
         }
       };
+
+      // Save to database
+      const savedData = await this.saveAllAboutData(allAboutData);
+      console.log('Saved All About raag data to database:', savedData._id);
+
+      return savedData;
     } catch (error) {
       console.error('Error in Perplexity "All About" raag search:', error);
       throw new Error('Failed to get "All About" raag information: ' + error.message);
     }
   }
 
-  async getAllAboutTaal(name) {
+  async getAllAboutTaal(name, modelName = null) {
     console.log('Starting Perplexity "All About" search for taal:', name);
     
     if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
@@ -142,10 +191,12 @@ class PerplexityAllAboutService {
     }
 
     const prompt = `all about ${name} taal`;
+    const model = modelName || this.defaultModel;
+    console.log(`Using Perplexity model: ${model}`);
 
     try {
       const response = await axios.post(this.baseURL, {
-        model: this.model,
+        model: model,
         messages: [
           {
             role: "user",
@@ -169,22 +220,64 @@ class PerplexityAllAboutService {
       const result = response.data;
       const message = result.choices[0].message;
       
-      return {
-        answer: message.content || '',
+      const allAboutData = {
+        category: 'taals',
+        searchQuery: name,
+        name: {
+          value: name,
+          reference: 'Perplexity All About Search',
+          verified: false
+        },
+        answer: {
+          value: message.content || '',
+          reference: 'Perplexity AI Response',
+          verified: false
+        },
         images: this.extractImages(result),
         sources: this.extractSources(result),
         citations: result.citations || [],
         relatedQuestions: result.related_questions || [],
         metadata: {
-          model: this.model,
+          aiProvider: 'perplexity',
+          aiModel: model,
           searchQuery: prompt,
           timestamp: new Date().toISOString()
         }
       };
+
+      // Save to database
+      const savedData = await this.saveAllAboutData(allAboutData);
+      console.log('Saved All About taal data to database:', savedData._id);
+
+      return savedData;
     } catch (error) {
       console.error('Error in Perplexity "All About" taal search:', error);
       throw new Error('Failed to get "All About" taal information: ' + error.message);
     }
+  }
+
+  async saveAllAboutData(data) {
+    try {
+      const allAboutData = new AllAboutData(data);
+      await allAboutData.save();
+      return allAboutData;
+    } catch (error) {
+      console.error('Error saving All About data:', error);
+      throw new Error('Failed to save All About data to database');
+    }
+  }
+
+  async researchWithFallbackModel(name, prompt, category) {
+    for (const model of this.fallbackModels) {
+      try {
+        console.log(`Trying fallback model: ${model}`);
+        return await this[`getAllAbout${category.charAt(0).toUpperCase() + category.slice(0, -1)}`](name, model);
+      } catch (fallbackError) {
+        console.log(`Fallback model ${model} failed:`, fallbackError.message);
+        continue;
+      }
+    }
+    throw new Error('All Perplexity models failed. Please check your API access.');
   }
 
   extractImages(result) {
@@ -192,15 +285,15 @@ class PerplexityAllAboutService {
     
     // Extract from various possible locations in Perplexity response
     if (result.images && Array.isArray(result.images)) {
-      images.push(...result.images);
+      images.push(...result.images.map(img => ({ ...img, verified: false })));
     }
     
     if (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.images) {
-      images.push(...result.choices[0].message.images);
+      images.push(...result.choices[0].message.images.map(img => ({ ...img, verified: false })));
     }
     
     if (result.multimedia && result.multimedia.images) {
-      images.push(...result.multimedia.images);
+      images.push(...result.multimedia.images.map(img => ({ ...img, verified: false })));
     }
     
     // Extract image URLs from citations if available
@@ -211,7 +304,9 @@ class PerplexityAllAboutService {
             url: citation.image_url,
             title: citation.title || '',
             source: citation.url || '',
-            description: citation.snippet || ''
+            description: citation.snippet || '',
+            type: 'reference',
+            verified: false
           });
         }
       });
@@ -237,7 +332,8 @@ class PerplexityAllAboutService {
           url: citation.url || '',
           snippet: citation.snippet || '',
           domain: this.extractDomain(citation.url),
-          type: 'citation'
+          type: 'citation',
+          verified: false
         });
       });
     }
@@ -272,7 +368,8 @@ class PerplexityAllAboutService {
           url: source.url || '',
           snippet: source.description || '',
           domain: this.extractDomain(source.url),
-          type: 'related'
+          type: 'related',
+          verified: false
         });
       });
     }

@@ -53,12 +53,12 @@ const TaalSearch = () => {
   }, 1000);
 
   // All About search function
-  const handleAllAboutSearch = async (query) => {
+  const handleAllAboutSearch = async (query, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/taals/all-about?name=${encodeURIComponent(query)}`);
+      const response = await axios.get(`http://localhost:5000/api/taals/all-about?name=${encodeURIComponent(query)}&aiProvider=${provider}&aiModel=${model}`);
       setAllAboutData(response.data.data);
-      toast.success('All About search completed successfully');
+      toast.success(`All About search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error('Rate limit exceeded. Please try again later.');

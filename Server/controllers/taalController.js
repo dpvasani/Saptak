@@ -65,7 +65,7 @@ exports.searchTaal = async (req, res) => {
 
 exports.getAllAboutTaal = async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name, aiProvider, aiModel } = req.query;
     console.log('All About search request received for taal:', name);
     
     if (!name) {
@@ -75,14 +75,28 @@ exports.getAllAboutTaal = async (req, res) => {
       });
     }
 
-    console.log('Using Perplexity "All About" mode for taal:', name);
-    const allAboutData = await perplexityAllAboutService.getAllAboutTaal(name);
+    const provider = aiProvider || 'perplexity';
+    const model = aiModel || 'sonar-pro';
+    console.log(`Using ${provider} "All About" mode (${model}) for taal:`, name);
+    
+    let allAboutData;
+    if (provider === 'perplexity') {
+      allAboutData = await perplexityAllAboutService.getAllAboutTaal(name, model);
+    } else if (provider === 'openai') {
+      allAboutData = await aiResearcher.getAllAboutTaal(name, model);
+    } else if (provider === 'gemini') {
+      allAboutData = await geminiResearcher.getAllAboutTaal(name, model);
+    } else {
+      throw new Error(`Unsupported AI provider: ${provider}`);
+    }
     
     res.json({
       success: true,
       data: allAboutData,
       mode: 'all-about',
-      searchQuery: name
+      searchQuery: name,
+      provider: provider,
+      model: model
     });
   } catch (error) {
     console.error('Error in getAllAboutTaal:', error);

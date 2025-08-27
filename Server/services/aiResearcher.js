@@ -517,6 +517,179 @@ CRITICAL REQUIREMENTS:
     }
   }
 
+  async getAllAboutArtist(name, modelName = null) {
+    console.log('Starting OpenAI "All About" search for artist:', name);
+    
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+      throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
+    }
+    
+    const model = modelName || "gpt-4-turbo";
+    const prompt = `all about ${name}`;
+    
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: model,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 4000
+      });
+
+      const response = completion.choices[0].message.content;
+      
+      const allAboutData = {
+        category: 'artists',
+        searchQuery: name,
+        name: {
+          value: name,
+          reference: 'OpenAI All About Search',
+          verified: false
+        },
+        answer: {
+          value: response || '',
+          reference: 'OpenAI GPT Response',
+          verified: false
+        },
+        images: [], // OpenAI doesn't provide images in text responses
+        sources: this.extractSourcesFromText(response),
+        citations: [],
+        relatedQuestions: [],
+        metadata: {
+          aiProvider: 'openai',
+          aiModel: model,
+          searchQuery: prompt,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      // Save to database
+      const AllAboutData = require('../models/AllAboutData');
+      const savedData = new AllAboutData(allAboutData);
+      await savedData.save();
+      
+      return savedData;
+    } catch (error) {
+      console.error('Error in OpenAI All About search:', error);
+      throw new Error('Failed to get "All About" information using OpenAI: ' + error.message);
+    }
+  }
+
+  async getAllAboutRaag(name, modelName = null) {
+    const model = modelName || "gpt-4-turbo";
+    const prompt = `all about ${name} raag`;
+    
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        max_tokens: 4000
+      });
+
+      const response = completion.choices[0].message.content;
+      
+      const allAboutData = {
+        category: 'raags',
+        searchQuery: name,
+        name: { value: name, reference: 'OpenAI All About Search', verified: false },
+        answer: { value: response || '', reference: 'OpenAI GPT Response', verified: false },
+        images: [],
+        sources: this.extractSourcesFromText(response),
+        citations: [],
+        relatedQuestions: [],
+        metadata: {
+          aiProvider: 'openai',
+          aiModel: model,
+          searchQuery: prompt,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      const AllAboutData = require('../models/AllAboutData');
+      const savedData = new AllAboutData(allAboutData);
+      await savedData.save();
+      
+      return savedData;
+    } catch (error) {
+      throw new Error('Failed to get "All About" raag information using OpenAI: ' + error.message);
+    }
+  }
+
+  async getAllAboutTaal(name, modelName = null) {
+    const model = modelName || "gpt-4-turbo";
+    const prompt = `all about ${name} taal`;
+    
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        max_tokens: 4000
+      });
+
+      const response = completion.choices[0].message.content;
+      
+      const allAboutData = {
+        category: 'taals',
+        searchQuery: name,
+        name: { value: name, reference: 'OpenAI All About Search', verified: false },
+        answer: { value: response || '', reference: 'OpenAI GPT Response', verified: false },
+        images: [],
+        sources: this.extractSourcesFromText(response),
+        citations: [],
+        relatedQuestions: [],
+        metadata: {
+          aiProvider: 'openai',
+          aiModel: model,
+          searchQuery: prompt,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      const AllAboutData = require('../models/AllAboutData');
+      const savedData = new AllAboutData(allAboutData);
+      await savedData.save();
+      
+      return savedData;
+    } catch (error) {
+      throw new Error('Failed to get "All About" taal information using OpenAI: ' + error.message);
+    }
+  }
+
+  extractSourcesFromText(text) {
+    const sources = [];
+    const urlMatches = text.match(/https?:\/\/[^\s\)]+/g);
+    
+    if (urlMatches) {
+      urlMatches.forEach((url, index) => {
+        sources.push({
+          title: `Reference ${index + 1}`,
+          url: url,
+          snippet: '',
+          domain: this.extractDomain(url),
+          type: 'reference',
+          verified: false
+        });
+      });
+    }
+    
+    return sources;
+  }
+
+  extractDomain(url) {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch (error) {
+      return 'Unknown Domain';
+    }
+  }
+
   parseAIResponse(response) {
     try {
       // Clean the response to extract JSON

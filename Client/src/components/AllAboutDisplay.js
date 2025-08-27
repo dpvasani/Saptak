@@ -10,6 +10,62 @@ import {
 const AllAboutDisplay = ({ data, category }) => {
   if (!data) return null;
 
+  const [editingField, setEditingField] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
+  const handleEdit = (field) => {
+    setEditingField(field);
+    setEditValue(data[field]?.value || '');
+  };
+
+  const handleSave = async () => {
+    try {
+      // Update the All About data in database
+      const response = await axios.put(`http://localhost:5000/api/all-about/${data._id}`, {
+        [editingField]: {
+          ...data[editingField],
+          value: editValue
+        }
+      });
+      
+      // Update local state
+      data[editingField] = {
+        ...data[editingField],
+        value: editValue
+      };
+      
+      setEditingField(null);
+      setEditValue('');
+      
+      toast.success('Field updated successfully');
+    } catch (error) {
+      toast.error('Failed to update field');
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const handleVerification = async (field, currentStatus) => {
+    try {
+      const response = await axios.put(`http://localhost:5000/api/all-about/${data._id}`, {
+        [field]: {
+          ...data[field],
+          verified: !currentStatus
+        }
+      });
+      
+      // Update local state
+      data[field].verified = !currentStatus;
+      
+      toast.success(`${field} verification updated successfully`);
+    } catch (error) {
+      toast.error('Failed to update verification status');
+    }
+  };
+
   const renderImages = () => {
     if (!data.images || data.images.length === 0) {
       return (
@@ -161,22 +217,77 @@ const AllAboutDisplay = ({ data, category }) => {
             <span className="text-gray-600 font-mono">{data.metadata?.searchQuery}</span>
           </div>
           <div className="flex items-center justify-between text-sm mt-2">
-            <span className="font-medium text-purple-700">Model Used:</span>
-            <span className="text-gray-600">{data.metadata?.model}</span>
+            <span className="font-medium text-purple-700">AI Provider:</span>
+            <span className="text-gray-600">{data.metadata?.aiProvider} - {data.metadata?.aiModel}</span>
           </div>
         </div>
       </div>
 
       {/* Answer Section */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
-          📝 Answer
-        </h4>
-        <div className="prose prose-lg max-w-none">
-          <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-            {data.answer || 'No answer provided'}
+        <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
+          <h4 className="text-xl font-semibold text-gray-900 flex items-center">
+            📝 Answer
+            {data.answer?.verified ? (
+              <CheckCircleIcon className="h-5 w-5 text-green-500 ml-2" />
+            ) : (
+              <XCircleIcon className="h-5 w-5 text-red-500 ml-2" />
+            )}
+          </h4>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleEdit('answer')}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 rounded-lg hover:bg-gray-100"
+              title="Edit answer"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleVerification('answer', data.answer?.verified)}
+              className={`flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                data.answer?.verified
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 shadow-sm'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200 shadow-sm'
+              }`}
+            >
+              {data.answer?.verified ? 'Verified' : 'Unverified'}
+            </button>
           </div>
         </div>
+        
+        {editingField === 'answer' ? (
+          <div className="space-y-4">
+            <textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              rows={12}
+              placeholder="Edit answer content..."
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSave}
+                className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <CheckIcon className="h-4 w-4 mr-1" />
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-lg max-w-none">
+            <div className="text-gray-800 leading-relaxed whitespace-pre-wrap markdown-content">
+              {data.answer?.value || 'No answer provided'}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Images Section */}
