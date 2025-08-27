@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import LoginModal from './LoginModal';
+import LoginModal from './components/LoginModal';
 
 const Navbar = () => {
   const location = useLocation();
