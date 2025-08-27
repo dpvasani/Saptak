@@ -1,10 +1,18 @@
 import React from 'react';
+import { useState } from 'react';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 import { 
   ArrowTopRightOnSquareIcon,
   PhotoIcon,
   LinkIcon,
   ClockIcon,
-  QuestionMarkCircleIcon
+  QuestionMarkCircleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const AllAboutDisplay = ({ data, category }) => {
