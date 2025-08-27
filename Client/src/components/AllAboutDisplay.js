@@ -308,33 +308,33 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
+      <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl p-6 border border-gray-800 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-2xl font-bold text-gray-900">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
             📝 "All About" Mode Results
           </h3>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
+          <div className="flex items-center space-x-2 text-sm text-gray-300">
             <ClockIcon className="h-4 w-4" />
             <span>{new Date(localData.metadata?.timestamp).toLocaleString()}</span>
           </div>
         </div>
         
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-emerald-100">
+        <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-emerald-700">Search Query:</span>
-            <span className="text-gray-600 font-mono">{localData.metadata?.searchQuery}</span>
+            <span className="font-medium text-green-400">Search Query:</span>
+            <span className="text-gray-300 font-mono">{localData.metadata?.searchQuery}</span>
           </div>
           <div className="flex items-center justify-between text-sm mt-2">
-            <span className="font-medium text-emerald-700">AI Provider:</span>
-            <span className="text-gray-600">{localData.metadata?.aiProvider} - {localData.metadata?.aiModel}</span>
+            <span className="font-medium text-green-400">AI Provider:</span>
+            <span className="text-gray-300">{localData.metadata?.aiProvider} - {localData.metadata?.aiModel}</span>
           </div>
         </div>
       </div>
 
       {/* Answer Section */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
-        <div className="flex items-center justify-between mb-4 border-b border-emerald-200 pb-2">
-          <h4 className="text-xl font-semibold text-gray-900 flex items-center">
+      <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800">
+        <div className="flex items-center justify-between mb-4 border-b border-gray-700 pb-2">
+          <h4 className="text-xl font-semibold text-white flex items-center">
             📝 Answer
             {localData.answer?.verified ? (
               <CheckCircleIcon className="h-5 w-5 text-green-500 ml-2" />
@@ -345,7 +345,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handleEdit('answer')}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 rounded-lg hover:bg-gray-100"
+              className="p-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 rounded-lg hover:bg-gray-800 hover:bg-opacity-50"
               title="Edit answer"
             >
               <PencilIcon className="h-4 w-4" />
@@ -368,21 +368,21 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              className="w-full px-3 py-2 border border-emerald-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none bg-white/80"
+              className="w-full px-3 py-2 bg-gray-800 bg-opacity-50 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none text-white placeholder-gray-400"
               rows={12}
               placeholder="Edit answer content..."
             />
             <div className="flex space-x-2">
               <button
                 onClick={handleSave}
-                className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                className="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <CheckIcon className="h-4 w-4 mr-1" />
                 Save
               </button>
               <button
                 onClick={handleCancel}
-                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
               >
                 <XMarkIcon className="h-4 w-4 mr-1" />
                 Cancel
@@ -390,25 +390,25 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
             </div>
           </div>
         ) : (
-          <div className="prose prose-lg max-w-none markdown-content bg-white/60 rounded-lg p-4 border border-emerald-100">
+          <div className="prose prose-lg max-w-none markdown-content bg-gray-800 bg-opacity-30 rounded-lg p-4 border border-gray-700">
             {renderMarkdown(localData.answer?.value || 'No answer provided')}
           </div>
         )}
       </div>
 
       {/* Images Section */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
-        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-emerald-200 pb-2 flex items-center">
-          <PhotoIcon className="h-6 w-6 mr-2 text-emerald-600" />
+      <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800">
+        <h4 className="text-xl font-semibold text-white mb-4 border-b border-gray-700 pb-2 flex items-center">
+          <PhotoIcon className="h-6 w-6 mr-2 text-green-400" />
           Images ({localData.images?.length || 0})
         </h4>
         {renderImages()}
       </div>
 
       {/* Sources Section */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
-        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-emerald-200 pb-2 flex items-center">
-          <LinkIcon className="h-6 w-6 mr-2 text-emerald-600" />
+      <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800">
+        <h4 className="text-xl font-semibold text-white mb-4 border-b border-gray-700 pb-2 flex items-center">
+          <LinkIcon className="h-6 w-6 mr-2 text-green-400" />
           Sources ({localData.sources?.length || 0})
         </h4>
         {renderSources()}

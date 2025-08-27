@@ -50,12 +50,12 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 backdrop-blur supports-[backdrop-filter]:bg-emerald-50/80 border-b border-emerald-200 shadow-sm">
+      <nav className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg border-b border-gray-800 shadow-2xl">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
                   🎵 RagaBot
                 </span>
               </div>
@@ -64,10 +64,10 @@ const Navbar = () => {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       isActive(link.path)
-                        ? 'bg-emerald-100 text-emerald-800 shadow-sm'
-                        : 'text-gray-700 hover:text-emerald-700 hover:bg-emerald-50'
+                        ? 'bg-gray-800 bg-opacity-50 text-green-400 shadow-sm border border-gray-700'
+                        : 'text-gray-300 hover:text-green-400 hover:bg-gray-800 hover:bg-opacity-30'
                     }`}
                   >
                     {link.label}

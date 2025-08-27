@@ -44,23 +44,23 @@ const Dashboard = () => {
   };
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color, link }) => (
-    <div className={`bg-white rounded-xl shadow-lg p-6 border-l-4 ${color} hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
+    <div className={`bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300 transform hover:-translate-y-1`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          <p className="text-sm font-medium text-gray-400 uppercase tracking-wide">{title}</p>
+          <p className="text-3xl font-bold text-white mt-2">{value}</p>
+          {subtitle && <p className="text-sm text-gray-300 mt-1">{subtitle}</p>}
           }
         </div>
-        <div className={`p-3 rounded-full ${color.replace('border-l-', 'bg-').replace('-500', '-100')}`}>
-          <Icon className={`h-8 w-8 ${color.replace('border-l-', 'text-')}`} />
+        <div className="p-3 rounded-full bg-gray-800 bg-opacity-50 border border-gray-700">
+          <Icon className="h-8 w-8 text-green-400" />
         </div>
       </div>
       {link && (
         <div className="mt-4">
           <Link 
             to={link} 
-            className={`inline-flex items-center text-sm font-medium ${color.replace('border-l-', 'text-')} hover:underline`}
+            className="inline-flex items-center text-sm font-medium text-green-400 hover:text-green-300 hover:underline"
           >
             View details
             <EyeIcon className="ml-1 h-4 w-4" />
@@ -71,22 +71,22 @@ const Dashboard = () => {
   );
 
   const VerificationCard = ({ category, data, color }) => (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+    <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 capitalize">{category}</h3>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${color.replace('border-l-', 'bg-').replace('-500', '-100')} ${color.replace('border-l-', 'text-')}`}>
+        <h3 className="text-lg font-semibold text-white capitalize">{category}</h3>
+        <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-500 bg-opacity-20 text-green-400 border border-green-500/30">
           {data.verificationRate}% verified
         </span>
       </div>
       
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Total Entries</span>
-          <span className="font-semibold">{data.total}</span>
+          <span className="text-sm text-gray-400">Total Entries</span>
+          <span className="font-semibold text-white">{data.total}</span>
         </div>
         
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 flex items-center">
+          <span className="text-sm text-gray-400 flex items-center">
             <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
             Fully Verified
           </span>
@@ -94,7 +94,7 @@ const Dashboard = () => {
         </div>
         
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 flex items-center">
+          <span className="text-sm text-gray-400 flex items-center">
             <ExclamationCircleIcon className="h-4 w-4 text-yellow-500 mr-1" />
             Partially Verified
           </span>
@@ -102,7 +102,7 @@ const Dashboard = () => {
         </div>
         
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 flex items-center">
+          <span className="text-sm text-gray-400 flex items-center">
             <ClockIcon className="h-4 w-4 text-red-500 mr-1" />
             Unverified
           </span>
@@ -113,7 +113,7 @@ const Dashboard = () => {
       <div className="mt-4 flex space-x-2">
         <Link 
           to={`/verification/${category}`} 
-          className={`flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium ${color.replace('border-l-', 'bg-').replace('-500', '-50')} ${color.replace('border-l-', 'text-')} hover:${color.replace('border-l-', 'bg-').replace('-500', '-100')} transition-colors duration-200`}
+          className="flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg"
         >
           Manage
         </Link>
@@ -123,10 +123,10 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto"></div>
+          <p className="mt-4 text-gray-300">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -134,13 +134,13 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <ExclamationCircleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchDashboardData}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 shadow-sm"
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg"
           >
             Retry
           </button>
@@ -150,12 +150,12 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Overview of your Indian Classical Music data collection</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-2">Dashboard</h1>
+          <p className="text-gray-300">Overview of your Indian Classical Music data collection</p>
         </div>
 
         {/* Overview Stats */}

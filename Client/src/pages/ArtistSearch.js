@@ -393,7 +393,7 @@ const ArtistSearch = () => {
   const verificationPercentage = artist && verifiedFields.length >= 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto text-white">
       {/* Dual Mode Search Form */}
       <DualModeSearchForm
         onStructuredSearch={debouncedStructuredSearch}
@@ -410,22 +410,22 @@ const ArtistSearch = () => {
         {/* Option 1: Structured Mode Results */}
         {artist && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl p-6 border border-gray-800 shadow-2xl">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-2">
                 📊 Structured Mode Results
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-300">
                 Organized field data with verification capabilities
               </p>
             </div>
 
             {/* Header with Progress */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
+            <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-gray-900">
+                <h3 className="text-2xl font-bold text-white">
                   {artist.name?.value || 'Artist Information'}
                 </h3>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-300">
                   {verifiedFields.length}/{fields.length} fields verified ({verificationPercentage}%)
                 </span>
               </div>
@@ -433,25 +433,25 @@ const ArtistSearch = () => {
               {/* Progress Bar */}
               <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
                 <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    verificationPercentage === 100 ? 'bg-emerald-500' :
-                    verificationPercentage > 50 ? 'bg-green-500' : 'bg-yellow-500'
+                  className={`h-2 rounded-full transition-all duration-300 bg-gradient-to-r ${
+                    verificationPercentage === 100 ? 'from-green-400 to-emerald-500' :
+                    verificationPercentage > 50 ? 'from-green-500 to-green-400' : 'from-yellow-500 to-orange-500'
                   }`}
                   style={{ width: `${verificationPercentage}%` }}
                 ></div>
               </div>
 
               {/* Bulk Actions */}
-              <div className="bg-emerald-50/50 backdrop-blur-sm rounded-lg p-4 border border-emerald-200">
+              <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={handleSelectAll}
-                      className="flex items-center px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                      className="flex items-center px-3 py-2 bg-gray-700 bg-opacity-50 hover:bg-gray-600 hover:bg-opacity-50 text-green-400 rounded-lg transition-colors duration-200 text-sm font-medium border border-gray-600"
                     >
                       {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
                     </button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-300">
                       {selectedFields.size} of {fields.length} fields selected
                     </span>
                   </div>

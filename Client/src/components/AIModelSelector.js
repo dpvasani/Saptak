@@ -189,7 +189,7 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
         <button
           type="button"
           onClick={() => setIsProviderOpen(!isProviderOpen)}
-          className="relative w-full bg-white border border-gray-300 rounded-lg shadow-sm pl-3 pr-10 py-3 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-gray-400 transition-colors duration-200"
+          className="relative w-full bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg shadow-sm pl-3 pr-10 py-3 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-500/50 transition-colors duration-200 text-white"
         >
           <span className="block truncate">
             {selectedProviderData ? selectedProviderData.name : 'Select AI Provider'}
@@ -204,21 +204,21 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
         </button>
 
         {isProviderOpen && (
-          <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+          <div className="absolute z-20 mt-1 w-full bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl max-h-60 rounded-lg py-1 text-base border border-gray-700 overflow-auto focus:outline-none">
             {providers.map((providerId) => (
               <button
                 key={providerId}
                 onClick={() => handleProviderSelect(providerId)}
-                className={`w-full text-left px-4 py-3 hover:bg-indigo-50 hover:text-indigo-700 transition-colors duration-150 ${
+                className={`w-full text-left px-4 py-3 hover:bg-gray-800 hover:bg-opacity-50 hover:text-green-400 transition-colors duration-150 ${
                   selectedProvider === providerId 
-                    ? 'bg-indigo-100 text-indigo-800 font-medium' 
-                    : 'text-gray-900'
+                    ? 'bg-gray-800 bg-opacity-50 text-green-400 font-medium border-l-2 border-green-500' 
+                    : 'text-gray-300'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{aiModels[providerId].name}</span>
                   {selectedProvider === providerId && (
-                    <span className="text-indigo-600">✓</span>
+                    <span className="text-green-400">✓</span>
                   )}
                 </div>
               </button>
@@ -236,7 +236,7 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
           <button
             type="button"
             onClick={() => setIsModelOpen(!isModelOpen)}
-            className="relative w-full bg-white border border-gray-300 rounded-lg shadow-sm pl-3 pr-10 py-3 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-gray-400 transition-colors duration-200"
+            className="relative w-full bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg shadow-sm pl-3 pr-10 py-3 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-500/50 transition-colors duration-200 text-white"
             disabled={!selectedProvider}
           >
             <span className="block truncate">
@@ -255,24 +255,24 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
           </button>
 
           {isModelOpen && (
-            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-80 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+            <div className="absolute z-10 mt-1 w-full bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl max-h-80 rounded-lg py-1 text-base border border-gray-700 overflow-auto focus:outline-none">
               {availableModels.map((model) => (
                 <button
                   key={model.id}
                   onClick={() => handleModelSelect(model)}
-                  className={`w-full text-left px-4 py-3 hover:bg-indigo-50 hover:text-indigo-700 transition-colors duration-150 ${
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-800 hover:bg-opacity-50 hover:text-green-400 transition-colors duration-150 ${
                     selectedModel === model.id 
-                      ? 'bg-indigo-100 text-indigo-800' 
-                      : 'text-gray-900'
+                      ? 'bg-gray-800 bg-opacity-50 text-green-400 border-l-2 border-green-500' 
+                      : 'text-gray-300'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
+                            <span className="text-green-400 flex-shrink-0">✓</span>
                         <span className="font-medium truncate">{model.name}</span>
                         {selectedModel === model.id && (
-                          <span className="text-indigo-600 flex-shrink-0">✓</span>
-                        )}
+                        <p className="text-sm text-gray-400 mt-1">{model.description}</p>
+                        <p className="text-xs text-gray-500 mt-1">Source: {model.source}</p>
                       </div>
                       <p className="text-sm text-gray-500 mt-1">{model.description}</p>
                       <p className="text-xs text-gray-400 mt-1">Source: {model.source}</p>
@@ -287,9 +287,9 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
 
       {/* Selected Model Info */}
       {selectedModel && selectedProviderData && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-indigo-800 mb-2">Selected Configuration</h4>
-          <div className="text-sm text-indigo-700">
+        <div className="bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-green-400 mb-2">Selected Configuration</h4>
+          <div className="text-sm text-gray-300">
             <p><span className="font-medium">Provider:</span> {selectedProviderData.name}</p>
             <p><span className="font-medium">Model:</span> {availableModels.find(m => m.id === selectedModel)?.name}</p>
             <p><span className="font-medium">Source:</span> {availableModels.find(m => m.id === selectedModel)?.source}</p>

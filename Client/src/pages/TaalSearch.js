@@ -466,7 +466,7 @@ const TaalSearch = () => {
   const verificationPercentage = taal && verifiedFields.length > 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto text-white">
       {/* Dual Mode Search Form */}
       <DualModeSearchForm
         onStructuredSearch={debouncedStructuredSearch}
