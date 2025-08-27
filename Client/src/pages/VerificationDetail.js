@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
   CheckCircleIcon, 
@@ -107,7 +107,14 @@ const VerificationDetail = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(`http://localhost:5000/api/${category}/${id}`);
+      let response;
+      if (category === 'artists') {
+        response = await apiService.getArtistById(id);
+      } else if (category === 'raags') {
+        response = await apiService.getRaagById(id);
+      } else if (category === 'taals') {
+        response = await apiService.getTaalById(id);
+      }
       setItem(response.data);
     } catch (error) {
       console.error(`Error fetching ${category}:`, error);

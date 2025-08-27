@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
   CheckCircleIcon, 
@@ -111,7 +111,14 @@ const VerificationPage = () => {
       setLoading(true);
       setError(null);
       
-      let endpoint = '';
+      let response;
+      if (category === 'artists') {
+        response = await apiService.getArtistById(id);
+      } else if (category === 'raags') {
+        response = await apiService.getRaagById(id);
+      } else if (category === 'taals') {
+        response = await apiService.getTaalById(id);
+      }
       switch (activeTab) {
         case 'verified':
           endpoint = `http://localhost:5000/api/${category}/verified`;

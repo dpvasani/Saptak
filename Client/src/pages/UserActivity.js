@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
   ClockIcon,
@@ -60,9 +60,7 @@ const UserActivity = ({ user }) => {
         params.append('action', filter);
       }
 
-      const response = await axios.get(`http://localhost:5000/api/auth/activity?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await apiService.getUserActivity(params.toString());
 
       if (response.data.success) {
         setActivities(response.data.data.activities);

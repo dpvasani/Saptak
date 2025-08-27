@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
 import DualModeSearchForm from '../components/DualModeSearchForm';
@@ -36,7 +36,7 @@ const ArtistSearch = () => {
   const debouncedStructuredSearch = debounce(async (query, aiEnabled, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/artists/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
+      const response = await apiService.searchArtist(query, aiEnabled, provider, model);
       setArtist(response.data);
       toast.success(`Artist data ${aiEnabled ? `researched using ${modelData?.name || model}` : 'scraped from web'} successfully`);
     } catch (error) {
@@ -54,7 +54,7 @@ const ArtistSearch = () => {
   const handleAllAboutSearch = async (query, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/artists/all-about?name=${encodeURIComponent(query)}&aiProvider=${provider}&aiModel=${model}`);
+      const response = await apiService.getAllAboutArtist(query, provider, model);
       setAllAboutData(response.data.data);
       toast.success(`All About search completed using ${modelData?.name || model}`);
     } catch (error) {
@@ -90,7 +90,7 @@ const ArtistSearch = () => {
         }
       };
 
-      await axios.put(`http://localhost:5000/api/artists/${artist._id}`, updatedArtist);
+      await apiService.updateArtist(artist._id, updatedArtist);
       
       // Update local state immediately
       updateArtistField(field, { verified: !currentStatus });
@@ -120,7 +120,7 @@ const ArtistSearch = () => {
         }
       };
 
-      await axios.put(`http://localhost:5000/api/artists/${artist._id}`, updatedArtist);
+      await apiService.updateArtist(artist._id, updatedArtist);
       
       // Update local state immediately
       updateArtistField(editingField, { value: editValue });
@@ -272,7 +272,7 @@ const ArtistSearch = () => {
         };
       });
 
-      await axios.put(`http://localhost:5000/api/artists/${artist._id}`, updatedArtist);
+      await apiService.updateArtist(artist._id, updatedArtist);
       setArtist(updatedArtist);
       setSelectedFields(new Set());
       

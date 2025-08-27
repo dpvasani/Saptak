@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../utils/api';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
   ChartBarIcon, 
@@ -30,12 +30,12 @@ const Dashboard = ({ user }) => {
       setError(null);
       
       const [statsResponse, pendingResponse] = await Promise.all([
-        api.get('/api/dashboard/stats'),
-        api.get('/api/dashboard/pending-verification?limit=5')
+        apiService.getDashboardStats(),
+        apiService.getPendingVerification('', 5)
       ]);
       
-      setStats(statsResponse.data);
-      setPendingItems(pendingResponse.data);
+      setStats(statsResponse.data.data || statsResponse.data);
+      setPendingItems(pendingResponse.data.data || pendingResponse.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       if (error.response?.status === 401) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { 
   UserIcon, 
   EnvelopeIcon, 
@@ -60,10 +60,7 @@ const UserProfile = ({ user, onUserUpdate }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put('http://localhost:5000/api/auth/profile', formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await apiService.updateUserProfile(formData);
 
       if (response.data.success) {
         // Update user data in localStorage and parent component

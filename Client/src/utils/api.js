@@ -104,8 +104,8 @@ api.interceptors.response.use(
 // API methods
 export const apiService = {
   // Artists
-  searchArtist: (name, useAI = false, aiProvider = 'openai') =>
-    api.get(`/api/artists/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}`),
+  searchArtist: (name, useAI = false, aiProvider = 'openai', aiModel = 'default') =>
+    api.get(`/api/artists/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
   
   getAllArtists: () => api.get('/api/artists'),
   getArtistById: (id) => api.get(`/api/artists/${id}`),
@@ -113,6 +113,8 @@ export const apiService = {
   getVerifiedArtists: (field) => api.get(`/api/artists/verified${field ? `?field=${field}` : ''}`),
   getUnverifiedArtists: (field) => api.get(`/api/artists/unverified${field ? `?field=${field}` : ''}`),
   getArtistStats: () => api.get('/api/artists/stats'),
+  getAllAboutArtist: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro') =>
+    api.get(`/api/artists/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
 
   // Delete operations
   deleteArtist: (id) => api.delete(`/api/artists/${id}`),
@@ -162,8 +164,41 @@ export const apiService = {
 
   // Dashboard
   getDashboardStats: () => api.get('/api/dashboard/stats'),
-  getPendingVerification: (category, limit = 10) => 
-    api.get(`/api/dashboard/pending-verification?category=${category}&limit=${limit}`),
+  getPendingVerification: (category = '', limit = 10) => {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (category) params.append('category', category);
+    return api.get(`/api/dashboard/pending-verification?${params}`);
+  },
+
+  // User and Auth
+  getUserActivity: (queryString = '') => api.get(`/api/auth/activity${queryString ? `?${queryString}` : ''}`),
+  updateUserProfile: (data) => api.put('/api/auth/profile', data),
+
+  // Raags
+  searchRaag: (name, useAI = false, aiProvider = 'openai', aiModel = 'default') =>
+    api.get(`/api/raags/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
+  
+  getAllRaags: () => api.get('/api/raags'),
+  getRaagById: (id) => api.get(`/api/raags/${id}`),
+  updateRaag: (id, data) => api.put(`/api/raags/${id}`, data),
+  getVerifiedRaags: (field) => api.get(`/api/raags/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedRaags: (field) => api.get(`/api/raags/unverified${field ? `?field=${field}` : ''}`),
+  getRaagStats: () => api.get('/api/raags/stats'),
+  getAllAboutRaag: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro') =>
+    api.get(`/api/raags/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
+
+  // Taals
+  searchTaal: (name, useAI = false, aiProvider = 'openai', aiModel = 'default') =>
+    api.get(`/api/taals/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
+  
+  getAllTaals: () => api.get('/api/taals'),
+  getTaalById: (id) => api.get(`/api/taals/${id}`),
+  updateTaal: (id, data) => api.put(`/api/taals/${id}`, data),
+  getVerifiedTaals: (field) => api.get(`/api/taals/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedTaals: (field) => api.get(`/api/taals/unverified${field ? `?field=${field}` : ''}`),
+  getTaalStats: () => api.get('/api/taals/stats'),
+  getAllAboutTaal: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro') =>
+    api.get(`/api/taals/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
 };
 
 export default api;

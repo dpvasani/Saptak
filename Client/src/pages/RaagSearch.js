@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
 import DualModeSearchForm from '../components/DualModeSearchForm';
@@ -38,7 +38,7 @@ const RaagSearch = () => {
   const debouncedStructuredSearch = debounce(async (query, aiEnabled, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/raags/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
+      const response = await apiService.searchRaag(query, aiEnabled, provider, model);
       setRaag(response.data);
       toast.success(`Raag data ${aiEnabled ? `researched using ${modelData?.name || model}` : 'scraped from web'} successfully`);
     } catch (error) {
@@ -56,7 +56,7 @@ const RaagSearch = () => {
   const handleAllAboutSearch = async (query, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/raags/all-about?name=${encodeURIComponent(query)}&aiProvider=${provider}&aiModel=${model}`);
+      const response = await apiService.getAllAboutRaag(query, provider, model);
       setAllAboutData(response.data.data);
       toast.success(`All About search completed using ${modelData?.name || model}`);
     } catch (error) {
@@ -92,7 +92,7 @@ const RaagSearch = () => {
         }
       };
 
-      await axios.put(`http://localhost:5000/api/raags/${raag._id}`, updatedRaag);
+      await apiService.updateRaag(raag._id, updatedRaag);
       
       // Update local state immediately
       updateRaagField(field, { verified: !currentStatus });
@@ -122,7 +122,7 @@ const RaagSearch = () => {
         }
       };
 
-      await axios.put(`http://localhost:5000/api/raags/${raag._id}`, updatedRaag);
+      await apiService.updateRaag(raag._id, updatedRaag);
       
       // Update local state immediately
       updateRaagField(editingField, { value: editValue });
@@ -274,7 +274,7 @@ const RaagSearch = () => {
         };
       });
 
-      await axios.put(`http://localhost:5000/api/raags/${raag._id}`, updatedRaag);
+      await apiService.updateRaag(raag._id, updatedRaag);
       setRaag(updatedRaag);
       setSelectedFields(new Set());
       

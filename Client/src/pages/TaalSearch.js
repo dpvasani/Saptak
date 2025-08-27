@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
 import DualModeSearchForm from '../components/DualModeSearchForm';
@@ -38,7 +38,7 @@ const TaalSearch = () => {
   const debouncedStructuredSearch = debounce(async (query, aiEnabled, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/taals/search?name=${encodeURIComponent(query)}&useAI=${aiEnabled}&aiProvider=${provider}&aiModel=${model}`);
+      const response = await apiService.searchTaal(query, aiEnabled, provider, model);
       setTaal(response.data);
       toast.success(`Taal data ${aiEnabled ? `researched using ${modelData?.name || model}` : 'scraped from web'} successfully`);
     } catch (error) {
@@ -56,7 +56,7 @@ const TaalSearch = () => {
   const handleAllAboutSearch = async (query, provider, model, modelData) => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/taals/all-about?name=${encodeURIComponent(query)}&aiProvider=${provider}&aiModel=${model}`);
+      const response = await apiService.getAllAboutTaal(query, provider, model);
       setAllAboutData(response.data.data);
       toast.success(`All About search completed using ${modelData?.name || model}`);
     } catch (error) {
@@ -143,7 +143,7 @@ const TaalSearch = () => {
         };
       }
 
-      await axios.put(`http://localhost:5000/api/taals/${taal._id}`, updatedTaal);
+      await apiService.updateTaal(taal._id, updatedTaal);
       
       // Update local state immediately
       updateTaalField(field, { verified: !currentStatus });
@@ -183,7 +183,7 @@ const TaalSearch = () => {
         };
       }
 
-      await axios.put(`http://localhost:5000/api/taals/${taal._id}`, updatedTaal);
+      await apiService.updateTaal(taal._id, updatedTaal);
       
       // Update local state immediately
       updateTaalField(editingField, { value: editValue });
@@ -343,7 +343,7 @@ const TaalSearch = () => {
         }
       });
 
-      await axios.put(`http://localhost:5000/api/taals/${taal._id}`, updatedTaal);
+      await apiService.updateTaal(taal._id, updatedTaal);
       setTaal(updatedTaal);
       setSelectedFields(new Set());
       

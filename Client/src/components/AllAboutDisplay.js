@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
   ArrowTopRightOnSquareIcon,
@@ -33,12 +33,21 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   const handleSave = async () => {
     try {
       // Update the All About data in database
-      await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
+      const updateData = {
         [editingField]: {
           ...localData[editingField],
           value: editValue
         }
-      });
+      };
+      
+      // Use the appropriate API service method based on category
+      if (category === 'artists') {
+        await apiService.updateArtist(localData._id, updateData);
+      } else if (category === 'raags') {
+        await apiService.updateRaag(localData._id, updateData);
+      } else if (category === 'taals') {
+        await apiService.updateTaal(localData._id, updateData);
+      }
       
       // Update local state
       const updatedData = {
@@ -71,12 +80,21 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
-      await axios.put(`http://localhost:5000/api/all-about/${localData._id}`, {
+      const updateData = {
         [field]: {
           ...localData[field],
           verified: !currentStatus
         }
-      });
+      };
+      
+      // Use the appropriate API service method based on category
+      if (category === 'artists') {
+        await apiService.updateArtist(localData._id, updateData);
+      } else if (category === 'raags') {
+        await apiService.updateRaag(localData._id, updateData);
+      } else if (category === 'taals') {
+        await apiService.updateTaal(localData._id, updateData);
+      }
       
       // Update local state
       const updatedData = {
