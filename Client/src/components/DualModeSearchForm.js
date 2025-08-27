@@ -263,7 +263,7 @@ const DualModeSearchForm = ({
                           <p className="text-xs text-green-600 mt-1">
                             ⚡ No prompt optimization - pure raw response in markdown format
                           </p>
-                          <p className="text-xs text-green-600">
+                        </label>
                         {/* AI Settings for All About Mode */}
                         {allAboutExpanded && (
                           <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200" onClick={(e) => e.stopPropagation()}>
