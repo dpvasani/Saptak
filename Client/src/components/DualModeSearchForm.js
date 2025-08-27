@@ -88,7 +88,7 @@ const DualModeSearchForm = ({
       }
 
       if (useAllAboutMode && (!allAboutProvider || !allAboutModel)) {
-        toast.error('Please select both AI provider and model for All About search');
+        toast.error('Please select both AI provider and model for Summary search');
         return;
       }
 
@@ -242,7 +242,7 @@ const DualModeSearchForm = ({
                     </div>
                   </div>
 
-                  {/* Option 2: All About Mode */}
+                  {/* Option 2: Summary Mode */}
                   <div className="bg-white rounded-lg p-4 border-2 border-purple-200">
                     <div className="flex items-start space-x-3">
                       <input
@@ -255,10 +255,10 @@ const DualModeSearchForm = ({
                       <div className="flex-1">
                         <label htmlFor="allabout-mode-checkbox" className="cursor-pointer select-none block">
                           <span className="text-sm font-medium text-gray-900">
-                            📝 Option 2: "All About" Mode
+                            📝 Option 2: Summary Mode
                           </span>
                           <p className="text-sm text-gray-600 mt-1">
-                            Runs "all about {searchQuery}" and displays raw AI response with Answer, Images, and Sources
+                            Generates a research summary in markdown with Answer, Images, and Sources
                           </p>
                           <p className="text-xs text-purple-600 mt-1">
                             ⚡ No prompt optimization - pure raw response in markdown format
@@ -275,10 +275,7 @@ const DualModeSearchForm = ({
                             />
                             <div className="mt-2 p-2 bg-white rounded border border-purple-100">
                               <p className="text-xs text-purple-700">
-                                💾 <strong>Database Saving:</strong> Response saved with verification fields
-                              </p>
-                              <p className="text-xs text-purple-700">
-                                📝 <strong>Markdown Display:</strong> Beautiful formatted response
+                                📝 <strong>Markdown Display:</strong> Beautifully formatted response
                               </p>
                             </div>
                           </div>
@@ -307,7 +304,7 @@ const DualModeSearchForm = ({
               ${searchMethod === 'web' ? '(Web Scraping)' : 
                 `(AI: ${useStructuredMode && useAllAboutMode ? 'Both Modes' : 
                        useStructuredMode ? 'Structured' : 
-                       useAllAboutMode ? 'All About' : 'Select Mode'})`}`
+                       useAllAboutMode ? 'Summary' : 'Select Mode'})`}`
             )}
           </button>
 
