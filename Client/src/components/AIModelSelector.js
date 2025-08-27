@@ -183,7 +183,7 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
     <div className={`ai-model-selector space-y-4 ${className}`}>
       {/* Provider Dropdown */}
       <div className="relative">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-200 mb-2">
           AI Provider
         </label>
         <button
@@ -204,7 +204,7 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
         </button>
 
         {isProviderOpen && (
-          <div className="absolute z-20 mt-1 w-full bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl max-h-60 rounded-lg py-1 text-base border border-gray-700 overflow-auto focus:outline-none">
+          <div className="absolute z-50 mt-1 w-full bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl max-h-60 rounded-lg py-1 text-base border border-gray-700 overflow-auto focus:outline-none">
             {providers.map((providerId) => (
               <button
                 key={providerId}
@@ -230,7 +230,7 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
       {/* Model Dropdown - Only show if provider is selected */}
       {selectedProvider && (
         <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-200 mb-2">
             AI Model
           </label>
           <button
@@ -255,7 +255,7 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
           </button>
 
           {isModelOpen && (
-            <div className="absolute z-10 mt-1 w-full bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl max-h-80 rounded-lg py-1 text-base border border-gray-700 overflow-auto focus:outline-none">
+            <div className="absolute z-50 mt-1 w-full bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl max-h-80 rounded-lg py-1 text-base border border-gray-700 overflow-auto focus:outline-none">
               {availableModels.map((model) => (
                 <button
                   key={model.id}
