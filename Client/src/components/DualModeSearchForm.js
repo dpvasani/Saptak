@@ -34,28 +34,36 @@ const DualModeSearchForm = ({
   const [allAboutModelData, setAllAboutModelData] = useState(null);
 
   const handleStructuredModelChange = ({ provider, model, modelData: data }) => {
-    // Don't collapse when changing model settings
+    // Keep expanded when changing model settings - don't collapse
     setStructuredProvider(provider);
     setStructuredModel(model);
     setStructuredModelData(data);
+    // Ensure it stays expanded
+    if (useStructuredMode) {
+      setStructuredExpanded(true);
+    }
   };
 
   const handleAllAboutModelChange = ({ provider, model, modelData: data }) => {
-    // Don't collapse when changing model settings
+    // Keep expanded when changing model settings - don't collapse
     setAllAboutProvider(provider);
     setAllAboutModel(model);
     setAllAboutModelData(data);
+    // Ensure it stays expanded
+    if (useAllAboutMode) {
+      setAllAboutExpanded(true);
+    }
   };
 
   const handleStructuredModeToggle = (checked) => {
     setUseStructuredMode(checked);
-    setStructuredExpanded(checked);
+    setStructuredExpanded(checked); // Only collapse when unchecking
   };
 
   const handleAllAboutModeToggle = (checked) => {
     setUseAllAboutMode(checked);
-    setAllAboutExpanded(checked);
-  }
+    setAllAboutExpanded(checked); // Only collapse when unchecking
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();

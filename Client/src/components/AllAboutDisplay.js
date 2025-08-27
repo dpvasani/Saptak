@@ -103,67 +103,94 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   const renderMarkdown = (text) => {
     if (!text) return null;
 
-    // Convert markdown to HTML-like structure for React
-    let formattedText = text;
+    // Simple and effective markdown parsing
+    const lines = text.split('\n');
+    const elements = [];
+    let currentList = [];
+    let listType = null;
 
-    // Handle headers
-    formattedText = formattedText.replace(/### (.*?)(\n|$)/g, '<h3>$1</h3>');
-    formattedText = formattedText.replace(/## (.*?)(\n|$)/g, '<h2>$1</h2>');
-    formattedText = formattedText.replace(/# (.*?)(\n|$)/g, '<h1>$1</h1>');
+    const flushList = () => {
+      if (currentList.length > 0) {
+        if (listType === 'ul') {
+          elements.push(
+            <ul key={`list-${elements.length}`} className="list-disc list-inside space-y-1 my-4 ml-4">
+              {currentList.map((item, idx) => (
+                <li key={idx} className="text-gray-700 leading-relaxed">{item}</li>
+              ))}
+            </ul>
+          );
+        }
+        currentList = [];
+        listType = null;
+      }
+    };
 
-    // Handle bold text
-    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine) {
+        flushList();
+        return;
+      }
 
-    // Handle bullet points
-    formattedText = formattedText.replace(/^- (.*?)$/gm, '<li>$1</li>');
-    
-    // Wrap consecutive list items in ul tags
-    formattedText = formattedText.replace(/(<li>.*<\/li>)/gs, (match) => {
-      return '<ul>' + match + '</ul>';
+      // Headers
+      if (trimmedLine.startsWith('### ')) {
+        flushList();
+        const headerText = trimmedLine.replace(/^### /, '').replace(/\*\*(.*?)\*\*/g, '$1');
+        elements.push(
+          <h3 key={`h3-${index}`} className="text-lg font-semibold text-gray-800 mt-6 mb-3 border-b border-gray-200 pb-1">
+            {headerText}
+          </h3>
+        );
+      } else if (trimmedLine.startsWith('## ')) {
+        flushList();
+        const headerText = trimmedLine.replace(/^## /, '').replace(/\*\*(.*?)\*\*/g, '$1');
+        elements.push(
+          <h2 key={`h2-${index}`} className="text-xl font-bold text-gray-800 mt-6 mb-4 border-b-2 border-gray-300 pb-2">
+            {headerText}
+          </h2>
+        );
+      } else if (trimmedLine.startsWith('# ')) {
+        flushList();
+        const headerText = trimmedLine.replace(/^# /, '').replace(/\*\*(.*?)\*\*/g, '$1');
+        elements.push(
+          <h1 key={`h1-${index}`} className="text-2xl font-bold text-gray-900 mt-6 mb-4 border-b-2 border-gray-400 pb-3">
+            {headerText}
+          </h1>
+        );
+      }
+      // Bullet points
+      else if (trimmedLine.startsWith('- ')) {
+        if (listType !== 'ul') {
+          flushList();
+          listType = 'ul';
+        }
+        const listItem = trimmedLine.replace(/^- /, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        currentList.push(
+          <span dangerouslySetInnerHTML={{ __html: listItem }} />
+        );
+      }
+      // Horizontal rules
+      else if (trimmedLine === '---') {
+        flushList();
+        elements.push(<hr key={`hr-${index}`} className="my-6 border-gray-300" />);
+      }
+      // Regular paragraphs
+      else {
+        flushList();
+        const processedLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        elements.push(
+          <p key={`p-${index}`} className="text-gray-700 leading-relaxed mb-4" dangerouslySetInnerHTML={{ __html: processedLine }} />
+        );
+      }
     });
 
-    // Handle line breaks
-    formattedText = formattedText.replace(/\n\n/g, '</p><p>');
-    formattedText = '<p>' + formattedText + '</p>';
+    // Flush any remaining list
+    flushList();
 
-    // Clean up empty paragraphs and fix nested tags
-    formattedText = formattedText.replace(/<p><\/p>/g, '');
-    formattedText = formattedText.replace(/<p>(<h[1-6]>.*?<\/h[1-6]>)<\/p>/g, '$1');
-    formattedText = formattedText.replace(/<p>(<ul>.*?<\/ul>)<\/p>/gs, '$1');
-
-    // Split by HTML tags and render as React elements
-    const parts = formattedText.split(/(<[^>]+>.*?<\/[^>]+>|<[^>]+\/>)/g);
-    
     return (
-      <div className="markdown-content">
-        {parts.map((part, index) => {
-          if (part.startsWith('<h1>')) {
-            return <h1 key={index} className="text-2xl font-bold text-gray-900 mt-6 mb-3 border-b-2 border-gray-200 pb-2">{part.replace(/<\/?h1>/g, '')}</h1>;
-          } else if (part.startsWith('<h2>')) {
-            return <h2 key={index} className="text-xl font-semibold text-gray-800 mt-5 mb-3">{part.replace(/<\/?h2>/g, '')}</h2>;
-          } else if (part.startsWith('<h3>')) {
-            return <h3 key={index} className="text-lg font-medium text-gray-800 mt-4 mb-2">{part.replace(/<\/?h3>/g, '')}</h3>;
-          } else if (part.startsWith('<strong>')) {
-            return <strong key={index} className="font-semibold text-gray-900">{part.replace(/<\/?strong>/g, '')}</strong>;
-          } else if (part.startsWith('<ul>')) {
-            const listItems = part.match(/<li>(.*?)<\/li>/g) || [];
-            return (
-              <ul key={index} className="list-disc list-inside space-y-1 my-3 ml-4">
-                {listItems.map((item, liIndex) => (
-                  <li key={liIndex} className="text-gray-700">
-                    {item.replace(/<\/?li>/g, '')}
-                  </li>
-                ))}
-              </ul>
-            );
-          } else if (part.startsWith('<p>') && part !== '<p></p>') {
-            const content = part.replace(/<\/?p>/g, '');
-            if (content.trim()) {
-              return <p key={index} className="text-gray-700 leading-relaxed mb-3">{content}</p>;
-            }
-          }
-          return part.trim() ? <span key={index} className="text-gray-700">{part}</span> : null;
-        }).filter(Boolean)}
+      <div className="markdown-content prose prose-lg max-w-none">
+        {elements}
       </div>
     );
   };
