@@ -139,25 +139,25 @@ const DualModeSearchForm = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-sm text-lg"
+              className="w-full px-4 py-3 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm text-lg bg-white/80 backdrop-blur-sm"
               placeholder={placeholder}
             />
           </div>
 
           {/* Main Search Method Selection */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-emerald-50/50 backdrop-blur-sm rounded-lg p-4 border border-emerald-200">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Search Method</h4>
             
             <div className="space-y-4">
               {/* Web Scraping Option */}
-              <label className="flex items-start space-x-3 cursor-pointer">
+              <label className="flex items-start space-x-3 cursor-pointer bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-emerald-200 hover:border-emerald-300 transition-all duration-200">
                 <input
                   type="radio"
                   name="searchMethod"
                   value="web"
                   checked={searchMethod === 'web'}
                   onChange={(e) => setSearchMethod(e.target.value)}
-                  className="mt-1 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  className="mt-1 text-emerald-600 border-emerald-300 focus:ring-emerald-500"
                 />
                 <div>
                   <span className="text-sm font-medium text-gray-900">
@@ -166,21 +166,21 @@ const DualModeSearchForm = ({
                   <p className="text-sm text-gray-600 mt-1">
                     Traditional web scraping from multiple sources (Wikipedia, music websites, etc.)
                   </p>
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-emerald-600 mt-1">
                     ⚡ Fast and reliable - No AI involved
                   </p>
                 </div>
               </label>
 
               {/* AI Search Option */}
-              <label className="flex items-start space-x-3 cursor-pointer">
+              <label className="flex items-start space-x-3 cursor-pointer bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-emerald-200 hover:border-emerald-300 transition-all duration-200">
                 <input
                   type="radio"
                   name="searchMethod"
                   value="ai"
                   checked={searchMethod === 'ai'}
                   onChange={(e) => setSearchMethod(e.target.value)}
-                  className="mt-1 text-purple-600 border-gray-300 focus:ring-purple-500"
+                  className="mt-1 text-emerald-600 border-emerald-300 focus:ring-emerald-500"
                 />
                 <div className="flex-1">
                   <span className="text-sm font-medium text-gray-900">
@@ -189,7 +189,7 @@ const DualModeSearchForm = ({
                   <p className="text-sm text-gray-600 mt-1">
                     Advanced AI-powered research with multiple modes and providers
                   </p>
-                  <p className="text-xs text-purple-600 mt-1">
+                  <p className="text-xs text-emerald-600 mt-1">
                     🎯 Choose from multiple AI modes below
                   </p>
                 </div>
@@ -198,22 +198,22 @@ const DualModeSearchForm = ({
             
             {/* AI Mode Options - Only shown when AI Search is selected */}
             {searchMethod === 'ai' && (
-              <div className="mt-6 pl-4 border-l-4 border-purple-300 bg-purple-50 rounded-r-lg p-4">
-                <h5 className="text-lg font-semibold text-purple-900 mb-4">🤖 AI Search Modes</h5>
-                <p className="text-sm text-purple-700 mb-4">
+              <div className="mt-6 pl-4 border-l-4 border-emerald-400 bg-emerald-50/80 backdrop-blur-sm rounded-r-lg p-4">
+                <h5 className="text-lg font-semibold text-emerald-900 mb-4">🤖 AI Search Modes</h5>
+                <p className="text-sm text-emerald-700 mb-4">
                   Choose one or both AI search modes. Each mode can use different AI providers and models.
                 </p>
                 
                 <div className="space-y-6">
                   {/* Option 1: Structured Mode */}
-                  <div className="bg-white rounded-lg p-4 border-2 border-blue-200">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border-2 border-emerald-300 shadow-sm">
                     <div className="flex items-start space-x-3">
                       <input
                         id="structured-mode-checkbox"
                         type="checkbox"
                         checked={useStructuredMode}
                         onChange={(e) => handleStructuredModeToggle(e.target.checked)}
-                        className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        className="mt-1 rounded border-emerald-300 text-emerald-600 shadow-sm focus:border-emerald-300 focus:ring focus:ring-emerald-200 focus:ring-opacity-50"
                       />
                       <div className="flex-1">
                         <label htmlFor="structured-mode-checkbox" className="cursor-pointer select-none block">
@@ -223,13 +223,13 @@ const DualModeSearchForm = ({
                           <p className="text-sm text-gray-600 mt-1">
                             Uses structured prompts to generate organized field data (Name, Guru, Gharana, etc.)
                           </p>
-                          <p className="text-xs text-blue-600 mt-1">
+                          <p className="text-xs text-emerald-600 mt-1">
                             ✅ Perfect for verification workflows and data management
                           </p>
                         </label>
                         {/* AI Settings for Structured Mode */}
                         {structuredExpanded && (
-                          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleStructuredModelChange}
                               selectedProvider={structuredProvider}
@@ -243,14 +243,14 @@ const DualModeSearchForm = ({
                   </div>
 
                   {/* Option 2: Summary Mode */}
-                  <div className="bg-white rounded-lg p-4 border-2 border-purple-200">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border-2 border-green-300 shadow-sm">
                     <div className="flex items-start space-x-3">
                       <input
                         id="allabout-mode-checkbox"
                         type="checkbox"
                         checked={useAllAboutMode}
                         onChange={(e) => handleAllAboutModeToggle(e.target.checked)}
-                        className="mt-1 rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
+                        className="mt-1 rounded border-green-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
                       />
                       <div className="flex-1">
                         <label htmlFor="allabout-mode-checkbox" className="cursor-pointer select-none block">
@@ -260,21 +260,21 @@ const DualModeSearchForm = ({
                           <p className="text-sm text-gray-600 mt-1">
                             Generates a research summary in markdown with Answer, Images, and Sources
                           </p>
-                          <p className="text-xs text-purple-600 mt-1">
+                          <p className="text-xs text-green-600 mt-1">
                             ⚡ No prompt optimization - pure raw response in markdown format
                           </p>
-                        </label>
+                          <p className="text-xs text-green-600">
                         {/* AI Settings for All About Mode */}
                         {allAboutExpanded && (
-                          <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleAllAboutModelChange}
                               selectedProvider={allAboutProvider}
                               selectedModel={allAboutModel}
                               className="text-sm"
                             />
-                            <div className="mt-2 p-2 bg-white rounded border border-purple-100">
-                              <p className="text-xs text-purple-700">
+                            <div className="mt-2 p-2 bg-white rounded border border-green-100">
+                              <p className="text-xs text-green-700">
                                 📝 <strong>Markdown Display:</strong> Beautifully formatted response
                               </p>
                             </div>
@@ -292,7 +292,7 @@ const DualModeSearchForm = ({
           <button
             type="submit"
             disabled={loading || (searchMethod === 'ai' && !useStructuredMode && !useAllAboutMode)}
-            className="w-full px-8 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
+            className="w-full px-8 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 disabled:from-emerald-400 disabled:to-green-400 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed transform hover:scale-[1.02]"
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -310,7 +310,7 @@ const DualModeSearchForm = ({
 
           {/* Validation Messages */}
           {searchMethod === 'ai' && !useStructuredMode && !useAllAboutMode && (
-            <p className="text-sm text-red-600 text-center">
+            <p className="text-sm text-red-600 text-center bg-red-50 rounded-lg p-3 border border-red-200">
               ⚠️ Please select at least one AI search mode above
             </p>
           )}

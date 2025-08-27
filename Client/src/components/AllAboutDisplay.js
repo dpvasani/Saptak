@@ -308,10 +308,10 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
+      <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-2xl font-bold text-gray-900">
-            "All About" Results
+            📝 "All About" Mode Results
           </h3>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <ClockIcon className="h-4 w-4" />
@@ -319,21 +319,21 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg p-4 border border-purple-100">
+        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-emerald-100">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-purple-700">Search Query:</span>
+            <span className="font-medium text-emerald-700">Search Query:</span>
             <span className="text-gray-600 font-mono">{localData.metadata?.searchQuery}</span>
           </div>
           <div className="flex items-center justify-between text-sm mt-2">
-            <span className="font-medium text-purple-700">AI Provider:</span>
+            <span className="font-medium text-emerald-700">AI Provider:</span>
             <span className="text-gray-600">{localData.metadata?.aiProvider} - {localData.metadata?.aiModel}</span>
           </div>
         </div>
       </div>
 
       {/* Answer Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
+        <div className="flex items-center justify-between mb-4 border-b border-emerald-200 pb-2">
           <h4 className="text-xl font-semibold text-gray-900 flex items-center">
             📝 Answer
             {localData.answer?.verified ? (
@@ -368,14 +368,14 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-emerald-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none bg-white/80"
               rows={12}
               placeholder="Edit answer content..."
             />
             <div className="flex space-x-2">
               <button
                 onClick={handleSave}
-                className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
               >
                 <CheckIcon className="h-4 w-4 mr-1" />
                 Save
@@ -390,25 +390,25 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
             </div>
           </div>
         ) : (
-          <div className="prose prose-lg max-w-none markdown-content">
+          <div className="prose prose-lg max-w-none markdown-content bg-white/60 rounded-lg p-4 border border-emerald-100">
             {renderMarkdown(localData.answer?.value || 'No answer provided')}
           </div>
         )}
       </div>
 
       {/* Images Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2 flex items-center">
-          <PhotoIcon className="h-6 w-6 mr-2 text-blue-600" />
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
+        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-emerald-200 pb-2 flex items-center">
+          <PhotoIcon className="h-6 w-6 mr-2 text-emerald-600" />
           Images ({localData.images?.length || 0})
         </h4>
         {renderImages()}
       </div>
 
       {/* Sources Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2 flex items-center">
-          <LinkIcon className="h-6 w-6 mr-2 text-green-600" />
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
+        <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-emerald-200 pb-2 flex items-center">
+          <LinkIcon className="h-6 w-6 mr-2 text-emerald-600" />
           Sources ({localData.sources?.length || 0})
         </h4>
         {renderSources()}
@@ -418,13 +418,13 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
       {/* Citations Section */}
       {localData.citations && localData.citations.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
+          <h4 className="text-xl font-semibold text-gray-900 mb-4 border-b border-emerald-200 pb-2">
             📚 Citations ({localData.citations.length})
           </h4>
           <div className="space-y-3">
             {localData.citations.map((citation, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-3 text-sm">
+              <div key={index} className="bg-emerald-50 rounded-lg p-3 text-sm border border-emerald-100">
                 <div className="font-medium text-gray-900 mb-1">
                   [{index + 1}] {citation.title || 'Citation'}
                 </div>
@@ -433,7 +433,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
                     href={citation.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline break-all"
+                    className="text-emerald-600 hover:underline break-all"
                   >
                     {citation.url}
                   </a>

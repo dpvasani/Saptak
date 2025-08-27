@@ -410,7 +410,7 @@ const ArtistSearch = () => {
         {/* Option 1: Structured Mode Results */}
         {artist && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
                 📊 Structured Mode Results
               </h3>
@@ -420,7 +420,7 @@ const ArtistSearch = () => {
             </div>
 
             {/* Header with Progress */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-emerald-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold text-gray-900">
                   {artist.name?.value || 'Artist Information'}
@@ -434,20 +434,20 @@ const ArtistSearch = () => {
               <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
                 <div 
                   className={`h-2 rounded-full transition-all duration-300 ${
-                    verificationPercentage === 100 ? 'bg-green-500' :
-                    verificationPercentage > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                    verificationPercentage === 100 ? 'bg-emerald-500' :
+                    verificationPercentage > 50 ? 'bg-green-500' : 'bg-yellow-500'
                   }`}
                   style={{ width: `${verificationPercentage}%` }}
                 ></div>
               </div>
 
               {/* Bulk Actions */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-emerald-50/50 backdrop-blur-sm rounded-lg p-4 border border-emerald-200">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={handleSelectAll}
-                      className="flex items-center px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                      className="flex items-center px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-colors duration-200 text-sm font-medium"
                     >
                       {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
                     </button>
@@ -460,14 +460,14 @@ const ArtistSearch = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleBulkVerification(true)}
-                        className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
                       >
                         <CheckCircleIcon className="h-4 w-4 mr-1" />
                         Verify Selected ({selectedFields.size})
                       </button>
                       <button
                         onClick={() => handleBulkVerification(false)}
-                        className="flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                        className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
                       >
                         <XCircleIcon className="h-4 w-4 mr-1" />
                         Unverify Selected ({selectedFields.size})

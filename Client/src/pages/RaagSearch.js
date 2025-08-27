@@ -414,7 +414,7 @@ const RaagSearch = () => {
         {/* Option 1: Structured Mode Results */}
         {raag && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
                 📊 Structured Mode Results
               </h3>

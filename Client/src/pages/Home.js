@@ -28,9 +28,9 @@ const Home = () => {
       <div className="text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
           RagaBot
-          <span className="block text-primary-600">Indian Classical Music Knowledge Hub</span>
+          <span className="block bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">Indian Classical Music Knowledge Hub</span>
         </h1>
-        <p className="mt-3 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+        <p className="mt-3 max-w-md mx-auto text-base text-gray-700 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
           A modern platform for researching, organizing, and verifying knowledge about Indian classical music.
         </p>
       </div>
@@ -41,10 +41,10 @@ const Home = () => {
             <Link
               key={feature.title}
               to={feature.path}
-              className="relative group bg-white p-6 rounded-xl shadow-sm ring-1 ring-gray-200 hover:shadow-md hover:ring-gray-300 transition-all"
+              className="relative group bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-lg ring-1 ring-emerald-200 hover:shadow-xl hover:ring-emerald-300 hover:bg-white transition-all duration-300 transform hover:-translate-y-1"
             >
               <div>
-                <span className="rounded-lg inline-flex p-3 bg-primary-50 text-primary-700 ring-4 ring-white text-4xl">
+                <span className="rounded-lg inline-flex p-3 bg-emerald-50 text-emerald-700 ring-4 ring-white text-4xl shadow-sm">
                   {feature.icon}
                 </span>
               </div>
@@ -58,7 +58,7 @@ const Home = () => {
                 </p>
               </div>
               <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                className="pointer-events-none absolute top-6 right-6 text-emerald-300 group-hover:text-emerald-500 transition-colors duration-300"
                 aria-hidden="true"
               >
                 <svg

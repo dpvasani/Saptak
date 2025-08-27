@@ -2,9 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global greenish theme */
+body {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 25%, #bbf7d0 50%, #86efac 75%, #10b981 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
 /* Markdown content styling */
 .markdown-content {
   line-height: 1.7;
+  color: #374151;
 }
 
 .markdown-content h1,
@@ -16,21 +24,24 @@
   font-weight: 600;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
-  color: #1f2937;
+  color: #065f46;
 }
 
 .markdown-content h1 {
   font-size: 1.875rem;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #10b981;
   padding-bottom: 0.5rem;
+  color: #064e3b;
 }
 
 .markdown-content h2 {
   font-size: 1.5rem;
+  color: #065f46;
 }
 
 .markdown-content h3 {
   font-size: 1.25rem;
+  color: #047857;
 }
 
 .markdown-content p {
@@ -48,27 +59,32 @@
 }
 
 .markdown-content blockquote {
-  border-left: 4px solid #d1d5db;
+  border-left: 4px solid #10b981;
   padding-left: 1rem;
   margin: 1rem 0;
   font-style: italic;
-  color: #6b7280;
+  color: #047857;
+  background-color: #f0fdf4;
+  border-radius: 0.5rem;
+  padding: 1rem;
 }
 
 .markdown-content code {
-  background-color: #f3f4f6;
+  background-color: #dcfce7;
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-family: 'Courier New', monospace;
   font-size: 0.875em;
+  color: #065f46;
 }
 
 .markdown-content pre {
-  background-color: #f3f4f6;
+  background-color: #f0fdf4;
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
   margin: 1rem 0;
+  border: 1px solid #bbf7d0;
 }
 
 .markdown-content pre code {
@@ -84,29 +100,50 @@
 
 .markdown-content th,
 .markdown-content td {
-  border: 1px solid #d1d5db;
+  border: 1px solid #bbf7d0;
   padding: 0.5rem;
   text-align: left;
 }
 
 .markdown-content th {
-  background-color: #f9fafb;
+  background-color: #dcfce7;
   font-weight: 600;
+  color: #065f46;
 }
 
 .markdown-content a {
-  color: #3b82f6;
+  color: #059669;
   text-decoration: underline;
 }
 
 .markdown-content a:hover {
-  color: #1d4ed8;
+  color: #047857;
 }
 
 .markdown-content strong {
   font-weight: 600;
+  color: #065f46;
 }
 
 .markdown-content em {
   font-style: italic;
+  color: #047857;
+}
+
+/* Custom scrollbar for green theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0fdf4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #10b981;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #059669;
 }
