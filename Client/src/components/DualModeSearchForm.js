@@ -12,11 +12,14 @@ const DualModeSearchForm = ({
   placeholder = "Enter name",
   category = "artist"
 }) => {
+  // Main search method selection
+  const [searchMethod, setSearchMethod] = useState('web'); // 'web' or 'ai'
+  
+  // AI Mode selections (only shown when searchMethod is 'ai')
   const [useStructuredMode, setUseStructuredMode] = useState(true);
   const [useAllAboutMode, setUseAllAboutMode] = useState(false);
   
   // Structured Mode AI Settings
-  const [structuredUseAI, setStructuredUseAI] = useState(false);
   const [structuredProvider, setStructuredProvider] = useState('');
   const [structuredModel, setStructuredModel] = useState('');
   const [structuredModelData, setStructuredModelData] = useState(null);
@@ -46,40 +49,52 @@ const DualModeSearchForm = ({
       return;
     }
 
-    // Validate AI settings if structured mode with AI is selected
-    if (useStructuredMode && structuredUseAI && (!structuredProvider || !structuredModel)) {
-      toast.error('Please select both AI provider and model for structured search');
-      return;
-    }
+    if (searchMethod === 'web') {
+      // Web scraping mode
+      try {
+        await onStructuredSearch(searchQuery, false, '', '', null);
+      } catch (error) {
+        console.error('Web scraping error:', error);
+      }
+    } else {
+      // AI search mode - validate selections
+      if (useStructuredMode && (!structuredProvider || !structuredModel)) {
+        toast.error('Please select both AI provider and model for structured search');
+        return;
+      }
 
-    // Validate AI settings for All About mode
-    if (useAllAboutMode && (!allAboutProvider || !allAboutModel)) {
-      toast.error('Please select both AI provider and model for All About search');
-      return;
-    }
+      if (useAllAboutMode && (!allAboutProvider || !allAboutModel)) {
+        toast.error('Please select both AI provider and model for All About search');
+        return;
+      }
 
-    const searchPromises = [];
+      if (!useStructuredMode && !useAllAboutMode) {
+        toast.error('Please select at least one AI search mode');
+        return;
+      }
 
-    // Execute structured search if selected
-    if (useStructuredMode) {
-      searchPromises.push(
-        onStructuredSearch(searchQuery, structuredUseAI, structuredProvider, structuredModel, structuredModelData)
-      );
-    }
+      const searchPromises = [];
 
-    // Execute "All About" search if selected
-    if (useAllAboutMode) {
-      searchPromises.push(
-        onAllAboutSearch(searchQuery, allAboutProvider, allAboutModel, allAboutModelData)
-      );
-    }
+      // Execute structured search if selected
+      if (useStructuredMode) {
+        searchPromises.push(
+          onStructuredSearch(searchQuery, true, structuredProvider, structuredModel, structuredModelData)
+        );
+      }
 
-    // Execute searches
-    try {
-      await Promise.all(searchPromises);
-    } catch (error) {
-      console.error('Search error:', error);
-      // Individual search functions handle their own error messages
+      // Execute "All About" search if selected
+      if (useAllAboutMode) {
+        searchPromises.push(
+          onAllAboutSearch(searchQuery, allAboutProvider, allAboutModel, allAboutModelData)
+        );
+      }
+
+      // Execute searches
+      try {
+        await Promise.all(searchPromises);
+      } catch (error) {
+        console.error('AI search error:', error);
+      }
     }
   };
 
@@ -90,7 +105,7 @@ const DualModeSearchForm = ({
           Search for {category === 'artist' ? 'an Artist' : category === 'raag' ? 'a Raag' : 'a Taal'}
         </h3>
         <p className="text-gray-600 mb-6">
-          Choose your search mode and enter the name to search for information.
+          Choose your search method and enter the name to search for information.
         </p>
         
         <form onSubmit={handleSearch} className="space-y-6">
@@ -105,93 +120,120 @@ const DualModeSearchForm = ({
             />
           </div>
 
-          {/* Search Mode Selection */}
+          {/* Main Search Method Selection */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Search Modes</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Search Method</h4>
             
-            {/* Option 1: Structured Mode */}
-            <div className="mb-4">
-              <label className="flex items-start space-x-3">
+            <div className="space-y-4">
+              {/* Web Scraping Option */}
+              <label className="flex items-start space-x-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  checked={useStructuredMode}
-                  onChange={(e) => setUseStructuredMode(e.target.checked)}
-                  className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                  type="radio"
+                  name="searchMethod"
+                  value="web"
+                  checked={searchMethod === 'web'}
+                  onChange={(e) => setSearchMethod(e.target.value)}
+                  className="mt-1 text-blue-600 border-gray-300 focus:ring-blue-500"
                 />
                 <div>
                   <span className="text-sm font-medium text-gray-900">
-                    Option 1: Structured Mode (Current System)
+                    🌐 Web Scraping
                   </span>
                   <p className="text-sm text-gray-600 mt-1">
-                    Uses structured prompts to generate organized field data (Name, Guru, Gharana, etc.)
+                    Traditional web scraping from multiple sources (Wikipedia, music websites, etc.)
                   </p>
-                  
-                  {/* AI Settings for Structured Mode */}
-                  {useStructuredMode && (
-                    <div className="mt-4 pl-4 border-l-2 border-blue-200">
-                      <div className="flex items-center space-x-4 mb-3">
-                        <label className="inline-flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={structuredUseAI}
-                            onChange={(e) => setStructuredUseAI(e.target.checked)}
-                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                          />
-                          <span className="ml-2 text-sm text-gray-700 font-medium">Use AI Research</span>
-                        </label>
-                        {!structuredUseAI && (
-                          <span className="text-sm text-gray-500">
-                            (Will use web scraping)
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* AI Model Selection */}
-                      {structuredUseAI && (
-                        <div className="mt-3">
-                          <AIModelSelector
-                            onModelChange={handleStructuredModelChange}
-                            selectedProvider={structuredProvider}
-                            selectedModel={structuredModel}
-                            className="text-sm"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </label>
-            </div>
 
-            {/* Option 2: All About Mode */}
-            <div>
-              <label className="flex items-start space-x-3">
+              {/* AI Search Option */}
+              <label className="flex items-start space-x-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  checked={useAllAboutMode}
-                  onChange={(e) => setUseAllAboutMode(e.target.checked)}
-                  className="mt-1 rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
+                  type="radio"
+                  name="searchMethod"
+                  value="ai"
+                  checked={searchMethod === 'ai'}
+                  onChange={(e) => setSearchMethod(e.target.value)}
+                  className="mt-1 text-purple-600 border-gray-300 focus:ring-purple-500"
                 />
-                <div>
+                <div className="flex-1">
                   <span className="text-sm font-medium text-gray-900">
-                    Option 2: "All About" Mode (Perplexity Raw)
+                    🤖 AI Search
                   </span>
                   <p className="text-sm text-gray-600 mt-1">
-                    Automatically runs "all about {name}" and displays raw AI response with Answer, Images, and Sources
+                    Advanced AI-powered research with multiple modes and providers
                   </p>
                   
-                  {/* AI Settings for All About Mode */}
-                  {useAllAboutMode && (
-                    <div className="mt-4 pl-4 border-l-2 border-purple-200">
-                      <AIModelSelector
-                        onModelChange={handleAllAboutModelChange}
-                        selectedProvider={allAboutProvider}
-                        selectedModel={allAboutModel}
-                        className="text-sm"
-                      />
-                      <p className="text-xs text-purple-600 mt-2">
-                        ⚡ No prompt optimization - pure raw "all about" response
-                      </p>
+                  {/* AI Mode Options - Only shown when AI Search is selected */}
+                  {searchMethod === 'ai' && (
+                    <div className="mt-4 pl-4 border-l-2 border-purple-200 space-y-4">
+                      <h5 className="text-sm font-semibold text-purple-900">AI Search Modes</h5>
+                      
+                      {/* Option 1: Structured Mode */}
+                      <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <label className="flex items-start space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={useStructuredMode}
+                            onChange={(e) => setUseStructuredMode(e.target.checked)}
+                            className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-900">
+                              📊 Option 1: Structured Mode
+                            </span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Uses structured prompts to generate organized field data (Name, Guru, Gharana, etc.)
+                            </p>
+                            
+                            {/* AI Settings for Structured Mode */}
+                            {useStructuredMode && (
+                              <div className="mt-3">
+                                <AIModelSelector
+                                  onModelChange={handleStructuredModelChange}
+                                  selectedProvider={structuredProvider}
+                                  selectedModel={structuredModel}
+                                  className="text-sm"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Option 2: All About Mode */}
+                      <div className="bg-white rounded-lg p-4 border border-purple-200">
+                        <label className="flex items-start space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={useAllAboutMode}
+                            onChange={(e) => setUseAllAboutMode(e.target.checked)}
+                            className="mt-1 rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-900">
+                              📝 Option 2: "All About" Mode
+                            </span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Automatically runs "all about {name}" and displays raw AI response with Answer, Images, and Sources
+                            </p>
+                            
+                            {/* AI Settings for All About Mode */}
+                            {useAllAboutMode && (
+                              <div className="mt-3">
+                                <AIModelSelector
+                                  onModelChange={handleAllAboutModelChange}
+                                  selectedProvider={allAboutProvider}
+                                  selectedModel={allAboutModel}
+                                  className="text-sm"
+                                />
+                                <p className="text-xs text-purple-600 mt-2">
+                                  ⚡ No prompt optimization - pure raw "all about" response
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -202,7 +244,7 @@ const DualModeSearchForm = ({
           {/* Search Button */}
           <button
             type="submit"
-            disabled={loading || (!useStructuredMode && !useAllAboutMode)}
+            disabled={loading || (searchMethod === 'ai' && !useStructuredMode && !useAllAboutMode)}
             className="w-full px-8 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
           >
             {loading ? (
@@ -211,14 +253,15 @@ const DualModeSearchForm = ({
                 Searching...
               </div>
             ) : (
-              `Search ${category === 'artist' ? 'Artist' : category === 'raag' ? 'Raag' : 'Taal'}`
+              `Search ${category === 'artist' ? 'Artist' : category === 'raag' ? 'Raag' : 'Taal'} 
+              ${searchMethod === 'web' ? '(Web Scraping)' : '(AI Search)'}`
             )}
           </button>
 
-          {/* Mode Selection Validation */}
-          {!useStructuredMode && !useAllAboutMode && (
+          {/* Validation Messages */}
+          {searchMethod === 'ai' && !useStructuredMode && !useAllAboutMode && (
             <p className="text-sm text-red-600 text-center">
-              Please select at least one search mode
+              Please select at least one AI search mode
             </p>
           )}
         </form>
