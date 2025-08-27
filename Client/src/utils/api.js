@@ -15,7 +15,11 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add any auth headers here if needed
+    // Add auth token to all requests
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -41,6 +45,16 @@ api.interceptors.response.use(
       switch (status) {
         case 400:
           toast.error(data.message || 'Invalid request');
+          break;
+        case 401:
+          toast.error('Authentication required. Please login.');
+          // Redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          break;
+        case 403:
+          toast.error('Access denied. Insufficient permissions.');
           break;
         case 404:
           toast.error(data.message || 'Resource not found');

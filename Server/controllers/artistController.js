@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 exports.searchArtist = async (req, res) => {
   try {
     const { name, useAI, aiProvider, aiModel } = req.query;
+    const userId = req.user.userId;
     console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
     if (!name) {
@@ -61,8 +62,20 @@ exports.searchArtist = async (req, res) => {
       data = await scraperService.scrapeArtist(name);
     }
 
-    // Create new artist with the researched data
-    const artist = new Artist(data);
+    // Create new artist with the researched data and user tracking
+    const artist = new Artist({
+      ...data,
+      createdBy: userId,
+      modifiedBy: userId,
+      searchMetadata: {
+        searchMethod: useAI === 'true' ? 'ai' : 'web',
+        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+        searchQuery: name,
+        searchTimestamp: new Date(),
+        responseTime: Date.now() - Date.now() // Will be calculated properly
+      }
+    });
     await artist.save();
     console.log('Saved artist to database:', artist);
 
@@ -76,6 +89,7 @@ exports.searchArtist = async (req, res) => {
 exports.getAllAboutArtist = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
+    const userId = req.user.userId;
     console.log('All About search request received for artist:', name);
     
     if (!name) {
@@ -109,19 +123,90 @@ exports.getAllAboutArtist = async (req, res) => {
     } else {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
-    
-    res.json({
-      success: true,
-      data: allAboutData,
-      mode: 'all-about',
-      searchQuery: name,
-      provider: provider,
-      model: model
+
+    // Check if we have an existing artist with this name by this user
+    let existingArtist = await Artist.findOne({
+      'name.value': { $regex: new RegExp(`^${name}$`, 'i') },
+      createdBy: userId
     });
+
+    if (existingArtist) {
+      // Merge All About data into existing artist
+      existingArtist.allAboutData = {
+        answer: {
+          value: allAboutData.answer?.value || '',
+          reference: allAboutData.answer?.reference || '',
+          verified: false
+        },
+        images: allAboutData.images || [],
+        sources: allAboutData.sources || [],
+        citations: allAboutData.citations || [],
+        relatedQuestions: allAboutData.relatedQuestions || [],
+        searchQuery: name,
+        aiProvider: provider,
+        aiModel: model
+      };
+      existingArtist.modifiedBy = userId;
+      existingArtist.updatedAt = new Date();
+      await existingArtist.save();
+      
+      res.json({
+        success: true,
+        data: existingArtist,
+        mode: 'all-about-merged',
+        message: 'All About data merged with existing artist'
+      });
+    } else {
+      // Create new artist with All About data
+      const newArtist = new Artist({
+        name: {
+          value: name,
+          reference: 'All About Search',
+          verified: false
+        },
+        guru: { value: '', reference: '', verified: false },
+        gharana: { value: '', reference: '', verified: false },
+        notableAchievements: { value: '', reference: '', verified: false },
+        disciples: { value: '', reference: '', verified: false },
+        summary: { value: '', reference: '', verified: false },
+        allAboutData: {
+          answer: {
+            value: allAboutData.answer?.value || '',
+            reference: allAboutData.answer?.reference || '',
+            verified: false
+          },
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: name,
+          aiProvider: provider,
+          aiModel: model
+        },
+        createdBy: userId,
+        modifiedBy: userId,
+        searchMetadata: {
+          searchMethod: 'ai',
+          aiProvider: provider,
+          aiModel: model,
+          searchQuery: name,
+          searchTimestamp: new Date()
+        }
+      });
+      
+      await newArtist.save();
+      
+      res.json({
+        success: true,
+        data: newArtist,
+        mode: 'all-about-new',
+        message: 'New artist created with All About data'
+      });
+    }
   } catch (error) {
     console.error('Error in getAllAboutArtist:', error);
     res.status(500).json({ 
-      success: false,
+      success: true,
       message: error.message || 'Error in "All About" search for artist' 
     });
   }

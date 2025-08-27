@@ -3,7 +3,10 @@ const router = express.Router();
 const Artist = require('../models/Artist');
 const Raag = require('../models/Raag');
 const Taal = require('../models/Taal');
+const { authenticateToken } = require('../middleware/auth');
 
+// All dashboard routes require authentication
+router.use(authenticateToken);
 // Get overall dashboard statistics
 router.get('/stats', async (req, res) => {
   try {

@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const raagController = require('../controllers/raagController');
+const { authenticateToken, logUserActivity } = require('../middleware/auth');
 
+// All routes require authentication
+router.use(authenticateToken);
 // Search for a raag
-router.get('/search', raagController.searchRaag);
+router.get('/search', logUserActivity('search', 'raags'), raagController.searchRaag);
 
 // "All About" search for a raag
-router.get('/all-about', raagController.getAllAboutRaag);
+router.get('/all-about', logUserActivity('search', 'raags'), raagController.getAllAboutRaag);
 
 // Get verified raags
 router.get('/verified', raagController.getVerifiedRaags);
@@ -24,18 +27,18 @@ router.get('/', raagController.getAllRaags);
 router.get('/:id', raagController.getRaagById);
 
 // Update raag
-router.put('/:id', raagController.updateRaag);
+router.put('/:id', logUserActivity('update', 'raags'), raagController.updateRaag);
 
 // Delete raag
-router.delete('/:id', raagController.deleteRaag);
+router.delete('/:id', logUserActivity('delete', 'raags'), raagController.deleteRaag);
 
 // Bulk delete raags
-router.delete('/', raagController.bulkDeleteRaags);
+router.delete('/', logUserActivity('delete', 'raags'), raagController.bulkDeleteRaags);
 
 // Export single raag
-router.get('/:id/export', raagController.exportSingleRaag);
+router.get('/:id/export', logUserActivity('export', 'raags'), raagController.exportSingleRaag);
 
 // Export raags
-router.post('/export', raagController.exportRaags);
+router.post('/export', logUserActivity('export', 'raags'), raagController.exportRaags);
 
 module.exports = router; 
