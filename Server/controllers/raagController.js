@@ -10,10 +10,15 @@ const mongoose = require('mongoose');
 exports.searchRaag = async (req, res) => {
   try {
     const { name, useAI, aiProvider, aiModel } = req.query;
+    const userId = req.user?.userId;
     console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
     if (!name) {
       return res.status(400).json({ message: 'Raag name is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required for search operations' });
     }
 
     let data;
@@ -52,7 +57,18 @@ exports.searchRaag = async (req, res) => {
     }
 
     // Create new raag with the researched data
-    const raag = new Raag(data);
+    const raag = new Raag({
+      ...data,
+      createdBy: userId,
+      modifiedBy: userId,
+      searchMetadata: {
+        searchMethod: useAI === 'true' ? 'ai' : 'web',
+        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+        searchQuery: name,
+        searchTimestamp: new Date()
+      }
+    });
     await raag.save();
     console.log('Saved raag to database:', raag);
 
@@ -66,12 +82,20 @@ exports.searchRaag = async (req, res) => {
 exports.getAllAboutRaag = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
+    const userId = req.user?.userId;
     console.log('All About search request received for raag:', name);
     
     if (!name) {
       return res.status(400).json({ 
         success: false,
         message: 'Raag name is required' 
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required for AI search operations' 
       });
     }
 

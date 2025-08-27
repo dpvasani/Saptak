@@ -10,10 +10,15 @@ const mongoose = require('mongoose');
 exports.searchTaal = async (req, res) => {
   try {
     const { name, useAI, aiProvider, aiModel } = req.query;
+    const userId = req.user?.userId;
     console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
     if (!name) {
       return res.status(400).json({ message: 'Taal name is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required for search operations' });
     }
 
     let data;
@@ -52,7 +57,18 @@ exports.searchTaal = async (req, res) => {
     }
 
     // Create new taal with the researched data
-    const taal = new Taal(data);
+    const taal = new Taal({
+      ...data,
+      createdBy: userId,
+      modifiedBy: userId,
+      searchMetadata: {
+        searchMethod: useAI === 'true' ? 'ai' : 'web',
+        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+        searchQuery: name,
+        searchTimestamp: new Date()
+      }
+    });
     await taal.save();
     console.log('Saved taal to database:', taal);
 
@@ -66,12 +82,20 @@ exports.searchTaal = async (req, res) => {
 exports.getAllAboutTaal = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
+    const userId = req.user?.userId;
     console.log('All About search request received for taal:', name);
     
     if (!name) {
       return res.status(400).json({ 
         success: false,
         message: 'Taal name is required' 
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required for AI search operations' 
       });
     }
 

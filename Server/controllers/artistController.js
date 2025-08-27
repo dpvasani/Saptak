@@ -10,11 +10,15 @@ const mongoose = require('mongoose');
 exports.searchArtist = async (req, res) => {
   try {
     const { name, useAI, aiProvider, aiModel } = req.query;
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     console.log('Search request received:', { name, useAI, aiProvider, aiModel });
     
     if (!name) {
       return res.status(400).json({ message: 'Artist name is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required for search operations' });
     }
 
     // Apply AI rate limiting if using AI
@@ -89,13 +93,20 @@ exports.searchArtist = async (req, res) => {
 exports.getAllAboutArtist = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     console.log('All About search request received for artist:', name);
     
     if (!name) {
       return res.status(400).json({ 
         success: false,
         message: 'Artist name is required' 
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required for AI search operations' 
       });
     }
 

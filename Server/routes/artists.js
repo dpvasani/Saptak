@@ -6,14 +6,11 @@ const { validateSearch, validateId, validateArtistUpdate } = require('../middlew
 const { aiLimiter, searchLimiter, updateLimiter } = require('../middleware/rateLimiter');
 const { authenticateToken, logUserActivity } = require('../middleware/auth');
 
-// All routes require authentication
-router.use(authenticateToken);
-
 // Search for an artist
-router.get('/search', searchLimiter, logUserActivity('search', 'artists'), validateSearch, asyncHandler(artistController.searchArtist));
+router.get('/search', authenticateToken, searchLimiter, logUserActivity('search', 'artists'), validateSearch, asyncHandler(artistController.searchArtist));
 
 // "All About" search for an artist
-router.get('/all-about', searchLimiter, logUserActivity('search', 'artists'), validateSearch, asyncHandler(artistController.getAllAboutArtist));
+router.get('/all-about', authenticateToken, logUserActivity('search', 'artists'), validateSearch, asyncHandler(artistController.getAllAboutArtist));
 
 // Get verified artists
 router.get('/verified', asyncHandler(artistController.getVerifiedArtists));
@@ -31,20 +28,21 @@ router.get('/', asyncHandler(artistController.getAllArtists));
 router.get('/:id', validateId, asyncHandler(artistController.getArtistById));
 
 // Update artist
-router.put('/:id', updateLimiter, logUserActivity('update', 'artists'), validateId, validateArtistUpdate, asyncHandler(artistController.updateArtist));
+router.put('/:id', authenticateToken, updateLimiter, logUserActivity('update', 'artists'), validateId, validateArtistUpdate, asyncHandler(artistController.updateArtist));
 
 // Delete artist
-router.delete('/:id', logUserActivity('delete', 'artists'), validateId, asyncHandler(artistController.deleteArtist));
+router.delete('/:id', authenticateToken, logUserActivity('delete', 'artists'), validateId, asyncHandler(artistController.deleteArtist));
 
 // Bulk delete artists
-router.delete('/', logUserActivity('delete', 'artists'), asyncHandler(artistController.bulkDeleteArtists));
+router.delete('/', authenticateToken, logUserActivity('delete', 'artists'), asyncHandler(artistController.bulkDeleteArtists));
 
 // Get partially verified artists
 router.get('/partial', asyncHandler(artistController.getPartiallyVerifiedArtists));
 
 // Export artists
-router.post('/export', logUserActivity('export', 'artists'), asyncHandler(artistController.exportArtists));
+router.post('/export', authenticateToken, logUserActivity('export', 'artists'), asyncHandler(artistController.exportArtists));
 
 // Export single artist
-router.get('/:id/export', logUserActivity('export', 'artists'), validateId, asyncHandler(artistController.exportSingleArtist));
+router.get('/:id/export', authenticateToken, logUserActivity('export', 'artists'), validateId, asyncHandler(artistController.exportSingleArtist));
+
 module.exports = router; 

@@ -3,13 +3,11 @@ const router = express.Router();
 const taalController = require('../controllers/taalController');
 const { authenticateToken, logUserActivity } = require('../middleware/auth');
 
-// All routes require authentication
-router.use(authenticateToken);
 // Search for a taal
-router.get('/search', logUserActivity('search', 'taals'), taalController.searchTaal);
+router.get('/search', authenticateToken, logUserActivity('search', 'taals'), taalController.searchTaal);
 
 // "All About" search for a taal
-router.get('/all-about', logUserActivity('search', 'taals'), taalController.getAllAboutTaal);
+router.get('/all-about', authenticateToken, logUserActivity('search', 'taals'), taalController.getAllAboutTaal);
 
 // Get verified taals
 router.get('/verified', taalController.getVerifiedTaals);
@@ -27,18 +25,18 @@ router.get('/', taalController.getAllTaals);
 router.get('/:id', taalController.getTaalById);
 
 // Update taal
-router.put('/:id', logUserActivity('update', 'taals'), taalController.updateTaal);
+router.put('/:id', authenticateToken, logUserActivity('update', 'taals'), taalController.updateTaal);
 
 // Delete taal
-router.delete('/:id', logUserActivity('delete', 'taals'), taalController.deleteTaal);
+router.delete('/:id', authenticateToken, logUserActivity('delete', 'taals'), taalController.deleteTaal);
 
 // Bulk delete taals
-router.delete('/', logUserActivity('delete', 'taals'), taalController.bulkDeleteTaals);
+router.delete('/', authenticateToken, logUserActivity('delete', 'taals'), taalController.bulkDeleteTaals);
 
 // Export single taal
-router.get('/:id/export', logUserActivity('export', 'taals'), taalController.exportSingleTaal);
+router.get('/:id/export', authenticateToken, logUserActivity('export', 'taals'), taalController.exportSingleTaal);
 
 // Export taals
-router.post('/export', logUserActivity('export', 'taals'), taalController.exportTaals);
+router.post('/export', authenticateToken, logUserActivity('export', 'taals'), taalController.exportTaals);
 
 module.exports = router; 

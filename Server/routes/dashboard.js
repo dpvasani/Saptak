@@ -5,10 +5,8 @@ const Raag = require('../models/Raag');
 const Taal = require('../models/Taal');
 const { authenticateToken } = require('../middleware/auth');
 
-// All dashboard routes require authentication
-router.use(authenticateToken);
 // Get overall dashboard statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     // Get total counts
     const totalArtists = await Artist.countDocuments();
@@ -151,7 +149,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // Get entries that need verification (priority list)
-router.get('/pending-verification', async (req, res) => {
+router.get('/pending-verification', authenticateToken, async (req, res) => {
   try {
     const { category, limit = 10 } = req.query;
     
