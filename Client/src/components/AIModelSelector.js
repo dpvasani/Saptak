@@ -271,6 +271,8 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
                             <span className="text-green-400 flex-shrink-0">✓</span>
                         <span className="font-medium truncate">{model.name}</span>
                         {selectedModel === model.id && (
+                        )
+                        }
                         <p className="text-sm text-gray-400 mt-1">{model.description}</p>
                         <p className="text-xs text-gray-500 mt-1">Source: {model.source}</p>
                       </div>
