@@ -168,7 +168,7 @@ class PerplexityAllAboutService {
           aiProvider: 'perplexity',
           aiModel: model,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
@@ -241,7 +241,7 @@ class PerplexityAllAboutService {
           aiProvider: 'perplexity',
           aiModel: model,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
