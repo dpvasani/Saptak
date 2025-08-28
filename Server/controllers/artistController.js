@@ -196,6 +196,7 @@ exports.getAllAboutArtist = async (req, res) => {
         if (existingArtist) {
           console.log('Strategy 4 - Word match found:', existingArtist._id, existingArtist.name.value);
         }
+      }
       // First, try to find artist from recent DataActivity within last 10 minutes
       const recentActivity = await DataActivity.findOne({
         user: userId,
@@ -205,21 +206,23 @@ exports.getAllAboutArtist = async (req, res) => {
         createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
       }).sort({ createdAt: -1 });
       
-      let existingArtist = null;
-      
-      if (recentActivity?.itemId) {
-        console.log('Found recent activity, looking for artist:', recentActivity.itemId);
-        existingArtist = await Artist.findById(recentActivity.itemId);
-        console.log('Found existing artist from activity:', existingArtist ? existingArtist._id : 'Not found');
-      }
-      
-      // Fallback: search by name if no recent activity found
       if (!existingArtist) {
-        console.log('No recent activity found, searching by name...');
-        existingArtist = await Artist.findOne({ 
-          'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-        });
-        console.log('Found artist by name:', existingArtist ? existingArtist._id : 'Not found');
+        existingArtist = null;
+      
+        if (recentActivity?.itemId) {
+          console.log('Found recent activity, looking for artist:', recentActivity.itemId);
+          existingArtist = await Artist.findById(recentActivity.itemId);
+          console.log('Found existing artist from activity:', existingArtist ? existingArtist._id : 'Not found');
+        }
+        
+        // Fallback: search by name if no recent activity found
+        if (!existingArtist) {
+          console.log('No recent activity found, searching by name...');
+          existingArtist = await Artist.findOne({ 
+            'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+          });
+          console.log('Found artist by name:', existingArtist ? existingArtist._id : 'Not found');
+        }
       }
       
       if (existingArtist) {
@@ -287,20 +290,7 @@ exports.getAllAboutArtist = async (req, res) => {
             verified: false
           },
           guru: {
-          allAboutData: {
-            answer: {
-              value: allAboutData.answer?.value || '',
-              reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-              verified: false
-            },
-            images: allAboutData.images || [],
-            sources: allAboutData.sources || [],
-            citations: allAboutData.citations || [],
-            relatedQuestions: allAboutData.relatedQuestions || [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
-          },
+            value: '',
             reference: 'Not searched in Summary mode',
             verified: false
           },
@@ -325,14 +315,18 @@ exports.getAllAboutArtist = async (req, res) => {
             verified: false
           },
           allAboutData: {
-            answer: allAboutData.answer,
-            images: allAboutData.images,
-            sources: allAboutData.sources,
-            citations: allAboutData.citations,
-            relatedQuestions: allAboutData.relatedQuestions,
-            searchQuery: allAboutData.metadata?.searchQuery,
-            aiProvider: allAboutData.metadata?.aiProvider,
-            aiModel: allAboutData.metadata?.aiModel
+            answer: {
+              value: allAboutData.answer?.value || '',
+              reference: allAboutData.answer?.reference || 'Perplexity AI Response',
+              verified: false
+            },
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
+            searchQuery: allAboutData.metadata?.searchQuery || name,
+            aiProvider: allAboutData.metadata?.aiProvider || provider,
+            aiModel: allAboutData.metadata?.aiModel || model
           },
           createdBy: userId,
           modifiedBy: userId,
