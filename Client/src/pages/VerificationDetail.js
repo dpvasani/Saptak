@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import AllAboutDisplay from '../components/AllAboutDisplay';
@@ -24,7 +23,6 @@ const VerificationDetail = () => {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [selectedFields, setSelectedFields] = useState(new Set());
-  const [bulkAction, setBulkAction] = useState('');
   const [showAllAboutData, setShowAllAboutData] = useState(false);
 
   const categoryConfig = {
@@ -36,7 +34,8 @@ const VerificationDetail = () => {
         { key: 'gharana', label: 'Gharana' },
         { key: 'notableAchievements', label: 'Notable Achievements' },
         { key: 'disciples', label: 'Disciples' },
-        { key: 'summary', label: 'Comprehensive Summary' }
+        { key: 'summary', label: 'Comprehensive Summary' },
+        { key: 'allAboutData.answer', label: 'Summary Mode Answer' }
       ],
       color: 'green'
     },
@@ -52,7 +51,8 @@ const VerificationDetail = () => {
         { key: 'thaat', label: 'Thaat' },
         { key: 'rasBhaav', label: 'Ras-Bhaav' },
         { key: 'tanpuraTuning', label: 'Tanpura Tuning' },
-        { key: 'timeOfRendition', label: 'Time of Rendition' }
+        { key: 'timeOfRendition', label: 'Time of Rendition' },
+        { key: 'allAboutData.answer', label: 'Summary Mode Answer' }
       ],
       color: 'purple'
     },
@@ -66,7 +66,8 @@ const VerificationDetail = () => {
         { key: 'taali.beatNumbers', label: 'Taali Beat Numbers' },
         { key: 'khaali.count', label: 'Khaali Count' },
         { key: 'khaali.beatNumbers', label: 'Khaali Beat Numbers' },
-        { key: 'jaati', label: 'Jaati' }
+        { key: 'jaati', label: 'Jaati' },
+        { key: 'allAboutData.answer', label: 'Summary Mode Answer' }
       ],
       color: 'orange'
     }
@@ -133,25 +134,43 @@ const VerificationDetail = () => {
   };
 
   const getFieldValue = (field) => {
+    if (!item) return '';
+    
     if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.value || '';
+      const parts = field.split('.');
+      let value = item;
+      for (const part of parts) {
+        value = value?.[part];
+      }
+      return value?.value || '';
     }
     return item[field]?.value || '';
   };
 
   const getFieldVerified = (field) => {
+    if (!item) return false;
+    
     if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.verified || false;
+      const parts = field.split('.');
+      let value = item;
+      for (const part of parts) {
+        value = value?.[part];
+      }
+      return value?.verified || false;
     }
     return item[field]?.verified || false;
   };
 
   const getFieldReference = (field) => {
+    if (!item) return '';
+    
     if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.reference || '';
+      const parts = field.split('.');
+      let value = item;
+      for (const part of parts) {
+        value = value?.[part];
+      }
+      return value?.reference || '';
     }
     return item[field]?.reference || '';
   };
@@ -161,13 +180,22 @@ const VerificationDetail = () => {
       const newItem = { ...prevItem };
       
       if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        newItem[parent] = {
-          ...newItem[parent],
-          [child]: {
-            ...newItem[parent][child],
-            ...updates
+        const parts = field.split('.');
+        let current = newItem;
+        
+        // Navigate to the parent object
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!current[parts[i]]) {
+            current[parts[i]] = {};
           }
+          current = current[parts[i]];
+        }
+        
+        // Update the final field
+        const finalKey = parts[parts.length - 1];
+        current[finalKey] = {
+          ...current[finalKey],
+          ...updates
         };
       } else {
         newItem[field] = {
@@ -182,9 +210,8 @@ const VerificationDetail = () => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
-      // Check if user is authenticated
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) {
         toast.error('Please login to verify data');
         return;
       }
@@ -192,13 +219,22 @@ const VerificationDetail = () => {
       const updatedItem = { ...item };
       
       if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        updatedItem[parent] = {
-          ...updatedItem[parent],
-          [child]: {
-            ...updatedItem[parent][child],
-            verified: !currentStatus
+        const parts = field.split('.');
+        let current = updatedItem;
+        
+        // Navigate to the parent object
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!current[parts[i]]) {
+            current[parts[i]] = {};
           }
+          current = current[parts[i]];
+        }
+        
+        // Update the final field
+        const finalKey = parts[parts.length - 1];
+        current[finalKey] = {
+          ...current[finalKey],
+          verified: !currentStatus
         };
       } else {
         updatedItem[field] = {
@@ -207,12 +243,14 @@ const VerificationDetail = () => {
         };
       }
 
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Use the appropriate API service method
+      if (category === 'artists') {
+        await apiService.updateArtist(id, updatedItem);
+      } else if (category === 'raags') {
+        await apiService.updateRaag(id, updatedItem);
+      } else if (category === 'taals') {
+        await apiService.updateTaal(id, updatedItem);
+      }
       
       // Update local state immediately
       updateItemField(field, { verified: !currentStatus });
@@ -240,9 +278,8 @@ const VerificationDetail = () => {
 
   const handleSave = async () => {
     try {
-      // Check if user is authenticated
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) {
         toast.error('Please login to save changes');
         return;
       }
@@ -250,13 +287,22 @@ const VerificationDetail = () => {
       const updatedItem = { ...item };
       
       if (editingField.includes('.')) {
-        const [parent, child] = editingField.split('.');
-        updatedItem[parent] = {
-          ...updatedItem[parent],
-          [child]: {
-            ...updatedItem[parent][child],
-            value: editValue
+        const parts = editingField.split('.');
+        let current = updatedItem;
+        
+        // Navigate to the parent object
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!current[parts[i]]) {
+            current[parts[i]] = {};
           }
+          current = current[parts[i]];
+        }
+        
+        // Update the final field
+        const finalKey = parts[parts.length - 1];
+        current[finalKey] = {
+          ...current[finalKey],
+          value: editValue
         };
       } else {
         updatedItem[editingField] = {
@@ -265,12 +311,14 @@ const VerificationDetail = () => {
         };
       }
 
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Use the appropriate API service method
+      if (category === 'artists') {
+        await apiService.updateArtist(id, updatedItem);
+      } else if (category === 'raags') {
+        await apiService.updateRaag(id, updatedItem);
+      } else if (category === 'taals') {
+        await apiService.updateTaal(id, updatedItem);
+      }
       
       // Update local state immediately
       updateItemField(editingField, { value: editValue });
@@ -302,7 +350,6 @@ const VerificationDetail = () => {
   const renderSources = (reference) => {
     if (!reference) return null;
 
-    // Check if it's a "no source" message
     const noSourceIndicators = [
       'no authoritative sources',
       'information not found',
@@ -331,11 +378,9 @@ const VerificationDetail = () => {
       );
     }
 
-    // Check if it contains multiple sources (separated by |)
     const sources = reference.split(' | ').map(source => source.trim()).filter(source => source.length > 0);
 
     if (sources.length === 1) {
-      // Single source
       const source = sources[0];
       const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
       
@@ -360,7 +405,6 @@ const VerificationDetail = () => {
       }
     }
 
-    // Multiple sources
     return (
       <div className="space-y-2">
         {sources.map((source, index) => {
@@ -392,6 +436,7 @@ const VerificationDetail = () => {
       </div>
     );
   };
+
   // Bulk verification functions
   const handleSelectAll = () => {
     if (selectedFields.size === config.fields.length) {
@@ -417,31 +462,27 @@ const VerificationDetail = () => {
       return;
     }
 
-    // Check if user is authenticated
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please login to verify data');
-      return;
-    }
-
-    // Check if user is authenticated
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please login to verify data');
-      return;
-    }
     try {
       const updatedItem = { ...item };
       
       selectedFields.forEach(field => {
         if (field.includes('.')) {
-          const [parent, child] = field.split('.');
-          updatedItem[parent] = {
-            ...updatedItem[parent],
-            [child]: {
-              ...updatedItem[parent][child],
-              verified: verify
+          const parts = field.split('.');
+          let current = updatedItem;
+          
+          // Navigate to the parent object
+          for (let i = 0; i < parts.length - 1; i++) {
+            if (!current[parts[i]]) {
+              current[parts[i]] = {};
             }
+            current = current[parts[i]];
+          }
+          
+          // Update the final field
+          const finalKey = parts[parts.length - 1];
+          current[finalKey] = {
+            ...current[finalKey],
+            verified: verify
           };
         } else {
           updatedItem[field] = {
@@ -487,9 +528,12 @@ const VerificationDetail = () => {
     const reference = getFieldReference(field.key);
     const isEditing = editingField === field.key;
     const isSelected = selectedFields.has(field.key);
+    const isSummaryField = field.key.includes('allAboutData');
 
     return (
-      <div key={field.key} className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-200 hover:border-primary-300 transition-colors duration-200">
+      <div key={field.key} className={`bg-white rounded-lg shadow-sm p-6 border-l-4 transition-colors duration-200 ${
+        isSummaryField ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-primary-300'
+      }`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <input
@@ -498,7 +542,10 @@ const VerificationDetail = () => {
               onChange={() => handleFieldSelect(field.key)}
               className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
             />
-            <h3 className="text-lg font-semibold text-gray-900">{field.label}</h3>
+            <h3 className={`text-lg font-semibold ${isSummaryField ? 'text-blue-800' : 'text-gray-900'}`}>
+              {field.label}
+              {isSummaryField && <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">AI Generated</span>}
+            </h3>
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -536,23 +583,27 @@ const VerificationDetail = () => {
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-              rows={3}
+              className="w-full px-4 py-3 bg-gray-800 bg-opacity-50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none text-white placeholder-gray-400 backdrop-blur-sm shadow-inner"
+              rows={isSummaryField ? 12 : field.key === 'summary' ? 8 : 3}
               placeholder={`Enter ${field.label.toLowerCase()}...`}
+              style={{
+                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.8) 100%)',
+                backdropFilter: 'blur(8px)'
+              }}
             />
-            <div className="flex space-x-2">
+            <div className="flex space-x-3">
               <button
                 onClick={handleSave}
-                className={`flex items-center px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md`}
+                className="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                <CheckIcon className="h-4 w-4 mr-1" />
-                Save
+                <CheckIcon className="h-4 w-4 mr-2" />
+                Save Changes
               </button>
               <button
                 onClick={handleCancel}
-                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                className="flex items-center px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
               >
-                <XMarkIcon className="h-4 w-4 mr-1" />
+                <XMarkIcon className="h-4 w-4 mr-2" />
                 Cancel
               </button>
             </div>
@@ -561,7 +612,26 @@ const VerificationDetail = () => {
           <>
             <div className="mb-4">
               {value ? (
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{value}</p>
+                <div className={`whitespace-pre-wrap leading-relaxed ${isSummaryField ? 'text-blue-900' : 'text-gray-900'}`}>
+                  {isSummaryField ? (
+                    <div className="prose prose-blue max-w-none">
+                      {value.split('\n').map((line, index) => {
+                        if (line.trim().startsWith('##')) {
+                          return <h3 key={index} className="text-lg font-semibold text-blue-800 mt-4 mb-2">{line.replace('##', '').trim()}</h3>;
+                        } else if (line.trim().startsWith('#')) {
+                          return <h2 key={index} className="text-xl font-bold text-blue-900 mt-6 mb-3">{line.replace('#', '').trim()}</h2>;
+                        } else if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
+                          return <p key={index} className="font-semibold text-blue-800 mt-2">{line.replace(/\*\*/g, '')}</p>;
+                        } else if (line.trim()) {
+                          return <p key={index} className="text-blue-900 mb-2">{line}</p>;
+                        }
+                        return <br key={index} />;
+                      })}
+                    </div>
+                  ) : (
+                    value
+                  )}
+                </div>
               ) : (
                 <p className="text-gray-500 italic">No data available</p>
               )}
@@ -707,14 +777,14 @@ const VerificationDetail = () => {
           {config.fields.map(renderField)}
         </div>
 
-        {/* Summary Mode Data Section */}
-        {item?.allAboutData && (
+        {/* Legacy Summary Mode Data Section (if exists separately) */}
+        {item?.allAboutData && !config.fields.some(f => f.key === 'allAboutData.answer') && (
           <div className="mt-8">
             <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl border border-gray-800 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-white flex items-center">
-                    📝 Summary Mode Data
+                    📝 Summary Mode Data (Legacy)
                   </h3>
                   <button
                     onClick={() => setShowAllAboutData(!showAllAboutData)}
@@ -742,6 +812,7 @@ const VerificationDetail = () => {
             </div>
           </div>
         )}
+
         {/* Metadata */}
         <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Metadata</h3>
