@@ -150,6 +150,15 @@ exports.getAllAboutArtist = async (req, res) => {
     let savedArtist = null;
     try {
       console.log('Attempting to save All About data for artist:', name);
+      console.log('All About data structure before saving:', {
+        hasAnswer: !!allAboutData.answer,
+        imagesType: typeof allAboutData.images,
+        imagesLength: Array.isArray(allAboutData.images) ? allAboutData.images.length : 'not array',
+        sourcesType: typeof allAboutData.sources,
+        sourcesLength: Array.isArray(allAboutData.sources) ? allAboutData.sources.length : 'not array',
+        citationsType: typeof allAboutData.citations,
+        citationsLength: Array.isArray(allAboutData.citations) ? allAboutData.citations.length : 'not array'
+      });
       
       // Strategy 1: Find existing artist by exact name match
       let existingArtist = await Artist.findOne({ 
@@ -175,16 +184,18 @@ exports.getAllAboutArtist = async (req, res) => {
         console.log('Found existing artist:', existingArtist._id, 'Name:', existingArtist.name.value);
         
         // Update All About data in existing artist
-        existingArtist.allAboutData = {
-          answer: allAboutData.answer,
-          images: allAboutData.images || [],
-          sources: allAboutData.sources || [],
-          citations: allAboutData.citations || [],
-          relatedQuestions: allAboutData.relatedQuestions || [],
-          searchQuery: allAboutData.metadata?.searchQuery,
-          aiProvider: allAboutData.metadata?.aiProvider,
-          aiModel: allAboutData.metadata?.aiModel
+        const cleanAllAboutData = {
+          answer: allAboutData.answer || { value: '', reference: '', verified: false },
+          images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
+          sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
+          citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
+          relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
+          searchQuery: allAboutData.metadata?.searchQuery || name,
+          aiProvider: allAboutData.metadata?.aiProvider || provider,
+          aiModel: allAboutData.metadata?.aiModel || model
         };
+        
+        existingArtist.allAboutData = cleanAllAboutData;
         
         existingArtist.modifiedBy = userId;
         existingArtist.updatedAt = new Date();
@@ -193,6 +204,17 @@ exports.getAllAboutArtist = async (req, res) => {
         console.log('Successfully saved All About data to existing artist:', savedArtist._id);
       } else {
         console.log('No existing artist found for name:', name, 'Creating new artist with All About data...');
+        
+        const cleanAllAboutData = {
+          answer: allAboutData.answer || { value: '', reference: '', verified: false },
+          images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
+          sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
+          citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
+          relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
+          searchQuery: allAboutData.metadata?.searchQuery || name,
+          aiProvider: allAboutData.metadata?.aiProvider || provider,
+          aiModel: allAboutData.metadata?.aiModel || model
+        };
         
         // Create new artist with All About data
         const newArtist = new Artist({
@@ -226,16 +248,7 @@ exports.getAllAboutArtist = async (req, res) => {
             reference: 'Not searched in All About mode',
             verified: false
           },
-          allAboutData: {
-            answer: allAboutData.answer,
-            images: allAboutData.images || [],
-            sources: allAboutData.sources || [],
-            citations: allAboutData.citations || [],
-            relatedQuestions: allAboutData.relatedQuestions || [],
-            searchQuery: allAboutData.metadata?.searchQuery,
-            aiProvider: allAboutData.metadata?.aiProvider,
-            aiModel: allAboutData.metadata?.aiModel
-          },
+          allAboutData: cleanAllAboutData,
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -253,7 +266,13 @@ exports.getAllAboutArtist = async (req, res) => {
     } catch (saveError) {
       console.error('Error saving All About data to artist:', saveError.message);
       console.error('Full save error:', saveError);
-      // Continue without failing the request
+      
+      // Return error response if saving fails
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to save All About data to database: ' + saveError.message,
+        data: allAboutData // Still return the data for frontend display
+      });
     }
     
     // Return the All About data with the saved artist ID for frontend
