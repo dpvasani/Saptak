@@ -590,35 +590,32 @@ exports.exportSingleArtist = async (req, res) => {
         res.send(markdown);
         break;
         
+      case 'json':
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
+        res.json(exportData);
+        break;
+        
       case 'pdf':
-        // Return structured data for frontend PDF generation
-        res.json({
-          success: true,
-          data: {
-            format: 'pdf',
-            content: [exportData],
-            filename: `${filename}.pdf`
-          }
-        });
+        // Generate simple text content for PDF
+        const pdfContent = this.generateTextContent([exportData]);
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
+        res.send(pdfContent);
         break;
         
       case 'word':
-        // Return structured data for frontend Word generation
-        res.json({
-          success: true,
-          data: {
-            format: 'word',
-            content: [exportData],
-            filename: `${filename}.docx`
-          }
-        });
+        // Generate simple text content for Word
+        const wordContent = this.generateTextContent([exportData]);
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
+        res.send(wordContent);
         break;
         
       default:
-        res.json({
-          success: true,
-          data: exportData
-        });
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
+        res.json(exportData);
     }
   } catch (error) {
     console.error('Error in exportSingleArtist:', error);
