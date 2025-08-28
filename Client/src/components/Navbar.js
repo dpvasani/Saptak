@@ -37,7 +37,7 @@ const Navbar = ({ user, onLogin, onLogout }) => {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Link to={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center">
+              <Link to="/" className="flex-shrink-0 flex items-center">
                 <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
                   🎵 RagaBot
                 </span>
