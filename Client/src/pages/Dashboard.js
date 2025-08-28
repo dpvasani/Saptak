@@ -57,6 +57,7 @@ const Dashboard = ({ user }) => {
           <p className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">{title}</p>
           <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent group-hover:from-green-300 group-hover:to-emerald-400 transition-all duration-300">{value}</p>
           {subtitle && <p className="text-sm text-gray-300 mt-2 opacity-80 group-hover:opacity-100 transition-opacity duration-300">{subtitle}</p>}
+          }
         </div>
         <div className="p-4 rounded-full bg-gradient-to-br from-gray-800 to-gray-700 bg-opacity-50 border border-gray-700 group-hover:border-green-500/50 group-hover:shadow-lg transition-all duration-300">
           <Icon className="h-10 w-10 text-green-400 group-hover:text-green-300 group-hover:scale-110 transition-all duration-300" />
