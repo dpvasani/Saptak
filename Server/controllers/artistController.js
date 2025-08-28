@@ -94,7 +94,7 @@ exports.getAllAboutArtist = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-    console.log('Summary search request received for artist:', name);
+    console.log('All About search request received for artist:', name, 'Provider:', aiProvider, 'Model:', aiModel);
     
     if (!name) {
       return res.status(400).json({ 
@@ -120,35 +120,47 @@ exports.getAllAboutArtist = async (req, res) => {
 
     const provider = aiProvider || 'perplexity';
     const model = aiModel || 'sonar-pro';
-    console.log(`Using ${provider} Summary mode (${model}) for artist:`, name);
+    console.log(`Using ${provider} All About mode (${model}) for artist:`, name);
     
     let allAboutData;
+    console.log('About to call AI service...');
+    
     if (provider === 'perplexity') {
+      console.log('Calling Perplexity All About service...');
       allAboutData = await perplexityAllAboutService.getAllAboutArtist(name, model);
     } else if (provider === 'openai') {
-      // Use OpenAI for All About mode
+      console.log('Calling OpenAI All About service...');
       allAboutData = await aiResearcher.getAllAboutArtist(name, model);
     } else if (provider === 'gemini') {
-      // Use Gemini for All About mode
+      console.log('Calling Gemini All About service...');
       allAboutData = await geminiResearcher.getAllAboutArtist(name, model);
     } else {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
 
+    console.log('All About data received:', {
+      hasAnswer: !!allAboutData.answer?.value,
+      answerLength: allAboutData.answer?.value?.length || 0,
+      imageCount: allAboutData.images?.length || 0,
+      sourceCount: allAboutData.sources?.length || 0,
+      hasMetadata: !!allAboutData.metadata
+    });
+    
     // Return the All About data directly for frontend display
     res.json({
       success: true,
       data: allAboutData,
-      mode: 'summary',
+      mode: 'all-about',
       searchQuery: name,
       provider: provider,
       model: model
     });
   } catch (error) {
-    console.error('Error in getAllAboutArtist:', error);
+    console.error('Error in getAllAboutArtist:', error.message);
+    console.error('Full error:', error);
     res.status(500).json({ 
       success: false,
-      message: error.message || 'Error in Summary search for artist' 
+      message: error.message || 'Error in All About search for artist' 
     });
   }
 };

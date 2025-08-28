@@ -317,17 +317,24 @@ class PerplexityAllAboutService {
   extractSources(result) {
     const sources = [];
     
-    console.log('Extracting sources from result:', JSON.stringify(result, null, 2));
+    console.log('Extracting sources from result structure...');
+    console.log('Result keys:', Object.keys(result));
+    console.log('Citations available:', !!result.citations);
+    console.log('Choices available:', !!result.choices);
     
     // Extract from citations
     if (result.citations && Array.isArray(result.citations)) {
       console.log('Found citations:', result.citations.length);
-      result.citations.forEach(citation => {
+      result.citations.forEach((citation, index) => {
+        console.log(`Citation ${index}:`, citation);
+        const sourceUrl = citation.url || citation.link || citation.href || '';
+        console.log(`Citation URL: ${sourceUrl}`);
+        
         sources.push({
-          title: citation.title || 'Untitled Source',
-          url: citation.url || '',
-          snippet: citation.snippet || '',
-          domain: this.extractDomain(citation.url),
+          title: citation.title || citation.name || `Source ${index + 1}`,
+          url: sourceUrl,
+          snippet: citation.snippet || citation.text || citation.description || '',
+          domain: this.extractDomain(sourceUrl),
           type: 'citation',
           verified: false
         });
@@ -336,19 +343,40 @@ class PerplexityAllAboutService {
       console.log('No citations found in result');
     }
     
+    // Extract from web_results if available
+    if (result.web_results && Array.isArray(result.web_results)) {
+      console.log('Found web_results:', result.web_results.length);
+      result.web_results.forEach((webResult, index) => {
+        console.log(`Web result ${index}:`, webResult);
+        const sourceUrl = webResult.url || webResult.link || webResult.href || '';
+        
+        sources.push({
+          title: webResult.title || webResult.name || `Web Result ${index + 1}`,
+          url: sourceUrl,
+          snippet: webResult.snippet || webResult.description || webResult.text || '',
+          domain: this.extractDomain(sourceUrl),
+          type: 'web_result',
+          verified: false
+        });
+      });
+    }
+    
     // Check for sources in the message content
     if (result.choices && result.choices[0] && result.choices[0].message) {
       const message = result.choices[0].message;
+      console.log('Message keys:', Object.keys(message));
       
       // Check if message has sources property
       if (message.sources && Array.isArray(message.sources)) {
         console.log('Found sources in message:', message.sources.length);
-        message.sources.forEach(source => {
+        message.sources.forEach((source, index) => {
+          const sourceUrl = source.url || source.link || source.href || '';
+          
           sources.push({
-            title: source.title || source.name || 'Referenced Source',
-            url: source.url || source.link || '',
-            snippet: source.snippet || source.description || '',
-            domain: this.extractDomain(source.url || source.link),
+            title: source.title || source.name || `Message Source ${index + 1}`,
+            url: sourceUrl,
+            snippet: source.snippet || source.description || source.text || '',
+            domain: this.extractDomain(sourceUrl),
             type: 'message_source',
             verified: false
           });
@@ -358,12 +386,14 @@ class PerplexityAllAboutService {
       // Check for citations in message
       if (message.citations && Array.isArray(message.citations)) {
         console.log('Found citations in message:', message.citations.length);
-        message.citations.forEach(citation => {
+        message.citations.forEach((citation, index) => {
+          const sourceUrl = citation.url || citation.link || citation.href || '';
+          
           sources.push({
-            title: citation.title || citation.name || 'Message Citation',
-            url: citation.url || citation.link || '',
-            snippet: citation.snippet || citation.text || '',
-            domain: this.extractDomain(citation.url || citation.link),
+            title: citation.title || citation.name || `Message Citation ${index + 1}`,
+            url: sourceUrl,
+            snippet: citation.snippet || citation.text || citation.description || '',
+            domain: this.extractDomain(sourceUrl),
             type: 'message_citation',
             verified: false
           });
@@ -372,16 +402,18 @@ class PerplexityAllAboutService {
     }
     
     // Check for sources at the root level with different property names
-    const possibleSourceKeys = ['sources', 'references', 'web_results', 'search_results'];
+    const possibleSourceKeys = ['sources', 'references', 'search_results', 'related_sources'];
     possibleSourceKeys.forEach(key => {
       if (result[key] && Array.isArray(result[key])) {
         console.log(`Found ${key}:`, result[key].length);
-        result[key].forEach(source => {
+        result[key].forEach((source, index) => {
+          const sourceUrl = source.url || source.link || source.href || '';
+          
           sources.push({
-            title: source.title || source.name || source.heading || 'Web Result',
-            url: source.url || source.link || source.href || '',
-            snippet: source.snippet || source.description || source.content || '',
-            domain: this.extractDomain(source.url || source.link || source.href),
+            title: source.title || source.name || source.heading || `${key} ${index + 1}`,
+            url: sourceUrl,
+            snippet: source.snippet || source.description || source.content || source.text || '',
+            domain: this.extractDomain(sourceUrl),
             type: key,
             verified: false
           });
@@ -396,12 +428,12 @@ class PerplexityAllAboutService {
       
       if (urlMatches) {
         console.log('Found URLs in content:', urlMatches.length);
-        urlMatches.forEach(url => {
+        urlMatches.forEach((url, index) => {
           // Only add if not already in citations
           const exists = sources.some(source => source.url === url);
           if (!exists) {
             sources.push({
-              title: 'Referenced in Answer',
+              title: `Referenced URL ${index + 1}`,
               url: url,
               snippet: '',
               domain: this.extractDomain(url),
@@ -415,9 +447,24 @@ class PerplexityAllAboutService {
       }
     }
     
-    console.log(`Extracted ${sources.length} sources`);
-    console.log('Sources details:', sources.map(s => ({ title: s.title, domain: s.domain, type: s.type })));
-    return sources;
+    // Filter out sources with empty URLs to prevent broken links
+    const validSources = sources.filter(source => {
+      const hasValidUrl = source.url && source.url.trim() !== '';
+      if (!hasValidUrl) {
+        console.log('Filtering out source with empty URL:', source.title);
+      }
+      return hasValidUrl;
+    });
+    
+    console.log(`Extracted ${validSources.length} valid sources out of ${sources.length} total`);
+    console.log('Valid sources details:', validSources.map(s => ({ 
+      title: s.title, 
+      domain: s.domain, 
+      type: s.type,
+      hasUrl: !!s.url 
+    })));
+    
+    return validSources;
   }
 
   extractDomain(url) {
@@ -426,7 +473,7 @@ class PerplexityAllAboutService {
       const urlObj = new URL(url);
       return urlObj.hostname;
     } catch (error) {
-      console.log('Failed to extract domain from URL:', url);
+      console.log('Failed to extract domain from URL:', url, 'Error:', error.message);
       return 'Unknown Domain';
     }
   }
