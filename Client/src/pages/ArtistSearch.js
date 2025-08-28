@@ -55,7 +55,16 @@ const ArtistSearch = () => {
     setLoading(true);
     try {
       const response = await apiService.getAllAboutArtist(query, provider, model);
-      setAllAboutData(response.data.data);
+      const responseData = response.data.data;
+      console.log('All About response received:', responseData);
+      
+      // Ensure we have the artist ID for database operations
+      if (responseData._id || responseData.itemId) {
+        responseData.artistId = responseData._id || responseData.itemId;
+        console.log('Artist ID for All About data:', responseData.artistId);
+      }
+      
+      setAllAboutData(responseData);
       toast.success(`Summary Mode search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
@@ -490,6 +499,7 @@ const ArtistSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="artist" 
+            itemId={allAboutData.artistId || allAboutData._id}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}

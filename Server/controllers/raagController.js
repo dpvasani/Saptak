@@ -115,16 +115,34 @@ exports.getAllAboutRaag = async (req, res) => {
     }
     
     // Try to find existing raag by name to save the All About data
+    let savedRaag = null;
     try {
-      const existingRaag = await Raag.findOne({ 'name.value': name });
+      let existingRaag = await Raag.findOne({ 
+        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      });
+      
+      if (!existingRaag) {
+        existingRaag = await Raag.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
+      }
       
       if (existingRaag) {
         console.log('Found existing raag, updating with All About data...');
-        existingRaag.allAboutData = allAboutData;
+        existingRaag.allAboutData = {
+          answer: allAboutData.answer,
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: allAboutData.metadata?.searchQuery,
+          aiProvider: allAboutData.metadata?.aiProvider,
+          aiModel: allAboutData.metadata?.aiModel
+        };
         existingRaag.modifiedBy = userId;
         existingRaag.updatedAt = new Date();
-        await existingRaag.save();
-        console.log('Successfully saved All About data to existing raag:', existingRaag._id);
+        savedRaag = await existingRaag.save();
+        console.log('Successfully saved All About data to existing raag:', savedRaag._id);
       } else {
         console.log('No existing raag found, creating new raag with All About data...');
         const newRaag = new Raag({
@@ -138,7 +156,16 @@ exports.getAllAboutRaag = async (req, res) => {
           rasBhaav: { value: '', reference: 'Not searched in All About mode', verified: false },
           tanpuraTuning: { value: '', reference: 'Not searched in All About mode', verified: false },
           timeOfRendition: { value: '', reference: 'Not searched in All About mode', verified: false },
-          allAboutData: allAboutData,
+          allAboutData: {
+            answer: allAboutData.answer,
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
+            searchQuery: allAboutData.metadata?.searchQuery,
+            aiProvider: allAboutData.metadata?.aiProvider,
+            aiModel: allAboutData.metadata?.aiModel
+          },
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -149,8 +176,8 @@ exports.getAllAboutRaag = async (req, res) => {
             searchTimestamp: new Date()
           }
         });
-        await newRaag.save();
-        console.log('Successfully created new raag with All About data:', newRaag._id);
+        savedRaag = await newRaag.save();
+        console.log('Successfully created new raag with All About data:', savedRaag._id);
       }
     } catch (saveError) {
       console.error('Error saving All About data to raag:', saveError);
@@ -158,7 +185,11 @@ exports.getAllAboutRaag = async (req, res) => {
     
     res.json({
       success: true,
-      data: allAboutData,
+      data: {
+        ...allAboutData,
+        _id: savedRaag?._id,
+        itemId: savedRaag?._id
+      },
       mode: 'summary',
       searchQuery: name,
       provider: provider,

@@ -14,7 +14,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
+const AllAboutDisplay = ({ data, category, onDataUpdate, itemId }) => {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [localData, setLocalData] = useState(data);
@@ -25,6 +25,10 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   if (!data) return null;
 
+  // Get the artist/raag/taal ID for database operations
+  const entityId = itemId || data.artistId || data.raagId || data.taalId || data._id;
+  console.log('AllAboutDisplay - Entity ID for database operations:', entityId);
+
   const handleEdit = (field) => {
     setEditingField(field);
     setEditValue(localData[field]?.value || '');
@@ -32,21 +36,31 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleSave = async () => {
     try {
+      if (!entityId) {
+        toast.error('Cannot save: No entity ID found. Please search again.');
+        return;
+      }
+
       // Update the All About data in database
       const updateData = {
-        [editingField]: {
-          ...localData[editingField],
-          value: editValue
+        allAboutData: {
+          ...localData,
+          [editingField]: {
+            ...localData[editingField],
+            value: editValue
+          }
         }
       };
       
+      console.log('Saving All About data update:', { entityId, field: editingField, category });
+      
       // Use the appropriate API service method based on category
       if (category === 'artists') {
-        await apiService.updateArtist(localData._id, { allAboutData: updateData });
+        await apiService.updateArtist(entityId, updateData);
       } else if (category === 'raags') {
-        await apiService.updateRaag(localData._id, { allAboutData: updateData });
+        await apiService.updateRaag(entityId, updateData);
       } else if (category === 'taals') {
-        await apiService.updateTaal(localData._id, { allAboutData: updateData });
+        await apiService.updateTaal(entityId, updateData);
       }
       
       // Update local state
@@ -69,7 +83,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
       toast.success('Field updated successfully');
     } catch (error) {
       console.error('Error updating field:', error);
-      toast.error('Failed to update field');
+      toast.error(error.response?.data?.message || 'Failed to update field');
     }
   };
 
@@ -80,20 +94,30 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
-      const verificationUpdate = {
-        [field]: {
-          ...localData[field],
-          verified: !currentStatus
+      if (!entityId) {
+        toast.error('Cannot verify: No entity ID found. Please search again.');
+        return;
+      }
+
+      const updateData = {
+        allAboutData: {
+          ...localData,
+          [field]: {
+            ...localData[field],
+            verified: !currentStatus
+          }
         }
       };
       
+      console.log('Saving All About verification update:', { entityId, field, currentStatus, category });
+      
       // Use the appropriate API service method based on category
       if (category === 'artists') {
-        await apiService.updateArtist(localData._id, { allAboutData: verificationUpdate });
+        await apiService.updateArtist(entityId, updateData);
       } else if (category === 'raags') {
-        await apiService.updateRaag(localData._id, { allAboutData: verificationUpdate });
+        await apiService.updateRaag(entityId, updateData);
       } else if (category === 'taals') {
-        await apiService.updateTaal(localData._id, { allAboutData: verificationUpdate });
+        await apiService.updateTaal(entityId, updateData);
       }
       
       // Update local state
@@ -113,7 +137,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
       toast.success(`${field} verification updated successfully`);
     } catch (error) {
       console.error('Error updating verification:', error);
-      toast.error('Failed to update verification status');
+      toast.error(error.response?.data?.message || 'Failed to update verification status');
     }
   };
 

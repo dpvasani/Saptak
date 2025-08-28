@@ -146,88 +146,51 @@ exports.getAllAboutArtist = async (req, res) => {
       hasMetadata: !!allAboutData.metadata
     });
     
-    // Save the All About data to the artist record
+    // Save the All About data to the artist record - CRITICAL FOR OPTION 2
+    let savedArtist = null;
     try {
       console.log('Attempting to save All About data for artist:', name);
       
-      // Try multiple strategies to find existing artist
-      let existingArtist = null;
-      
-      // Strategy 1: Exact name match (case insensitive)
-      existingArtist = await Artist.findOne({ 
+      // Strategy 1: Find existing artist by exact name match
+      let existingArtist = await Artist.findOne({ 
         'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
       });
-      console.log('Strategy 1 - Exact match result:', existingArtist ? `Found: ${existingArtist._id}` : 'Not found');
       
-      // Strategy 2: Partial name match if exact not found
       if (!existingArtist) {
+        // Strategy 2: Partial name match
         existingArtist = await Artist.findOne({ 
           'name.value': { $regex: new RegExp(name.trim(), 'i') } 
         });
-        console.log('Strategy 2 - Partial match result:', existingArtist ? `Found: ${existingArtist._id}` : 'Not found');
       }
       
-      // Strategy 3: Find by similar name (remove common prefixes)
       if (!existingArtist) {
+        // Strategy 3: Clean name match (remove prefixes)
         const cleanName = name.replace(/^(pandit|ustad|pt\.?|sri|shri)\s+/i, '').trim();
         existingArtist = await Artist.findOne({ 
           'name.value': { $regex: new RegExp(cleanName, 'i') } 
         });
-        console.log('Strategy 3 - Clean name match result:', existingArtist ? `Found: ${existingArtist._id}` : 'Not found');
-      }
-      
-      // Strategy 4: Find most recent artist if multiple matches
-      if (!existingArtist) {
-        const allArtists = await Artist.find({}).sort({ createdAt: -1 }).limit(10);
-        console.log('Strategy 4 - Recent artists for manual matching:', allArtists.map(a => ({ 
-          id: a._id, 
-          name: a.name.value, 
-          created: a.createdAt 
-        })));
-        
-        // Try to find by any word match
-        const nameWords = name.toLowerCase().split(' ');
-        existingArtist = allArtists.find(artist => {
-          const artistNameLower = artist.name.value.toLowerCase();
-          return nameWords.some(word => artistNameLower.includes(word) && word.length > 2);
-        });
-        
-        if (existingArtist) {
-          console.log('Strategy 4 - Word match found:', existingArtist._id, existingArtist.name.value);
-        }
       }
       
       if (existingArtist) {
         console.log('Found existing artist:', existingArtist._id, 'Name:', existingArtist.name.value);
         
-        // Merge All About data with existing data (don't overwrite)
-        if (!existingArtist.allAboutData) {
-          existingArtist.allAboutData = {};
-        }
-        
-        // Update specific fields
-        existingArtist.allAboutData.answer = allAboutData.answer;
-        existingArtist.allAboutData.images = allAboutData.images;
-        existingArtist.allAboutData.sources = allAboutData.sources;
-        existingArtist.allAboutData.citations = allAboutData.citations;
-        existingArtist.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
-        existingArtist.allAboutData.searchQuery = allAboutData.metadata?.searchQuery;
-        existingArtist.allAboutData.aiProvider = allAboutData.metadata?.aiProvider;
-        existingArtist.allAboutData.aiModel = allAboutData.metadata?.aiModel;
+        // Update All About data in existing artist
+        existingArtist.allAboutData = {
+          answer: allAboutData.answer,
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: allAboutData.metadata?.searchQuery,
+          aiProvider: allAboutData.metadata?.aiProvider,
+          aiModel: allAboutData.metadata?.aiModel
+        };
         
         existingArtist.modifiedBy = userId;
         existingArtist.updatedAt = new Date();
         
-        const savedArtist = await existingArtist.save();
+        savedArtist = await existingArtist.save();
         console.log('Successfully saved All About data to existing artist:', savedArtist._id);
-        console.log('Updated artist allAboutData structure:', {
-          hasAnswer: !!savedArtist.allAboutData?.answer?.value,
-          answerLength: savedArtist.allAboutData?.answer?.value?.length || 0,
-          hasImages: !!savedArtist.allAboutData?.images?.length,
-          hasSources: !!savedArtist.allAboutData?.sources?.length,
-          aiProvider: savedArtist.allAboutData?.aiProvider,
-          aiModel: savedArtist.allAboutData?.aiModel
-        });
       } else {
         console.log('No existing artist found for name:', name, 'Creating new artist with All About data...');
         
@@ -235,40 +198,40 @@ exports.getAllAboutArtist = async (req, res) => {
         const newArtist = new Artist({
           name: {
             value: name,
-            reference: 'Summary Mode Search',
+            reference: 'All About Search',
             verified: false
           },
           guru: {
             value: '',
-            reference: 'Not searched in Summary mode',
+            reference: 'Not searched in All About mode',
             verified: false
           },
           gharana: {
             value: '',
-            reference: 'Not searched in Summary mode',
+            reference: 'Not searched in All About mode',
             verified: false
           },
           notableAchievements: {
             value: '',
-            reference: 'Not searched in Summary mode',
+            reference: 'Not searched in All About mode',
             verified: false
           },
           disciples: {
             value: '',
-            reference: 'Not searched in Summary mode',
+            reference: 'Not searched in All About mode',
             verified: false
           },
           summary: {
             value: '',
-            reference: 'Not searched in Summary mode',
+            reference: 'Not searched in All About mode',
             verified: false
           },
           allAboutData: {
             answer: allAboutData.answer,
-            images: allAboutData.images,
-            sources: allAboutData.sources,
-            citations: allAboutData.citations,
-            relatedQuestions: allAboutData.relatedQuestions,
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
             searchQuery: allAboutData.metadata?.searchQuery,
             aiProvider: allAboutData.metadata?.aiProvider,
             aiModel: allAboutData.metadata?.aiModel
@@ -284,28 +247,23 @@ exports.getAllAboutArtist = async (req, res) => {
           }
         });
         
-        const savedNewArtist = await newArtist.save();
-        console.log('Successfully created new artist with All About data:', savedNewArtist._id);
-        console.log('New artist ID for future reference:', savedNewArtist._id);
-        console.log('New artist allAboutData structure:', {
-          hasAnswer: !!savedNewArtist.allAboutData?.answer?.value,
-          answerLength: savedNewArtist.allAboutData?.answer?.value?.length || 0,
-          hasImages: !!savedNewArtist.allAboutData?.images?.length,
-          hasSources: !!savedNewArtist.allAboutData?.sources?.length,
-          aiProvider: savedNewArtist.allAboutData?.aiProvider,
-          aiModel: savedNewArtist.allAboutData?.aiModel
-        });
+        savedArtist = await newArtist.save();
+        console.log('Successfully created new artist with All About data:', savedArtist._id);
       }
     } catch (saveError) {
       console.error('Error saving All About data to artist:', saveError.message);
       console.error('Full save error:', saveError);
-      // Don't fail the request if saving fails, but log the error
+      // Continue without failing the request
     }
     
-    // Return the All About data directly for frontend display
+    // Return the All About data with the saved artist ID for frontend
     res.json({
       success: true,
-      data: allAboutData,
+      data: {
+        ...allAboutData,
+        _id: savedArtist?._id, // Include the artist ID for frontend reference
+        itemId: savedArtist?._id // Alternative field name
+      },
       mode: 'summary',
       searchQuery: name,
       provider: provider,

@@ -115,16 +115,34 @@ exports.getAllAboutTaal = async (req, res) => {
     }
     
     // Try to find existing taal by name to save the All About data
+    let savedTaal = null;
     try {
-      const existingTaal = await Taal.findOne({ 'name.value': name });
+      let existingTaal = await Taal.findOne({ 
+        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      });
+      
+      if (!existingTaal) {
+        existingTaal = await Taal.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
+      }
       
       if (existingTaal) {
         console.log('Found existing taal, updating with All About data...');
-        existingTaal.allAboutData = allAboutData;
+        existingTaal.allAboutData = {
+          answer: allAboutData.answer,
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: allAboutData.metadata?.searchQuery,
+          aiProvider: allAboutData.metadata?.aiProvider,
+          aiModel: allAboutData.metadata?.aiModel
+        };
         existingTaal.modifiedBy = userId;
         existingTaal.updatedAt = new Date();
-        await existingTaal.save();
-        console.log('Successfully saved All About data to existing taal:', existingTaal._id);
+        savedTaal = await existingTaal.save();
+        console.log('Successfully saved All About data to existing taal:', savedTaal._id);
       } else {
         console.log('No existing taal found, creating new taal with All About data...');
         const newTaal = new Taal({
@@ -140,7 +158,16 @@ exports.getAllAboutTaal = async (req, res) => {
             beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
           },
           jaati: { value: '', reference: 'Not searched in All About mode', verified: false },
-          allAboutData: allAboutData,
+          allAboutData: {
+            answer: allAboutData.answer,
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
+            searchQuery: allAboutData.metadata?.searchQuery,
+            aiProvider: allAboutData.metadata?.aiProvider,
+            aiModel: allAboutData.metadata?.aiModel
+          },
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -151,8 +178,8 @@ exports.getAllAboutTaal = async (req, res) => {
             searchTimestamp: new Date()
           }
         });
-        await newTaal.save();
-        console.log('Successfully created new taal with All About data:', newTaal._id);
+        savedTaal = await newTaal.save();
+        console.log('Successfully created new taal with All About data:', savedTaal._id);
       }
     } catch (saveError) {
       console.error('Error saving All About data to taal:', saveError);
@@ -160,7 +187,11 @@ exports.getAllAboutTaal = async (req, res) => {
     
     res.json({
       success: true,
-      data: allAboutData,
+      data: {
+        ...allAboutData,
+        _id: savedTaal?._id,
+        itemId: savedTaal?._id
+      },
       mode: 'summary',
       searchQuery: name,
       provider: provider,

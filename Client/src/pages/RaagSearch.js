@@ -494,6 +494,7 @@ const RaagSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="raag" 
+            itemId={allAboutData.raagId || allAboutData._id}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}

@@ -563,6 +563,7 @@ const TaalSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="taal" 
+            itemId={allAboutData.taalId || allAboutData._id}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}
