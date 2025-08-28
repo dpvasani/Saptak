@@ -663,18 +663,20 @@ const VerificationPage = () => {
 
         {/* Export Modal */}
         {showExportModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 text-center mb-4">Export Options</h3>
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-75 backdrop-filter backdrop-blur-sm overflow-y-auto h-full w-full z-[99999] flex items-center justify-center">
+            <div className="relative mx-auto p-6 w-full max-w-lg bg-gray-900 bg-opacity-95 backdrop-filter backdrop-blur-lg shadow-2xl rounded-xl border border-gray-700">
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-white mb-6 bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
+                  📄 Export Options
+                </h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-3">Export Format</label>
                     <select
                       value={exportFormat}
                       onChange={(e) => setExportFormat(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-800 bg-opacity-50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-white shadow-sm backdrop-blur-sm"
                     >
                       <option value="markdown">Markdown (.md)</option>
                       <option value="pdf">PDF (.pdf)</option>
@@ -683,10 +685,10 @@ const VerificationPage = () => {
                     </select>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <button
                       onClick={() => handleExport('selected')}
-                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+                      className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                       disabled={selectedItems.size === 0 || bulkLoading}
                     >
                       {bulkLoading ? 'Exporting...' : `Export Selected (${selectedItems.size})`}
@@ -694,7 +696,7 @@ const VerificationPage = () => {
                     
                     <button
                       onClick={() => handleExport('all')}
-                      className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200"
+                      className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                       disabled={bulkLoading}
                     >
                       {bulkLoading ? 'Exporting...' : `Export All (${filteredItems.length})`}
@@ -702,10 +704,10 @@ const VerificationPage = () => {
                   </div>
                 </div>
                 
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-center mt-8">
                   <button
                     onClick={() => setShowExportModal(false)}
-                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors duration-200"
+                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
                     disabled={bulkLoading}
                   >
                     Cancel
