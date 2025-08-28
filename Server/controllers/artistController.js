@@ -367,6 +367,7 @@ exports.getAllAboutArtist = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
+      itemId: existingArtist?._id || savedNewArtist?._id,
       mode: 'summary',
       searchQuery: name,
       provider: provider,

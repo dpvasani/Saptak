@@ -222,6 +222,7 @@ exports.getAllAboutTaal = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
+      itemId: existingTaal?._id || savedNewTaal?._id,
       mode: 'summary',
       searchQuery: name,
       provider: provider,

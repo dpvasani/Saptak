@@ -220,6 +220,7 @@ exports.getAllAboutRaag = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
+      itemId: existingRaag?._id || savedNewRaag?._id,
       mode: 'summary',
       searchQuery: name,
       provider: provider,

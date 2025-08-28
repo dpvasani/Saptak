@@ -57,7 +57,10 @@ const TaalSearch = () => {
     setLoading(true);
     try {
       const response = await apiService.getAllAboutTaal(query, provider, model);
-      setAllAboutData(response.data.data);
+      setAllAboutData({
+        ...response.data.data,
+        _itemId: response.data.itemId
+      });
       toast.success(`Summary Mode search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
@@ -563,6 +566,7 @@ const TaalSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="taal" 
+            itemId={allAboutData._itemId}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}

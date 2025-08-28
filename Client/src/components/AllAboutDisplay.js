@@ -14,7 +14,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
+const AllAboutDisplay = ({ data, category, onDataUpdate, itemId }) => {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [localData, setLocalData] = useState(data);
@@ -32,21 +32,29 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleSave = async () => {
     try {
+      if (!itemId) {
+        toast.error('No item ID available for saving');
+        return;
+      }
+
       // Update the All About data in database
       const updateData = {
-        [editingField]: {
-          ...localData[editingField],
-          value: editValue
+        allAboutData: {
+          ...localData,
+          [editingField]: {
+            ...localData[editingField],
+            value: editValue
+          }
         }
       };
       
       // Use the appropriate API service method based on category
       if (category === 'artists') {
-        await apiService.updateArtist(localData._id, { allAboutData: updateData });
+        await apiService.updateArtist(itemId, updateData);
       } else if (category === 'raags') {
-        await apiService.updateRaag(localData._id, { allAboutData: updateData });
+        await apiService.updateRaag(itemId, updateData);
       } else if (category === 'taals') {
-        await apiService.updateTaal(localData._id, { allAboutData: updateData });
+        await apiService.updateTaal(itemId, updateData);
       }
       
       // Update local state
@@ -80,20 +88,28 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
+      if (!itemId) {
+        toast.error('No item ID available for verification');
+        return;
+      }
+
       const verificationUpdate = {
-        [field]: {
-          ...localData[field],
-          verified: !currentStatus
+        allAboutData: {
+          ...localData,
+          [field]: {
+            ...localData[field],
+            verified: !currentStatus
+          }
         }
       };
       
       // Use the appropriate API service method based on category
       if (category === 'artists') {
-        await apiService.updateArtist(localData._id, { allAboutData: verificationUpdate });
+        await apiService.updateArtist(itemId, verificationUpdate);
       } else if (category === 'raags') {
-        await apiService.updateRaag(localData._id, { allAboutData: verificationUpdate });
+        await apiService.updateRaag(itemId, verificationUpdate);
       } else if (category === 'taals') {
-        await apiService.updateTaal(localData._id, { allAboutData: verificationUpdate });
+        await apiService.updateTaal(itemId, verificationUpdate);
       }
       
       // Update local state
