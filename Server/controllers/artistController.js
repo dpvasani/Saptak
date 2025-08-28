@@ -151,6 +151,9 @@ exports.getAllAboutArtist = async (req, res) => {
     try {
       console.log('Attempting to save All About data for artist:', name);
       
+     let existingArtist = null;
+     let savedNewArtist = null;
+     
       // Try multiple strategies to find existing artist
       let existingArtist = null;
       
@@ -205,8 +208,6 @@ exports.getAllAboutArtist = async (req, res) => {
         'details.searchQuery': name,
         createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
       }).sort({ createdAt: -1 });
-      
-      // Use the existing variable declared above
       
       if (recentActivity?.itemId) {
         console.log('Found recent activity, looking for artist:', recentActivity.itemId);
@@ -281,7 +282,7 @@ exports.getAllAboutArtist = async (req, res) => {
         console.log('No existing artist found, creating new artist with All About data for:', name);
         
         // Create new artist with All About data
-        const newArtist = new Artist({
+       savedNewArtist = new Artist({
           name: {
             value: name,
             reference: 'Summary Mode Search',
@@ -337,7 +338,7 @@ exports.getAllAboutArtist = async (req, res) => {
           }
         });
         
-        const savedNewArtist = await newArtist.save();
+       await savedNewArtist.save();
         console.log('Successfully created new artist with All About data:', savedNewArtist._id);
         console.log('All About answer saved:', !!savedNewArtist.allAboutData?.answer?.value);
         console.log('Successfully created new artist with All About data:', savedNewArtist._id);
