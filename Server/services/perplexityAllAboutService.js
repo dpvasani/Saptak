@@ -553,6 +553,9 @@ class PerplexityAllAboutService {
       url: s.url
     })));
     
+    // CRITICAL: Ensure we return a proper array, not a string
+    console.log('Final sources type check:', typeof uniqueSources, 'isArray:', Array.isArray(uniqueSources));
+    
     return uniqueSources;
   }
 
