@@ -26,8 +26,8 @@ class PerplexityAllAboutService {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
 
-    // Simple, direct prompt that mimics typing "all about {artist name}" in Perplexity.ai
-    const prompt = `all about ${name}`;
+    // Enhanced prompt for comprehensive artist information
+    const prompt = `Please provide comprehensive information about the Indian Classical Music artist "${name}". Include biographical details, musical background, achievements, and any relevant information about their contributions to Indian classical music.`;
     const model = modelName || this.defaultModel;
     console.log(`Using Perplexity model: ${model}`);
 
@@ -35,6 +35,10 @@ class PerplexityAllAboutService {
       const response = await axios.post(this.baseURL, {
         model: model,
         messages: [
+          {
+            role: "system",
+            content: "You are an expert researcher specializing in Indian Classical Music. Provide comprehensive, accurate information about artists, including their background, training, achievements, and contributions to the field."
+          },
           {
             role: "user",
             content: prompt
@@ -45,9 +49,7 @@ class PerplexityAllAboutService {
         top_p: 0.9,
         return_citations: true,
         return_images: true,
-        return_related_questions: true,
-        search_domain_filter: ["perplexity.ai"],
-        search_recency_filter: "month"
+        return_related_questions: true
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -63,8 +65,6 @@ class PerplexityAllAboutService {
       
       // Extract all available data from Perplexity response
       const allAboutData = {
-        category: 'artists',
-        searchQuery: name,
         name: {
           value: name,
           reference: 'Perplexity Summary Search',
@@ -80,17 +80,12 @@ class PerplexityAllAboutService {
         citations: result.citations || [],
         relatedQuestions: result.related_questions || [],
         metadata: {
-          aiProvider: 'perplexity',
-          aiModel: model,
-          searchQuery: prompt,
           timestamp: new Date(),
-          responseTime: result.usage?.total_tokens || 0
+          searchQuery: name,
+          aiProvider: 'perplexity',
+          aiModel: model
         }
       };
-
-      // Save to database
-      const savedData = await this.saveAllAboutData(allAboutData);
-      console.log('Saved Summary data to database:', savedData._id);
 
       console.log('Perplexity Summary data extracted:', {
         answerLength: allAboutData.answer.value.length,
@@ -99,7 +94,7 @@ class PerplexityAllAboutService {
         citationCount: allAboutData.citations.length
       });
 
-      return savedData;
+      return allAboutData;
     } catch (error) {
       console.error('Error in Perplexity Summary search:', error);
       if (error.response) {
@@ -117,7 +112,7 @@ class PerplexityAllAboutService {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
 
-    const prompt = `all about ${name} raag`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music raag "${name}". Include details about its structure, characteristics, performance guidelines, and musical significance.`;
     const model = modelName || this.defaultModel;
     console.log(`Using Perplexity model: ${model}`);
 
@@ -125,6 +120,10 @@ class PerplexityAllAboutService {
       const response = await axios.post(this.baseURL, {
         model: model,
         messages: [
+          {
+            role: "system",
+            content: "You are an expert in Indian Classical Music theory and ragas. Provide comprehensive, accurate information about ragas, including their musical structure, performance characteristics, and cultural significance."
+          },
           {
             role: "user",
             content: prompt
@@ -148,8 +147,6 @@ class PerplexityAllAboutService {
       const message = result.choices[0].message;
       
       const allAboutData = {
-        category: 'raags',
-        searchQuery: name,
         name: {
           value: name,
           reference: 'Perplexity Summary Search',
@@ -165,18 +162,14 @@ class PerplexityAllAboutService {
         citations: result.citations || [],
         relatedQuestions: result.related_questions || [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'perplexity',
-          aiModel: model,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: model
         }
       };
 
-      // Save to database
-      const savedData = await this.saveAllAboutData(allAboutData);
-      console.log('Saved Summary raag data to database:', savedData._id);
-
-      return savedData;
+      return allAboutData;
     } catch (error) {
       console.error('Error in Perplexity Summary raag search:', error);
       throw new Error('Failed to get Summary raag information: ' + error.message);
@@ -190,7 +183,7 @@ class PerplexityAllAboutService {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
 
-    const prompt = `all about ${name} taal`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music taal "${name}". Include details about its rhythmic structure, beat patterns, and performance characteristics.`;
     const model = modelName || this.defaultModel;
     console.log(`Using Perplexity model: ${model}`);
 
@@ -198,6 +191,10 @@ class PerplexityAllAboutService {
       const response = await axios.post(this.baseURL, {
         model: model,
         messages: [
+          {
+            role: "system",
+            content: "You are an expert in Indian Classical Music rhythm and talas. Provide comprehensive, accurate information about talas, including their rhythmic structure, beat patterns, and performance characteristics."
+          },
           {
             role: "user",
             content: prompt
@@ -221,8 +218,6 @@ class PerplexityAllAboutService {
       const message = result.choices[0].message;
       
       const allAboutData = {
-        category: 'taals',
-        searchQuery: name,
         name: {
           value: name,
           reference: 'Perplexity Summary Search',
@@ -238,18 +233,14 @@ class PerplexityAllAboutService {
         citations: result.citations || [],
         relatedQuestions: result.related_questions || [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'perplexity',
-          aiModel: model,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: model
         }
       };
 
-      // Save to database
-      const savedData = await this.saveAllAboutData(allAboutData);
-      console.log('Saved Summary taal data to database:', savedData._id);
-
-      return savedData;
+      return allAboutData;
     } catch (error) {
       console.error('Error in Perplexity Summary taal search:', error);
       throw new Error('Failed to get Summary taal information: ' + error.message);

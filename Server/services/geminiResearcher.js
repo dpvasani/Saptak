@@ -425,16 +425,19 @@ REQUIREMENTS:
     }
     
     const model = this.getModel(modelName);
-    const prompt = `all about ${name}`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music artist "${name}". Include biographical details, musical background, training, achievements, and contributions to Indian classical music.`;
     
     try {
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent([
+        {
+          role: "user",
+          parts: [{ text: prompt }]
+        }
+      ]);
       const response = result.response;
       const text = response.text();
       
       const allAboutData = {
-        category: 'artists',
-        searchQuery: name,
         name: {
           value: name,
           reference: 'Gemini Summary Search',
@@ -450,19 +453,14 @@ REQUIREMENTS:
         citations: [],
         relatedQuestions: [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'gemini',
-          aiModel: modelName || this.defaultModel,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: modelName || this.defaultModel
         }
       };
 
-      // Save to database
-      const AllAboutData = require('../models/AllAboutData');
-      const savedData = new AllAboutData(allAboutData);
-      await savedData.save();
-      
-      return savedData;
+      return allAboutData;
     } catch (error) {
       console.error('Error in Gemini Summary search:', error);
       throw new Error('Failed to get Summary information using Gemini: ' + error.message);
@@ -471,35 +469,42 @@ REQUIREMENTS:
 
   async getAllAboutRaag(name, modelName = null) {
     const model = this.getModel(modelName);
-    const prompt = `all about ${name} raag`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music raag "${name}". Include details about its structure, characteristics, performance guidelines, and musical significance.`;
     
     try {
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent([
+        {
+          role: "user", 
+          parts: [{ text: prompt }]
+        }
+      ]);
       const response = result.response;
       const text = response.text();
       
       const allAboutData = {
-        category: 'raags',
-        searchQuery: name,
-        name: { value: name, reference: 'Gemini All About Search', verified: false },
-        answer: { value: text || '', reference: 'Google Gemini Response', verified: false },
+        name: {
+          value: name,
+          reference: 'Gemini All About Search',
+          verified: false
+        },
+        answer: {
+          value: text || '',
+          reference: 'Google Gemini Response',
+          verified: false
+        },
         images: [],
         sources: this.extractSourcesFromText(text),
         citations: [],
         relatedQuestions: [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'gemini',
-          aiModel: modelName || this.defaultModel,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: modelName || this.defaultModel
         }
       };
 
-      const AllAboutData = require('../models/AllAboutData');
-      const savedData = new AllAboutData(allAboutData);
-      await savedData.save();
-      
-      return savedData;
+      return allAboutData;
     } catch (error) {
       throw new Error('Failed to get Summary raag information using Gemini: ' + error.message);
     }
@@ -507,35 +512,42 @@ REQUIREMENTS:
 
   async getAllAboutTaal(name, modelName = null) {
     const model = this.getModel(modelName);
-    const prompt = `all about ${name} taal`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music taal "${name}". Include details about its rhythmic structure, beat patterns, and performance characteristics.`;
     
     try {
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent([
+        {
+          role: "user",
+          parts: [{ text: prompt }]
+        }
+      ]);
       const response = result.response;
       const text = response.text();
       
       const allAboutData = {
-        category: 'taals',
-        searchQuery: name,
-        name: { value: name, reference: 'Gemini All About Search', verified: false },
-        answer: { value: text || '', reference: 'Google Gemini Response', verified: false },
+        name: {
+          value: name,
+          reference: 'Gemini All About Search',
+          verified: false
+        },
+        answer: {
+          value: text || '',
+          reference: 'Google Gemini Response',
+          verified: false
+        },
         images: [],
         sources: this.extractSourcesFromText(text),
         citations: [],
         relatedQuestions: [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'gemini',
-          aiModel: modelName || this.defaultModel,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: modelName || this.defaultModel
         }
       };
 
-      const AllAboutData = require('../models/AllAboutData');
-      const savedData = new AllAboutData(allAboutData);
-      await savedData.save();
-      
-      return savedData;
+      return allAboutData;
     } catch (error) {
       throw new Error('Failed to get Summary taal information using Gemini: ' + error.message);
     }

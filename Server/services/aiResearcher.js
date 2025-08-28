@@ -525,12 +525,16 @@ CRITICAL REQUIREMENTS:
     }
     
     const model = modelName || "gpt-4-turbo";
-    const prompt = `all about ${name}`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music artist "${name}". Include biographical details, musical background, training, achievements, and contributions to Indian classical music.`;
     
     try {
       const completion = await this.openai.chat.completions.create({
         model: model,
         messages: [
+          {
+            role: "system",
+            content: "You are an expert researcher specializing in Indian Classical Music. Provide comprehensive, accurate information about artists, including their background, training, achievements, and contributions to the field."
+          },
           {
             role: "user",
             content: prompt
@@ -543,8 +547,6 @@ CRITICAL REQUIREMENTS:
       const response = completion.choices[0].message.content;
       
       const allAboutData = {
-        category: 'artists',
-        searchQuery: name,
         name: {
           value: name,
           reference: 'OpenAI Summary Search',
@@ -560,19 +562,14 @@ CRITICAL REQUIREMENTS:
         citations: [],
         relatedQuestions: [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'openai',
-          aiModel: model,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: model
         }
       };
 
-      // Save to database
-      const AllAboutData = require('../models/AllAboutData');
-      const savedData = new AllAboutData(allAboutData);
-      await savedData.save();
-      
-      return savedData;
+      return allAboutData;
     } catch (error) {
       console.error('Error in OpenAI Summary search:', error);
       throw new Error('Failed to get Summary information using OpenAI: ' + error.message);
@@ -581,12 +578,21 @@ CRITICAL REQUIREMENTS:
 
   async getAllAboutRaag(name, modelName = null) {
     const model = modelName || "gpt-4-turbo";
-    const prompt = `all about ${name} raag`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music raag "${name}". Include details about its structure, characteristics, performance guidelines, and musical significance.`;
     
     try {
       const completion = await this.openai.chat.completions.create({
         model: model,
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert in Indian Classical Music theory and ragas. Provide comprehensive, accurate information about ragas, including their musical structure, performance characteristics, and cultural significance."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
         temperature: 0.2,
         max_tokens: 4000
       });
@@ -594,27 +600,29 @@ CRITICAL REQUIREMENTS:
       const response = completion.choices[0].message.content;
       
       const allAboutData = {
-        category: 'raags',
-        searchQuery: name,
-        name: { value: name, reference: 'OpenAI All About Search', verified: false },
-        answer: { value: response || '', reference: 'OpenAI GPT Response', verified: false },
+        name: {
+          value: name,
+          reference: 'OpenAI All About Search',
+          verified: false
+        },
+        answer: {
+          value: response || '',
+          reference: 'OpenAI GPT Response',
+          verified: false
+        },
         images: [],
         sources: this.extractSourcesFromText(response),
         citations: [],
         relatedQuestions: [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'openai',
-          aiModel: model,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: model
         }
       };
 
-      const AllAboutData = require('../models/AllAboutData');
-      const savedData = new AllAboutData(allAboutData);
-      await savedData.save();
-      
-      return savedData;
+      return allAboutData;
     } catch (error) {
       throw new Error('Failed to get Summary raag information using OpenAI: ' + error.message);
     }
@@ -622,12 +630,21 @@ CRITICAL REQUIREMENTS:
 
   async getAllAboutTaal(name, modelName = null) {
     const model = modelName || "gpt-4-turbo";
-    const prompt = `all about ${name} taal`;
+    const prompt = `Please provide comprehensive information about the Indian Classical Music taal "${name}". Include details about its rhythmic structure, beat patterns, and performance characteristics.`;
     
     try {
       const completion = await this.openai.chat.completions.create({
         model: model,
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert in Indian Classical Music rhythm and talas. Provide comprehensive, accurate information about talas, including their rhythmic structure, beat patterns, and performance characteristics."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
         temperature: 0.2,
         max_tokens: 4000
       });
@@ -635,27 +652,29 @@ CRITICAL REQUIREMENTS:
       const response = completion.choices[0].message.content;
       
       const allAboutData = {
-        category: 'taals',
-        searchQuery: name,
-        name: { value: name, reference: 'OpenAI All About Search', verified: false },
-        answer: { value: response || '', reference: 'OpenAI GPT Response', verified: false },
+        name: {
+          value: name,
+          reference: 'OpenAI All About Search',
+          verified: false
+        },
+        answer: {
+          value: response || '',
+          reference: 'OpenAI GPT Response',
+          verified: false
+        },
         images: [],
         sources: this.extractSourcesFromText(response),
         citations: [],
         relatedQuestions: [],
         metadata: {
+          timestamp: new Date(),
+          searchQuery: name,
           aiProvider: 'openai',
-          aiModel: model,
-          searchQuery: prompt,
-          timestamp: new Date()
+          aiModel: model
         }
       };
 
-      const AllAboutData = require('../models/AllAboutData');
-      const savedData = new AllAboutData(allAboutData);
-      await savedData.save();
-      
-      return savedData;
+      return allAboutData;
     } catch (error) {
       throw new Error('Failed to get Summary taal information using OpenAI: ' + error.message);
     }

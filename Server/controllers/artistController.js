@@ -135,85 +135,15 @@ exports.getAllAboutArtist = async (req, res) => {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
 
-    // Check if we have an existing artist with this name by this user
-    let existingArtist = await Artist.findOne({
-      'name.value': { $regex: new RegExp(`^${name}$`, 'i') },
-      createdBy: userId
+    // Return the All About data directly for frontend display
+    res.json({
+      success: true,
+      data: allAboutData,
+      mode: 'summary',
+      searchQuery: name,
+      provider: provider,
+      model: model
     });
-
-    if (existingArtist) {
-      // Merge All About data into existing artist
-      existingArtist.allAboutData = {
-        answer: {
-          value: allAboutData.answer?.value || '',
-          reference: allAboutData.answer?.reference || '',
-          verified: false
-        },
-        images: allAboutData.images || [],
-        sources: allAboutData.sources || [],
-        citations: allAboutData.citations || [],
-        relatedQuestions: allAboutData.relatedQuestions || [],
-        searchQuery: name,
-        aiProvider: provider,
-        aiModel: model
-      };
-      existingArtist.modifiedBy = userId;
-      existingArtist.updatedAt = new Date();
-      await existingArtist.save();
-      
-      res.json({
-        success: true,
-        data: existingArtist,
-        mode: 'summary-merged',
-        message: 'Summary data merged with existing artist'
-      });
-    } else {
-      // Create new artist with All About data
-      const newArtist = new Artist({
-        name: {
-          value: name,
-          reference: 'All About Search',
-          verified: false
-        },
-        guru: { value: '', reference: '', verified: false },
-        gharana: { value: '', reference: '', verified: false },
-        notableAchievements: { value: '', reference: '', verified: false },
-        disciples: { value: '', reference: '', verified: false },
-        summary: { value: '', reference: '', verified: false },
-        allAboutData: {
-          answer: {
-            value: allAboutData.answer?.value || '',
-            reference: allAboutData.answer?.reference || '',
-            verified: false
-          },
-          images: allAboutData.images || [],
-          sources: allAboutData.sources || [],
-          citations: allAboutData.citations || [],
-          relatedQuestions: allAboutData.relatedQuestions || [],
-          searchQuery: name,
-          aiProvider: provider,
-          aiModel: model
-        },
-        createdBy: userId,
-        modifiedBy: userId,
-        searchMetadata: {
-          searchMethod: 'ai',
-          aiProvider: provider,
-          aiModel: model,
-          searchQuery: name,
-          searchTimestamp: new Date()
-        }
-      });
-      
-      await newArtist.save();
-      
-      res.json({
-        success: true,
-        data: newArtist,
-        mode: 'summary-new',
-        message: 'New artist created with Summary data'
-      });
-    }
   } catch (error) {
     console.error('Error in getAllAboutArtist:', error);
     res.status(500).json({ 
