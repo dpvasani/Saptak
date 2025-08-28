@@ -146,53 +146,66 @@ exports.getAllAboutArtist = async (req, res) => {
       hasMetadata: !!allAboutData.metadata
     });
     
-    // Try to find existing artist by name to save the All About data
+    // Save the All About data to the artist record
     try {
-      const existingArtist = await Artist.findOne({ 'name.value': name });
+      console.log('Attempting to save All About data for artist:', name);
+      
+      // First try to find existing artist by exact name match
+      let existingArtist = await Artist.findOne({ 'name.value': { $regex: new RegExp(`^${name}$`, 'i') } });
+      
+      if (!existingArtist) {
+        // Try to find by partial name match
+        existingArtist = await Artist.findOne({ 'name.value': { $regex: new RegExp(name, 'i') } });
+      }
       
       if (existingArtist) {
-        console.log('Found existing artist, updating with All About data...');
+        console.log('Found existing artist:', existingArtist._id, 'Name:', existingArtist.name.value);
         
         // Update the existing artist with All About data
         existingArtist.allAboutData = allAboutData;
         existingArtist.modifiedBy = userId;
         existingArtist.updatedAt = new Date();
         
-        await existingArtist.save();
-        console.log('Successfully saved All About data to existing artist:', existingArtist._id);
+        const savedArtist = await existingArtist.save();
+        console.log('Successfully saved All About data to existing artist:', savedArtist._id);
+        console.log('Saved allAboutData structure:', {
+          hasAnswer: !!savedArtist.allAboutData?.answer?.value,
+          answerLength: savedArtist.allAboutData?.answer?.value?.length || 0,
+          hasMetadata: !!savedArtist.allAboutData?.metadata
+        });
       } else {
-        console.log('No existing artist found, creating new artist with All About data...');
+        console.log('No existing artist found for name:', name, 'Creating new artist with All About data...');
         
         // Create new artist with All About data
         const newArtist = new Artist({
           name: {
             value: name,
-            reference: 'All About Search',
+            reference: 'Summary Mode Search',
             verified: false
           },
           guru: {
             value: '',
-            reference: 'Not searched in All About mode',
+            reference: 'Not searched in Summary mode',
             verified: false
           },
           gharana: {
             value: '',
-            reference: 'Not searched in All About mode',
+            reference: 'Not searched in Summary mode',
             verified: false
           },
           notableAchievements: {
             value: '',
-            reference: 'Not searched in All About mode',
+            reference: 'Not searched in Summary mode',
             verified: false
           },
           disciples: {
             value: '',
-            reference: 'Not searched in All About mode',
+            reference: 'Not searched in Summary mode',
             verified: false
           },
           summary: {
             value: '',
-            reference: 'Not searched in All About mode',
+            reference: 'Not searched in Summary mode',
             verified: false
           },
           allAboutData: allAboutData,
@@ -207,19 +220,25 @@ exports.getAllAboutArtist = async (req, res) => {
           }
         });
         
-        await newArtist.save();
-        console.log('Successfully created new artist with All About data:', newArtist._id);
+        const savedNewArtist = await newArtist.save();
+        console.log('Successfully created new artist with All About data:', savedNewArtist._id);
+        console.log('New artist allAboutData structure:', {
+          hasAnswer: !!savedNewArtist.allAboutData?.answer?.value,
+          answerLength: savedNewArtist.allAboutData?.answer?.value?.length || 0,
+          hasMetadata: !!savedNewArtist.allAboutData?.metadata
+        });
       }
     } catch (saveError) {
-      console.error('Error saving All About data to artist:', saveError);
-      // Continue with response even if saving fails
+      console.error('Error saving All About data to artist:', saveError.message);
+      console.error('Full save error:', saveError);
+      // Don't fail the request if saving fails, but log the error
     }
     
     // Return the All About data directly for frontend display
     res.json({
       success: true,
       data: allAboutData,
-      mode: 'all-about',
+      mode: 'summary',
       searchQuery: name,
       provider: provider,
       model: model
@@ -229,7 +248,7 @@ exports.getAllAboutArtist = async (req, res) => {
     console.error('Full error:', error);
     res.status(500).json({ 
       success: false,
-      message: error.message || 'Error in All About search for artist' 
+      message: error.message || 'Error in Summary search for artist' 
     });
   }
 };

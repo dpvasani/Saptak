@@ -42,11 +42,11 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
       
       // Use the appropriate API service method based on category
       if (category === 'artists') {
-        await apiService.updateArtist(localData._id, updateData);
+        await apiService.updateArtist(localData._id, { allAboutData: updateData });
       } else if (category === 'raags') {
-        await apiService.updateRaag(localData._id, updateData);
+        await apiService.updateRaag(localData._id, { allAboutData: updateData });
       } else if (category === 'taals') {
-        await apiService.updateTaal(localData._id, updateData);
+        await apiService.updateTaal(localData._id, { allAboutData: updateData });
       }
       
       // Update local state
@@ -80,7 +80,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
-      const updateData = {
+      const verificationUpdate = {
         [field]: {
           ...localData[field],
           verified: !currentStatus
@@ -89,11 +89,11 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
       
       // Use the appropriate API service method based on category
       if (category === 'artists') {
-        await apiService.updateArtist(localData._id, updateData);
+        await apiService.updateArtist(localData._id, { allAboutData: verificationUpdate });
       } else if (category === 'raags') {
-        await apiService.updateRaag(localData._id, updateData);
+        await apiService.updateRaag(localData._id, { allAboutData: verificationUpdate });
       } else if (category === 'taals') {
-        await apiService.updateTaal(localData._id, updateData);
+        await apiService.updateTaal(localData._id, { allAboutData: verificationUpdate });
       }
       
       // Update local state
