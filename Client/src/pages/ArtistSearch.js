@@ -56,12 +56,12 @@ const ArtistSearch = () => {
     try {
       const response = await apiService.getAllAboutArtist(query, provider, model);
       setAllAboutData(response.data.data);
-      toast.success(`Summary search completed using ${modelData?.name || model}`);
+      toast.success(`Summary Mode search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error('Rate limit exceeded. Please try again later.');
       } else {
-        toast.error(error.response?.data?.message || 'Error in Summary search');
+        toast.error(error.response?.data?.message || 'Error in Summary Mode search');
       }
     } finally {
       setLoading(false);
