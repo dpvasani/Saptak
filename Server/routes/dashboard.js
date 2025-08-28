@@ -19,7 +19,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
       'guru.verified': true,
       'gharana.verified': true,
       'notableAchievements.verified': true,
-      'disciples.verified': true
+      'disciples.verified': true,
+      'summary.verified': true
     });
     
     const artistsPartiallyVerified = await Artist.countDocuments({
