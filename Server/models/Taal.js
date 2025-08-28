@@ -47,7 +47,7 @@ const taalSchema = new mongoose.Schema({
     verified: { type: Boolean, default: false }
   },
   
-  // All About Data (merged from separate collection)
+  // All About Data (embedded)
   allAboutData: {
     answer: {
       value: { type: String },
