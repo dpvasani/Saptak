@@ -53,7 +53,7 @@ const raagSchema = new mongoose.Schema({
     verified: { type: Boolean, default: false }
   },
   
-  // All About Data (embedded)
+  // All About Data (merged from separate collection)
   allAboutData: {
     answer: {
       value: { type: String },

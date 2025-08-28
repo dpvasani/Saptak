@@ -1,3 +1,4 @@
+const Artist = require('../models/Artist');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
