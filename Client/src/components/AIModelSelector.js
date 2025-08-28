@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
-const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, className = '' }) => {
+const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, className = '', onDropdownStateChange }) => {
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [isModelOpen, setIsModelOpen] = useState(false);
 
@@ -141,6 +141,13 @@ const AIModelSelector = ({ onModelChange, selectedProvider, selectedModel, class
   const providers = Object.keys(aiModels);
   const selectedProviderData = selectedProvider ? aiModels[selectedProvider] : null;
   const availableModels = selectedProviderData ? selectedProviderData.models : [];
+
+  // Notify parent component when dropdown state changes
+  useEffect(() => {
+    if (onDropdownStateChange) {
+      onDropdownStateChange(isProviderOpen || isModelOpen);
+    }
+  }, [isProviderOpen, isModelOpen, onDropdownStateChange]);
 
   // Handle provider selection
   const handleProviderSelect = (providerId) => {

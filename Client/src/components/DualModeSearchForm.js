@@ -23,6 +23,10 @@ const DualModeSearchForm = ({
   const [structuredExpanded, setStructuredExpanded] = useState(true);
   const [allAboutExpanded, setAllAboutExpanded] = useState(false);
   
+  // Track dropdown states to adjust Option 2 position
+  const [structuredDropdownOpen, setStructuredDropdownOpen] = useState(false);
+  const [allAboutDropdownOpen, setAllAboutDropdownOpen] = useState(false);
+  
   // Structured Mode AI Settings
   const [structuredProvider, setStructuredProvider] = useState('');
   const [structuredModel, setStructuredModel] = useState('');
@@ -206,7 +210,7 @@ const DualModeSearchForm = ({
                 
                 <div className="space-y-6">
                   {/* Option 1: Structured Mode */}
-                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative z-[1]">
+                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative">
                     <div className="flex items-start space-x-3">
                       <input
                         id="structured-mode-checkbox"
@@ -229,11 +233,12 @@ const DualModeSearchForm = ({
                         </label>
                         {/* AI Settings for Structured Mode */}
                         {structuredExpanded && (
-                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative z-[50000]" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleStructuredModelChange}
                               selectedProvider={structuredProvider}
                               selectedModel={structuredModel}
+                              onDropdownStateChange={setStructuredDropdownOpen}
                               className="text-sm"
                             />
                           </div>
@@ -243,7 +248,9 @@ const DualModeSearchForm = ({
                   </div>
 
                   {/* Option 2: Summary Mode */}
-                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative z-[1]">
+                  <div className={`bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative transition-all duration-300 ${
+                    structuredDropdownOpen ? 'mt-80' : ''
+                  }`}>
                     <div className="flex items-start space-x-3">
                       <input
                         id="allabout-mode-checkbox"
@@ -266,11 +273,12 @@ const DualModeSearchForm = ({
                         </label>
                         {/* AI Settings for All About Mode */}
                         {allAboutExpanded && (
-                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative z-[50000]" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleAllAboutModelChange}
                               selectedProvider={allAboutProvider}
                               selectedModel={allAboutModel}
+                              onDropdownStateChange={setAllAboutDropdownOpen}
                               className="text-sm"
                             />
                             <div className="mt-2 p-2 bg-gray-800 bg-opacity-50 rounded border border-gray-600">
