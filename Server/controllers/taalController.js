@@ -1,4 +1,3 @@
-const Taal = require('../models/Taal');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
