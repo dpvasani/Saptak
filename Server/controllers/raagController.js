@@ -1,5 +1,4 @@
 const Raag = require('../models/Raag');
-const DataActivity = require('../models/DataActivity');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
@@ -117,63 +116,17 @@ exports.getAllAboutRaag = async (req, res) => {
     
     // Try to find existing raag by name to save the All About data
     try {
-      // First, try to find raag from recent DataActivity within last 10 minutes
-      const recentActivity = await DataActivity.findOne({
-        user: userId,
-        category: 'raags',
-        action: { $in: ['search', 'create'] },
-        'details.searchQuery': name,
-        createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) }
-      }).sort({ createdAt: -1 });
-      
-      let existingRaag = null;
-      
-      if (recentActivity?.itemId) {
-        console.log('Found recent activity, looking for raag:', recentActivity.itemId);
-        existingRaag = await Raag.findById(recentActivity.itemId);
-        console.log('Found existing raag from activity:', existingRaag ? existingRaag._id : 'Not found');
-      }
-      
-      // Fallback: search by name if no recent activity found
-      if (!existingRaag) {
-        console.log('No recent activity found, searching by name...');
-        existingRaag = await Raag.findOne({ 
-          'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-        });
-        console.log('Found raag by name:', existingRaag ? existingRaag._id : 'Not found');
-      }
+      const existingRaag = await Raag.findOne({ 'name.value': name });
       
       if (existingRaag) {
-        console.log('Updating existing raag with All About data:', existingRaag._id);
-        
-        // Ensure allAboutData exists
-        if (!existingRaag.allAboutData) {
-          existingRaag.allAboutData = {};
-        }
-        
-        // Update the answer field specifically
-        existingRaag.allAboutData.answer = {
-          value: allAboutData.answer?.value || '',
-          reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-          verified: false
-        };
-        
-        // Update other fields if they exist
-        if (allAboutData.images) existingRaag.allAboutData.images = allAboutData.images;
-        if (allAboutData.sources) existingRaag.allAboutData.sources = allAboutData.sources;
-        if (allAboutData.citations) existingRaag.allAboutData.citations = allAboutData.citations;
-        if (allAboutData.relatedQuestions) existingRaag.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
-        if (allAboutData.metadata?.searchQuery) existingRaag.allAboutData.searchQuery = allAboutData.metadata.searchQuery;
-        if (allAboutData.metadata?.aiProvider) existingRaag.allAboutData.aiProvider = allAboutData.metadata.aiProvider;
-        if (allAboutData.metadata?.aiModel) existingRaag.allAboutData.aiModel = allAboutData.metadata.aiModel;
-        
+        console.log('Found existing raag, updating with All About data...');
+        existingRaag.allAboutData = allAboutData;
         existingRaag.modifiedBy = userId;
         existingRaag.updatedAt = new Date();
-        
-        const savedRaag = await existingRaag.save();
-        console.log('Successfully updated existing raag with All About data:', savedRaag._id);
+        await existingRaag.save();
+        console.log('Successfully saved All About data to existing raag:', existingRaag._id);
       } else {
-        console.log('No existing raag found, creating new raag with All About data for:', name);
+        console.log('No existing raag found, creating new raag with All About data...');
         const newRaag = new Raag({
           name: { value: name, reference: 'All About Search', verified: false },
           aroha: { value: '', reference: 'Not searched in All About mode', verified: false },
@@ -185,20 +138,7 @@ exports.getAllAboutRaag = async (req, res) => {
           rasBhaav: { value: '', reference: 'Not searched in All About mode', verified: false },
           tanpuraTuning: { value: '', reference: 'Not searched in All About mode', verified: false },
           timeOfRendition: { value: '', reference: 'Not searched in All About mode', verified: false },
-          allAboutData: {
-            answer: {
-              value: allAboutData.answer?.value || '',
-              reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-              verified: false
-            },
-            images: allAboutData.images || [],
-            sources: allAboutData.sources || [],
-            citations: allAboutData.citations || [],
-            relatedQuestions: allAboutData.relatedQuestions || [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
-          },
+          allAboutData: allAboutData,
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -209,9 +149,8 @@ exports.getAllAboutRaag = async (req, res) => {
             searchTimestamp: new Date()
           }
         });
-        
-        const savedNewRaag = await newRaag.save();
-        console.log('Successfully created new raag with All About data:', savedNewRaag._id);
+        await newRaag.save();
+        console.log('Successfully created new raag with All About data:', newRaag._id);
       }
     } catch (saveError) {
       console.error('Error saving All About data to raag:', saveError);
@@ -220,7 +159,6 @@ exports.getAllAboutRaag = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
-      itemId: existingRaag?._id || savedNewRaag?._id,
       mode: 'summary',
       searchQuery: name,
       provider: provider,

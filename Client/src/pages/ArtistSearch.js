@@ -55,10 +55,7 @@ const ArtistSearch = () => {
     setLoading(true);
     try {
       const response = await apiService.getAllAboutArtist(query, provider, model);
-      setAllAboutData({
-        ...response.data.data,
-        _itemId: response.data.itemId // Store the actual database item ID
-      });
+      setAllAboutData(response.data.data);
       toast.success(`Summary Mode search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
@@ -493,7 +490,6 @@ const ArtistSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="artist" 
-            itemId={allAboutData._itemId}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}

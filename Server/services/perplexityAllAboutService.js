@@ -1,4 +1,5 @@
 const axios = require('axios');
+const AllAboutData = require('../models/AllAboutData');
 
 class PerplexityAllAboutService {
   constructor() {
@@ -245,6 +246,17 @@ class PerplexityAllAboutService {
     } catch (error) {
       console.error('Error in Perplexity Summary taal search:', error);
       throw new Error('Failed to get Summary taal information: ' + error.message);
+    }
+  }
+
+  async saveAllAboutData(data) {
+    try {
+      const allAboutData = new AllAboutData(data);
+      await allAboutData.save();
+      return allAboutData;
+    } catch (error) {
+      console.error('Error saving Summary data:', error);
+      throw new Error('Failed to save Summary data to database');
     }
   }
 

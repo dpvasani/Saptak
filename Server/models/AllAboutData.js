@@ -1,30 +1,25 @@
 const mongoose = require('mongoose');
 
 const allAboutDataSchema = new mongoose.Schema({
-  // Link to the main entity
-  entityId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    refPath: 'entityType'
-  },
-  entityType: {
+  category: {
     type: String,
-    required: true,
-    enum: ['Artist', 'Raag', 'Taal']
+    enum: ['artists', 'raags', 'taals'],
+    required: true
   },
-  entityName: {
+  searchQuery: {
     type: String,
     required: true
   },
-  
-  // AI Response Data
+  name: {
+    value: { type: String, required: true },
+    reference: { type: String, required: true },
+    verified: { type: Boolean, default: false }
+  },
   answer: {
     value: { type: String },
     reference: { type: String },
     verified: { type: Boolean, default: false }
   },
-  
-  // Media and Sources
   images: [{
     url: String,
     title: String,
@@ -32,7 +27,6 @@ const allAboutDataSchema = new mongoose.Schema({
     source: String,
     verified: { type: Boolean, default: false }
   }],
-  
   sources: [{
     title: String,
     url: String,
@@ -41,42 +35,22 @@ const allAboutDataSchema = new mongoose.Schema({
     type: String,
     verified: { type: Boolean, default: false }
   }],
-  
   citations: [{
     title: String,
     url: String,
     snippet: String,
     verified: { type: Boolean, default: false }
   }],
-  
   relatedQuestions: [String],
-  
-  // Search Metadata
-  searchQuery: String,
-  aiProvider: String,
-  aiModel: String,
-  
-  // User Tracking
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  metadata: {
+    aiProvider: String,
+    aiModel: String,
+    searchQuery: String,
+    timestamp: Date,
+    responseTime: Number
   },
-  modifiedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
-
-// Indexes for better performance
-allAboutDataSchema.index({ entityId: 1, entityType: 1 });
-allAboutDataSchema.index({ entityName: 1 });
-allAboutDataSchema.index({ createdBy: 1 });
-allAboutDataSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('AllAboutData', allAboutDataSchema);

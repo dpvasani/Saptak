@@ -57,10 +57,7 @@ const RaagSearch = () => {
     setLoading(true);
     try {
       const response = await apiService.getAllAboutRaag(query, provider, model);
-      setAllAboutData({
-        ...response.data.data,
-        _itemId: response.data.itemId
-      });
+      setAllAboutData(response.data.data);
       toast.success(`Summary Mode search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
@@ -497,7 +494,6 @@ const RaagSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="raag" 
-            itemId={allAboutData._itemId}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}

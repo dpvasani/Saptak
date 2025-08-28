@@ -1,5 +1,4 @@
 const Taal = require('../models/Taal');
-const DataActivity = require('../models/DataActivity');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
@@ -117,63 +116,17 @@ exports.getAllAboutTaal = async (req, res) => {
     
     // Try to find existing taal by name to save the All About data
     try {
-      // First, try to find taal from recent DataActivity within last 10 minutes
-      const recentActivity = await DataActivity.findOne({
-        user: userId,
-        category: 'taals',
-        action: { $in: ['search', 'create'] },
-        'details.searchQuery': name,
-        createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) }
-      }).sort({ createdAt: -1 });
-      
-      let existingTaal = null;
-      
-      if (recentActivity?.itemId) {
-        console.log('Found recent activity, looking for taal:', recentActivity.itemId);
-        existingTaal = await Taal.findById(recentActivity.itemId);
-        console.log('Found existing taal from activity:', existingTaal ? existingTaal._id : 'Not found');
-      }
-      
-      // Fallback: search by name if no recent activity found
-      if (!existingTaal) {
-        console.log('No recent activity found, searching by name...');
-        existingTaal = await Taal.findOne({ 
-          'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-        });
-        console.log('Found taal by name:', existingTaal ? existingTaal._id : 'Not found');
-      }
+      const existingTaal = await Taal.findOne({ 'name.value': name });
       
       if (existingTaal) {
-        console.log('Updating existing taal with All About data:', existingTaal._id);
-        
-        // Ensure allAboutData exists
-        if (!existingTaal.allAboutData) {
-          existingTaal.allAboutData = {};
-        }
-        
-        // Update the answer field specifically
-        existingTaal.allAboutData.answer = {
-          value: allAboutData.answer?.value || '',
-          reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-          verified: false
-        };
-        
-        // Update other fields if they exist
-        if (allAboutData.images) existingTaal.allAboutData.images = allAboutData.images;
-        if (allAboutData.sources) existingTaal.allAboutData.sources = allAboutData.sources;
-        if (allAboutData.citations) existingTaal.allAboutData.citations = allAboutData.citations;
-        if (allAboutData.relatedQuestions) existingTaal.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
-        if (allAboutData.metadata?.searchQuery) existingTaal.allAboutData.searchQuery = allAboutData.metadata.searchQuery;
-        if (allAboutData.metadata?.aiProvider) existingTaal.allAboutData.aiProvider = allAboutData.metadata.aiProvider;
-        if (allAboutData.metadata?.aiModel) existingTaal.allAboutData.aiModel = allAboutData.metadata.aiModel;
-        
+        console.log('Found existing taal, updating with All About data...');
+        existingTaal.allAboutData = allAboutData;
         existingTaal.modifiedBy = userId;
         existingTaal.updatedAt = new Date();
-        
-        const savedTaal = await existingTaal.save();
-        console.log('Successfully updated existing taal with All About data:', savedTaal._id);
+        await existingTaal.save();
+        console.log('Successfully saved All About data to existing taal:', existingTaal._id);
       } else {
-        console.log('No existing taal found, creating new taal with All About data for:', name);
+        console.log('No existing taal found, creating new taal with All About data...');
         const newTaal = new Taal({
           name: { value: name, reference: 'All About Search', verified: false },
           numberOfBeats: { value: '', reference: 'Not searched in All About mode', verified: false },
@@ -187,20 +140,7 @@ exports.getAllAboutTaal = async (req, res) => {
             beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
           },
           jaati: { value: '', reference: 'Not searched in All About mode', verified: false },
-          allAboutData: {
-            answer: {
-              value: allAboutData.answer?.value || '',
-              reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-              verified: false
-            },
-            images: allAboutData.images || [],
-            sources: allAboutData.sources || [],
-            citations: allAboutData.citations || [],
-            relatedQuestions: allAboutData.relatedQuestions || [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
-          },
+          allAboutData: allAboutData,
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -211,9 +151,8 @@ exports.getAllAboutTaal = async (req, res) => {
             searchTimestamp: new Date()
           }
         });
-        
-        const savedNewTaal = await newTaal.save();
-        console.log('Successfully created new taal with All About data:', savedNewTaal._id);
+        await newTaal.save();
+        console.log('Successfully created new taal with All About data:', newTaal._id);
       }
     } catch (saveError) {
       console.error('Error saving All About data to taal:', saveError);
@@ -222,7 +161,6 @@ exports.getAllAboutTaal = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
-      itemId: existingTaal?._id || savedNewTaal?._id,
       mode: 'summary',
       searchQuery: name,
       provider: provider,
