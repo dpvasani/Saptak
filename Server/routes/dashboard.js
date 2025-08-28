@@ -170,7 +170,9 @@ router.get('/pending-verification', authenticateToken, async (req, res) => {
           { 'guru.verified': false },
           { 'gharana.verified': false },
           { 'notableAchievements.verified': false },
-          { 'disciples.verified': false }
+          { 'disciples.verified': false },
+          { 'summary.verified': false },
+          { 'allAboutData.answer.verified': false }
         ]
       }).sort({ createdAt: -1 }).limit(parseInt(limit));
       
@@ -189,7 +191,8 @@ router.get('/pending-verification', authenticateToken, async (req, res) => {
           { 'thaat.verified': false },
           { 'rasBhaav.verified': false },
           { 'tanpuraTuning.verified': false },
-          { 'timeOfRendition.verified': false }
+          { 'timeOfRendition.verified': false },
+          { 'allAboutData.answer.verified': false }
         ]
       }).sort({ createdAt: -1 }).limit(parseInt(limit));
       
@@ -206,7 +209,8 @@ router.get('/pending-verification', authenticateToken, async (req, res) => {
           { 'taali.beatNumbers.verified': false },
           { 'khaali.count.verified': false },
           { 'khaali.beatNumbers.verified': false },
-          { 'jaati.verified': false }
+          { 'jaati.verified': false },
+          { 'allAboutData.answer.verified': false }
         ]
       }).sort({ createdAt: -1 }).limit(parseInt(limit));
       
