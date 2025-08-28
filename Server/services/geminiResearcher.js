@@ -453,7 +453,7 @@ REQUIREMENTS:
           aiProvider: 'gemini',
           aiModel: modelName || this.defaultModel,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
@@ -491,7 +491,7 @@ REQUIREMENTS:
           aiProvider: 'gemini',
           aiModel: modelName || this.defaultModel,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
@@ -527,7 +527,7 @@ REQUIREMENTS:
           aiProvider: 'gemini',
           aiModel: modelName || this.defaultModel,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
