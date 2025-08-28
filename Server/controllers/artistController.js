@@ -6,6 +6,7 @@ const perplexityResearcher = require('../services/perplexityResearcher');
 const perplexityAllAboutService = require('../services/perplexityAllAboutService');
 const { aiLimiter, webScrapingLimiter } = require('../middleware/rateLimiter');
 const mongoose = require('mongoose');
+const DataActivity = require('../models/DataActivity');
 
 exports.searchArtist = async (req, res) => {
   try {
@@ -205,7 +206,7 @@ exports.getAllAboutArtist = async (req, res) => {
         createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
       }).sort({ createdAt: -1 });
       
-      let existingArtist = null;
+      // Use the existing variable declared above
       
       if (recentActivity?.itemId) {
         console.log('Found recent activity, looking for artist:', recentActivity.itemId);
