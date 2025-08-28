@@ -190,7 +190,8 @@ exports.getAllAboutTaal = async (req, res) => {
       data: {
         ...allAboutData,
         _id: savedTaal?._id,
-        itemId: savedTaal?._id
+        itemId: savedTaal?._id,
+        taalId: savedTaal?._id
       },
       mode: 'summary',
       searchQuery: name,

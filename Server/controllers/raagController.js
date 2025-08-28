@@ -188,7 +188,8 @@ exports.getAllAboutRaag = async (req, res) => {
       data: {
         ...allAboutData,
         _id: savedRaag?._id,
-        itemId: savedRaag?._id
+        itemId: savedRaag?._id,
+        raagId: savedRaag?._id
       },
       mode: 'summary',
       searchQuery: name,

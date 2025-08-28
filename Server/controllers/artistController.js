@@ -261,8 +261,9 @@ exports.getAllAboutArtist = async (req, res) => {
       success: true,
       data: {
         ...allAboutData,
-        _id: savedArtist?._id, // Include the artist ID for frontend reference
-        itemId: savedArtist?._id // Alternative field name
+        _id: savedArtist?._id,
+        itemId: savedArtist?._id,
+        artistId: savedArtist?._id // Explicit artist ID for frontend
       },
       mode: 'summary',
       searchQuery: name,
