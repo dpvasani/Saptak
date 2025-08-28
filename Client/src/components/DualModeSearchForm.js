@@ -206,7 +206,7 @@ const DualModeSearchForm = ({
                 
                 <div className="space-y-6">
                   {/* Option 1: Structured Mode */}
-                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative z-10">
+                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative z-[1]">
                     <div className="flex items-start space-x-3">
                       <input
                         id="structured-mode-checkbox"
@@ -229,7 +229,7 @@ const DualModeSearchForm = ({
                         </label>
                         {/* AI Settings for Structured Mode */}
                         {structuredExpanded && (
-                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative z-20" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative z-[50000]" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleStructuredModelChange}
                               selectedProvider={structuredProvider}
@@ -243,7 +243,7 @@ const DualModeSearchForm = ({
                   </div>
 
                   {/* Option 2: Summary Mode */}
-                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative z-10">
+                  <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative z-[1]">
                     <div className="flex items-start space-x-3">
                       <input
                         id="allabout-mode-checkbox"
@@ -266,7 +266,7 @@ const DualModeSearchForm = ({
                         </label>
                         {/* AI Settings for All About Mode */}
                         {allAboutExpanded && (
-                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative z-20" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-4 p-3 bg-gray-700 bg-opacity-50 rounded-lg border border-gray-600 relative z-[50000]" onClick={(e) => e.stopPropagation()}>
                             <AIModelSelector
                               onModelChange={handleAllAboutModelChange}
                               selectedProvider={allAboutProvider}
