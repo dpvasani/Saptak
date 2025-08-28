@@ -159,10 +159,10 @@ class PerplexityAllAboutService {
           reference: 'Perplexity AI Response',
           verified: false
         },
-        images: this.extractImages(result),
-        sources: this.extractSources(result),
-        citations: result.citations || [],
-        relatedQuestions: result.related_questions || [],
+        images: this.extractImages(result) || [],
+        sources: this.extractSources(result) || [],
+        citations: this.extractCitations(result) || [],
+        relatedQuestions: this.extractRelatedQuestions(result) || [],
         metadata: {
           timestamp: new Date(),
           searchQuery: name,
@@ -230,10 +230,10 @@ class PerplexityAllAboutService {
           reference: 'Perplexity AI Response',
           verified: false
         },
-        images: this.extractImages(result),
-        sources: this.extractSources(result),
-        citations: result.citations || [],
-        relatedQuestions: result.related_questions || [],
+        images: this.extractImages(result) || [],
+        sources: this.extractSources(result) || [],
+        citations: this.extractCitations(result) || [],
+        relatedQuestions: this.extractRelatedQuestions(result) || [],
         metadata: {
           timestamp: new Date(),
           searchQuery: name,
