@@ -563,7 +563,7 @@ CRITICAL REQUIREMENTS:
           aiProvider: 'openai',
           aiModel: model,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
@@ -606,7 +606,7 @@ CRITICAL REQUIREMENTS:
           aiProvider: 'openai',
           aiModel: model,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
@@ -647,7 +647,7 @@ CRITICAL REQUIREMENTS:
           aiProvider: 'openai',
           aiModel: model,
           searchQuery: prompt,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         }
       };
 
