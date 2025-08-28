@@ -259,63 +259,11 @@ exports.getAllAboutArtist = async (req, res) => {
           verified: false
         };
         
-        // Handle images array
-        newArtist.allAboutData.images = [];
-        if (Array.isArray(allAboutData.images)) {
-          allAboutData.images.forEach(img => {
-            if (img && typeof img === 'object' && img.url) {
-              newArtist.allAboutData.images.push({
-                url: String(img.url || ''),
-                title: String(img.title || ''),
-                description: String(img.description || ''),
-                source: String(img.source || ''),
-                verified: false
-              });
-            }
-          });
-        }
-        
-        // Handle sources array - CRITICAL FIX
-        newArtist.allAboutData.sources = [];
-        if (Array.isArray(allAboutData.sources)) {
-          allAboutData.sources.forEach(source => {
-            if (source && typeof source === 'object' && source.url) {
-              newArtist.allAboutData.sources.push({
-                title: String(source.title || ''),
-                url: String(source.url || ''),
-                snippet: String(source.snippet || ''),
-                domain: String(source.domain || ''),
-                type: String(source.type || ''),
-                verified: false
-              });
-            }
-          });
-        }
-        
-        // Handle citations array
-        newArtist.allAboutData.citations = [];
-        if (Array.isArray(allAboutData.citations)) {
-          allAboutData.citations.forEach(citation => {
-            if (citation && typeof citation === 'object' && citation.url) {
-              newArtist.allAboutData.citations.push({
-                title: String(citation.title || ''),
-                url: String(citation.url || ''),
-                snippet: String(citation.snippet || ''),
-                verified: false
-              });
-            }
-          });
-        }
-        
-        // Handle related questions array
-        newArtist.allAboutData.relatedQuestions = [];
-        if (Array.isArray(allAboutData.relatedQuestions)) {
-          allAboutData.relatedQuestions.forEach(question => {
-            if (question && typeof question === 'string') {
-              newArtist.allAboutData.relatedQuestions.push(String(question));
-            }
-          });
-        }
+        // Use Mixed type - direct assignment
+        newArtist.allAboutData.images = cleanAllAboutData.images || [];
+        newArtist.allAboutData.sources = cleanAllAboutData.sources || [];
+        newArtist.allAboutData.citations = cleanAllAboutData.citations || [];
+        newArtist.allAboutData.relatedQuestions = cleanAllAboutData.relatedQuestions || [];
         
         // Set metadata
         newArtist.allAboutData.searchQuery = String(allAboutData.metadata?.searchQuery || name);

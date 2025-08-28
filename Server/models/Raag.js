@@ -60,27 +60,9 @@ const raagSchema = new mongoose.Schema({
       reference: { type: String },
       verified: { type: Boolean, default: false }
     },
-    images: [{
-      url: String,
-      title: String,
-      description: String,
-      source: String,
-      verified: { type: Boolean, default: false }
-    }],
-    sources: [{
-      title: String,
-      url: String,
-      snippet: String,
-      domain: String,
-      type: String,
-      verified: { type: Boolean, default: false }
-    }],
-    citations: [{
-      title: String,
-      url: String,
-      snippet: String,
-      verified: { type: Boolean, default: false }
-    }],
+    images: { type: mongoose.Schema.Types.Mixed, default: [] },
+    sources: { type: mongoose.Schema.Types.Mixed, default: [] },
+    citations: { type: mongoose.Schema.Types.Mixed, default: [] },
     relatedQuestions: [String],
     searchQuery: String,
     aiProvider: String,
