@@ -114,6 +114,48 @@ exports.getAllAboutRaag = async (req, res) => {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
     
+    // Try to find existing raag by name to save the All About data
+    try {
+      const existingRaag = await Raag.findOne({ 'name.value': name });
+      
+      if (existingRaag) {
+        console.log('Found existing raag, updating with All About data...');
+        existingRaag.allAboutData = allAboutData;
+        existingRaag.modifiedBy = userId;
+        existingRaag.updatedAt = new Date();
+        await existingRaag.save();
+        console.log('Successfully saved All About data to existing raag:', existingRaag._id);
+      } else {
+        console.log('No existing raag found, creating new raag with All About data...');
+        const newRaag = new Raag({
+          name: { value: name, reference: 'All About Search', verified: false },
+          aroha: { value: '', reference: 'Not searched in All About mode', verified: false },
+          avroha: { value: '', reference: 'Not searched in All About mode', verified: false },
+          chalan: { value: '', reference: 'Not searched in All About mode', verified: false },
+          vadi: { value: '', reference: 'Not searched in All About mode', verified: false },
+          samvadi: { value: '', reference: 'Not searched in All About mode', verified: false },
+          thaat: { value: '', reference: 'Not searched in All About mode', verified: false },
+          rasBhaav: { value: '', reference: 'Not searched in All About mode', verified: false },
+          tanpuraTuning: { value: '', reference: 'Not searched in All About mode', verified: false },
+          timeOfRendition: { value: '', reference: 'Not searched in All About mode', verified: false },
+          allAboutData: allAboutData,
+          createdBy: userId,
+          modifiedBy: userId,
+          searchMetadata: {
+            searchMethod: 'ai',
+            aiProvider: provider,
+            aiModel: model,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        });
+        await newRaag.save();
+        console.log('Successfully created new raag with All About data:', newRaag._id);
+      }
+    } catch (saveError) {
+      console.error('Error saving All About data to raag:', saveError);
+    }
+    
     res.json({
       success: true,
       data: allAboutData,

@@ -146,6 +146,75 @@ exports.getAllAboutArtist = async (req, res) => {
       hasMetadata: !!allAboutData.metadata
     });
     
+    // Try to find existing artist by name to save the All About data
+    try {
+      const existingArtist = await Artist.findOne({ 'name.value': name });
+      
+      if (existingArtist) {
+        console.log('Found existing artist, updating with All About data...');
+        
+        // Update the existing artist with All About data
+        existingArtist.allAboutData = allAboutData;
+        existingArtist.modifiedBy = userId;
+        existingArtist.updatedAt = new Date();
+        
+        await existingArtist.save();
+        console.log('Successfully saved All About data to existing artist:', existingArtist._id);
+      } else {
+        console.log('No existing artist found, creating new artist with All About data...');
+        
+        // Create new artist with All About data
+        const newArtist = new Artist({
+          name: {
+            value: name,
+            reference: 'All About Search',
+            verified: false
+          },
+          guru: {
+            value: '',
+            reference: 'Not searched in All About mode',
+            verified: false
+          },
+          gharana: {
+            value: '',
+            reference: 'Not searched in All About mode',
+            verified: false
+          },
+          notableAchievements: {
+            value: '',
+            reference: 'Not searched in All About mode',
+            verified: false
+          },
+          disciples: {
+            value: '',
+            reference: 'Not searched in All About mode',
+            verified: false
+          },
+          summary: {
+            value: '',
+            reference: 'Not searched in All About mode',
+            verified: false
+          },
+          allAboutData: allAboutData,
+          createdBy: userId,
+          modifiedBy: userId,
+          searchMetadata: {
+            searchMethod: 'ai',
+            aiProvider: provider,
+            aiModel: model,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        });
+        
+        await newArtist.save();
+        console.log('Successfully created new artist with All About data:', newArtist._id);
+      }
+    } catch (saveError) {
+      console.error('Error saving All About data to artist:', saveError);
+      // Continue with response even if saving fails
+    }
+    
     // Return the All About data directly for frontend display
     res.json({
       success: true,

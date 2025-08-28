@@ -114,6 +114,50 @@ exports.getAllAboutTaal = async (req, res) => {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
     
+    // Try to find existing taal by name to save the All About data
+    try {
+      const existingTaal = await Taal.findOne({ 'name.value': name });
+      
+      if (existingTaal) {
+        console.log('Found existing taal, updating with All About data...');
+        existingTaal.allAboutData = allAboutData;
+        existingTaal.modifiedBy = userId;
+        existingTaal.updatedAt = new Date();
+        await existingTaal.save();
+        console.log('Successfully saved All About data to existing taal:', existingTaal._id);
+      } else {
+        console.log('No existing taal found, creating new taal with All About data...');
+        const newTaal = new Taal({
+          name: { value: name, reference: 'All About Search', verified: false },
+          numberOfBeats: { value: '', reference: 'Not searched in All About mode', verified: false },
+          divisions: { value: '', reference: 'Not searched in All About mode', verified: false },
+          taali: {
+            count: { value: '', reference: 'Not searched in All About mode', verified: false },
+            beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
+          },
+          khaali: {
+            count: { value: '', reference: 'Not searched in All About mode', verified: false },
+            beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
+          },
+          jaati: { value: '', reference: 'Not searched in All About mode', verified: false },
+          allAboutData: allAboutData,
+          createdBy: userId,
+          modifiedBy: userId,
+          searchMetadata: {
+            searchMethod: 'ai',
+            aiProvider: provider,
+            aiModel: model,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        });
+        await newTaal.save();
+        console.log('Successfully created new taal with All About data:', newTaal._id);
+      }
+    } catch (saveError) {
+      console.error('Error saving All About data to taal:', saveError);
+    }
+    
     res.json({
       success: true,
       data: allAboutData,
