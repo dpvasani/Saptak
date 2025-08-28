@@ -645,68 +645,21 @@ exports.exportArtists = async (req, res) => {
       });
     }
 
-    const exportData = artists.map(artist => this.formatArtistForExport(artist));
+    const exportData = artists.map(artist => formatArtistForExport(artist));
     
     let filename;
     if (ids && ids.length > 0) {
       if (ids.length === 1) {
         // Single artist: use artist name with ID
-        const artist = artists[0];
-        const artistName = artist.name?.value || 'Unknown Artist';
-        const shortId = artist._id.toString().slice(-8);
-        filename = `${artistName} ${shortId}`;
-      } else {
-        // Multiple selected artists: use first artist name + count
-        const firstArtist = artists[0];
-        const firstName = firstArtist.name?.value || 'Unknown';
-        filename = `${firstName} And Other ${ids.length - 1}`;
-      }
-    } else {
-      // All artists
-      filename = `All Artists ${artists.length}`;
-    }
-
-    switch (format.toLowerCase()) {
-      case 'markdown':
-        const markdown = this.generateMarkdown(exportData);
-        res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
-        res.send(markdown);
-        break;
-        
-      case 'pdf':
-        // Return structured data for frontend PDF generation
-        res.json({
-          success: true,
-          data: {
-            format: 'pdf',
-            content: exportData,
-            filename: `${filename}.pdf`,
-            count: artists.length
-          }
-        });
-        break;
-        
-      case 'word':
-        // Return structured data for frontend Word generation
-        res.json({
-          success: true,
-          data: {
-            format: 'word',
-            content: exportData,
-            filename: `${filename}.docx`,
-            count: artists.length
-          }
-        });
-        break;
-        
       default:
         res.json({
           success: true,
           data: {
             artists: exportData,
             count: artists.length,
-            exported: new Date().toISOString()
+            exported: new Date().toISOString(),
+            filename: `${filename}.${format}`,
+            format: format
           }
         });
     }
@@ -719,8 +672,8 @@ exports.exportArtists = async (req, res) => {
   }
 };
 
-// Helper method to format artist data for export
-exports.formatArtistForExport = (artist) => {
+// Helper function to format artist data for export
+function formatArtistForExport(artist) {
   return {
     id: artist._id,
     name: artist.name?.value || 'N/A',
@@ -748,20 +701,20 @@ exports.formatArtistForExport = (artist) => {
     metadata: {
       createdAt: artist.createdAt,
       updatedAt: artist.updatedAt,
-      verificationPercentage: this.calculateVerificationPercentage(artist)
+      verificationPercentage: calculateArtistVerificationPercentage(artist)
     }
   };
-};
+}
 
-// Helper method to calculate verification percentage
-exports.calculateVerificationPercentage = (artist) => {
+// Helper function to calculate verification percentage
+function calculateArtistVerificationPercentage(artist) {
   const fields = ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'];
   const verifiedFields = fields.filter(field => artist[field]?.verified);
   return Math.round((verifiedFields.length / fields.length) * 100);
-};
+}
 
-// Helper method to generate markdown
-exports.generateMarkdown = (artists) => {
+// Helper function to generate markdown
+function generateArtistMarkdown(artists) {
   let markdown = '# Indian Classical Music Artists\n\n';
   markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
   markdown += `**Total Artists:** ${artists.length}\n\n`;
@@ -804,4 +757,4 @@ exports.generateMarkdown = (artists) => {
   });
   
   return markdown;
-};
+}
