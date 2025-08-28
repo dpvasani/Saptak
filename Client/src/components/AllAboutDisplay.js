@@ -329,7 +329,7 @@ const AllAboutDisplay = ({ data, category, onDataUpdate }) => {
       <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl p-6 border border-gray-800 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
-            📝 "All About" Mode Results
+            📝 Summary Mode Results
           </h3>
           <div className="flex items-center space-x-2 text-sm text-gray-300">
             <ClockIcon className="h-4 w-4" />

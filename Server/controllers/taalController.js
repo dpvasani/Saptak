@@ -83,7 +83,7 @@ exports.getAllAboutTaal = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-    console.log('All About search request received for taal:', name);
+    console.log('Summary search request received for taal:', name);
     
     if (!name) {
       return res.status(400).json({ 
@@ -101,7 +101,7 @@ exports.getAllAboutTaal = async (req, res) => {
 
     const provider = aiProvider || 'perplexity';
     const model = aiModel || 'sonar-pro';
-    console.log(`Using ${provider} "All About" mode (${model}) for taal:`, name);
+    console.log(`Using ${provider} Summary mode (${model}) for taal:`, name);
     
     let allAboutData;
     if (provider === 'perplexity') {
@@ -117,7 +117,7 @@ exports.getAllAboutTaal = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
-      mode: 'all-about',
+      mode: 'summary',
       searchQuery: name,
       provider: provider,
       model: model
@@ -126,7 +126,7 @@ exports.getAllAboutTaal = async (req, res) => {
     console.error('Error in getAllAboutTaal:', error);
     res.status(500).json({ 
       success: false,
-      message: error.message || 'Error in "All About" search for taal' 
+      message: error.message || 'Error in Summary search for taal' 
     });
   }
 };

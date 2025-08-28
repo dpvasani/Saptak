@@ -94,7 +94,7 @@ exports.getAllAboutArtist = async (req, res) => {
   try {
     const { name, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-    console.log('All About search request received for artist:', name);
+    console.log('Summary search request received for artist:', name);
     
     if (!name) {
       return res.status(400).json({ 
@@ -120,7 +120,7 @@ exports.getAllAboutArtist = async (req, res) => {
 
     const provider = aiProvider || 'perplexity';
     const model = aiModel || 'sonar-pro';
-    console.log(`Using ${provider} "All About" mode (${model}) for artist:`, name);
+    console.log(`Using ${provider} Summary mode (${model}) for artist:`, name);
     
     let allAboutData;
     if (provider === 'perplexity') {
@@ -164,8 +164,8 @@ exports.getAllAboutArtist = async (req, res) => {
       res.json({
         success: true,
         data: existingArtist,
-        mode: 'all-about-merged',
-        message: 'All About data merged with existing artist'
+        mode: 'summary-merged',
+        message: 'Summary data merged with existing artist'
       });
     } else {
       // Create new artist with All About data
@@ -210,15 +210,15 @@ exports.getAllAboutArtist = async (req, res) => {
       res.json({
         success: true,
         data: newArtist,
-        mode: 'all-about-new',
-        message: 'New artist created with All About data'
+        mode: 'summary-new',
+        message: 'New artist created with Summary data'
       });
     }
   } catch (error) {
     console.error('Error in getAllAboutArtist:', error);
     res.status(500).json({ 
-      success: true,
-      message: error.message || 'Error in "All About" search for artist' 
+      success: false,
+      message: error.message || 'Error in Summary search for artist' 
     });
   }
 };

@@ -58,12 +58,12 @@ const TaalSearch = () => {
     try {
       const response = await apiService.getAllAboutTaal(query, provider, model);
       setAllAboutData(response.data.data);
-      toast.success(`All About search completed using ${modelData?.name || model}`);
+      toast.success(`Summary search completed using ${modelData?.name || model}`);
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error('Rate limit exceeded. Please try again later.');
       } else {
-        toast.error(error.response?.data?.message || 'Error in All About search');
+        toast.error(error.response?.data?.message || 'Error in Summary search');
       }
     } finally {
       setLoading(false);
@@ -560,7 +560,7 @@ const TaalSearch = () => {
 
         {/* Option 2: All About Mode Results */}
         {allAboutData && (
-          <AllAboutDisplay 
+          <AllAboutDisplay
             data={allAboutData} 
             category="taal" 
             onDataUpdate={handleAllAboutDataUpdate}
