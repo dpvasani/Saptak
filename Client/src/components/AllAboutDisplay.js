@@ -26,8 +26,16 @@ const AllAboutDisplay = ({ data, category, onDataUpdate, itemId }) => {
   if (!data) return null;
 
   // Get the artist/raag/taal ID for database operations
-  const entityId = itemId || data.artistId || data.raagId || data.taalId || data._id;
+  const entityId = itemId || data.artistId || data.raagId || data.taalId || data._id || data.itemId;
   console.log('AllAboutDisplay - Entity ID for database operations:', entityId);
+  console.log('AllAboutDisplay - Available IDs in data:', {
+    itemId,
+    artistId: data.artistId,
+    raagId: data.raagId,
+    taalId: data.taalId,
+    _id: data._id,
+    itemIdProp: data.itemId
+  });
 
   const handleEdit = (field) => {
     setEditingField(field);

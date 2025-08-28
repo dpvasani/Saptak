@@ -58,10 +58,18 @@ const ArtistSearch = () => {
       const responseData = response.data.data;
       console.log('All About response received:', responseData);
       
+      // Extract the artist ID from the response
+      const artistId = responseData._id || responseData.itemId || responseData.artistId;
+      console.log('Artist ID extracted from response:', artistId);
+      
       // Ensure we have the artist ID for database operations
-      if (responseData._id || responseData.itemId) {
-        responseData.artistId = responseData._id || responseData.itemId;
-        console.log('Artist ID for All About data:', responseData.artistId);
+      if (artistId) {
+        responseData.artistId = artistId;
+        console.log('Artist ID set for All About data:', responseData.artistId);
+      } else {
+        console.error('No artist ID found in response:', responseData);
+        toast.error('Artist ID not found in response. Please try searching again.');
+        return;
       }
       
       setAllAboutData(responseData);
@@ -499,7 +507,7 @@ const ArtistSearch = () => {
           <AllAboutDisplay
             data={allAboutData} 
             category="artist" 
-            itemId={allAboutData.artistId || allAboutData._id}
+            itemId={allAboutData.artistId || allAboutData._id || allAboutData.itemId}
             onDataUpdate={handleAllAboutDataUpdate}
           />
         )}
