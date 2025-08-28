@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const DataActivity = require('../models/DataActivity');
+const mongoose = require('mongoose');
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -77,7 +78,7 @@ const logUserActivity = (action, category) => {
             user: req.user.userId,
             action,
             category,
-            itemId: req.params.id || req.body._id,
+            itemId: req.params.id || req.body._id || new mongoose.Types.ObjectId(), // Generate a temporary ID for search operations
             itemName: req.body.name?.value || req.query.name,
             details: {
               searchQuery: req.query.name,

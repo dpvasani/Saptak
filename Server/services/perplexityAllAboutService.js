@@ -322,37 +322,45 @@ class PerplexityAllAboutService {
     console.log('Citations available:', !!result.citations);
     console.log('Choices available:', !!result.choices);
     
-    // Extract from citations
+    // Extract from citations - but skip them as they're returning function objects
     if (result.citations && Array.isArray(result.citations)) {
       console.log('Found citations:', result.citations.length);
-      result.citations.forEach((citation, index) => {
-        console.log(`Citation ${index}:`, citation);
-        const sourceUrl = String(citation.url || citation.link || citation.href || '').trim();
-        console.log(`Citation URL: ${sourceUrl}`);
-        
-        if (sourceUrl && sourceUrl !== '') {
-          sources.push({
-            title: String(citation.title || citation.name || `Source ${index + 1}`).trim(),
-            url: sourceUrl,
-            snippet: String(citation.snippet || citation.text || citation.description || '').trim(),
-            domain: this.extractDomain(sourceUrl),
-            type: 'citation',
-            verified: false
-          });
-        }
-      });
+      // Skip citations as they're returning function objects instead of URLs
+      console.log('Skipping citations due to function object issue');
     } else {
       console.log('No citations found in result');
     }
     
-    // Extract from web_results if available
+    // Extract from search_results (this is where the real URLs are)
+    if (result.search_results && Array.isArray(result.search_results)) {
+      console.log('Found search_results:', result.search_results.length);
+      result.search_results.forEach((searchResult, index) => {
+        console.log(`Search result ${index}:`, searchResult);
+        const sourceUrl = String(searchResult.url || searchResult.link || searchResult.href || '').trim();
+        console.log(`Search result URL: ${sourceUrl}`);
+        
+        if (sourceUrl && sourceUrl !== '' && !sourceUrl.includes('function')) {
+          sources.push({
+            title: String(searchResult.title || searchResult.name || `Search Result ${index + 1}`).trim(),
+            url: sourceUrl,
+            snippet: String(searchResult.snippet || searchResult.description || searchResult.text || '').trim(),
+            domain: this.extractDomain(sourceUrl),
+            type: 'search_result',
+            verified: false
+          });
+        }
+      });
+    }
+    
+    // Extract from web_results if available (fallback)
     if (result.web_results && Array.isArray(result.web_results)) {
       console.log('Found web_results:', result.web_results.length);
       result.web_results.forEach((webResult, index) => {
         console.log(`Web result ${index}:`, webResult);
         const sourceUrl = String(webResult.url || webResult.link || webResult.href || '').trim();
+        console.log(`Web result URL: ${sourceUrl}`);
         
-        if (sourceUrl && sourceUrl !== '') {
+        if (sourceUrl && sourceUrl !== '' && !sourceUrl.includes('function')) {
           sources.push({
             title: String(webResult.title || webResult.name || `Web Result ${index + 1}`).trim(),
             url: sourceUrl,
