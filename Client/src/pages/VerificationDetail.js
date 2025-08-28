@@ -533,14 +533,14 @@ const VerificationDetail = () => {
             <div className="flex space-x-2">
               <button
                 onClick={handleSave}
-                className={`flex items-center px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md`}
+                className="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
               >
                 <CheckIcon className="h-4 w-4 mr-1" />
                 Save
               </button>
               <button
                 onClick={handleCancel}
-                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                className="flex items-center px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
               >
                 <XMarkIcon className="h-4 w-4 mr-1" />
                 Cancel
