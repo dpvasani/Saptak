@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import AllAboutDisplay from '../components/AllAboutDisplay';
