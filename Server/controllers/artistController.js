@@ -1,4 +1,5 @@
 const Artist = require('../models/Artist');
+const DataActivity = require('../models/DataActivity');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
@@ -6,7 +7,6 @@ const perplexityResearcher = require('../services/perplexityResearcher');
 const perplexityAllAboutService = require('../services/perplexityAllAboutService');
 const { aiLimiter, webScrapingLimiter } = require('../middleware/rateLimiter');
 const mongoose = require('mongoose');
-const DataActivity = require('../models/DataActivity');
 
 exports.searchArtist = async (req, res) => {
   try {
@@ -147,183 +147,50 @@ exports.getAllAboutArtist = async (req, res) => {
       hasMetadata: !!allAboutData.metadata
     });
     
-    // Save the All About data to the artist record
+    // Declare variables at the top of the try block
+    let targetArtist = null;
+    let isNewArtist = false;
+    
+    // Try to find existing artist to attach All About data
     try {
-      console.log('Attempting to save All About data for artist:', name);
+      console.log('Attempting to find existing artist for All About data:', name);
       
-      // Try multiple strategies to find existing artist
-      let existingArtist = null;
-      
-      // Strategy 1: Exact name match (case insensitive)
-      existingArtist = await Artist.findOne({ 
-        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-      });
-      console.log('Strategy 1 - Exact match result:', existingArtist ? `Found: ${existingArtist._id}` : 'Not found');
-      
-      // Strategy 2: Partial name match if exact not found
-      if (!existingArtist) {
-        existingArtist = await Artist.findOne({ 
-          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
-        });
-        console.log('Strategy 2 - Partial match result:', existingArtist ? `Found: ${existingArtist._id}` : 'Not found');
-      }
-      
-      // Strategy 3: Find by similar name (remove common prefixes)
-      if (!existingArtist) {
-        const cleanName = name.replace(/^(pandit|ustad|pt\.?|sri|shri)\s+/i, '').trim();
-        existingArtist = await Artist.findOne({ 
-          'name.value': { $regex: new RegExp(cleanName, 'i') } 
-        });
-        console.log('Strategy 3 - Clean name match result:', existingArtist ? `Found: ${existingArtist._id}` : 'Not found');
-      }
-      
-      // Strategy 4: Find most recent artist if multiple matches
-      if (!existingArtist) {
-        const allArtists = await Artist.find({}).sort({ createdAt: -1 }).limit(10);
-        console.log('Strategy 4 - Recent artists for manual matching:', allArtists.map(a => ({ 
-          id: a._id, 
-          name: a.name.value, 
-          created: a.createdAt 
-        })));
-        
-        // Try to find by any word match
-        const nameWords = name.toLowerCase().split(' ');
-        existingArtist = allArtists.find(artist => {
-          const artistNameLower = artist.name.value.toLowerCase();
-          return nameWords.some(word => artistNameLower.includes(word) && word.length > 2);
-        });
-        
-        if (existingArtist) {
-          console.log('Strategy 4 - Word match found:', existingArtist._id, existingArtist.name.value);
-        }
-      }
-      // First, try to find artist from recent DataActivity within last 10 minutes
+      // Strategy 1: Find from recent DataActivity within last 10 minutes
       const recentActivity = await DataActivity.findOne({
         user: userId,
         category: 'artists',
         action: { $in: ['search', 'create'] },
         'details.searchQuery': name,
-        createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
+        createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) }
       }).sort({ createdAt: -1 });
       
       if (recentActivity?.itemId) {
         console.log('Found recent activity, looking for artist:', recentActivity.itemId);
-        existingArtist = await Artist.findById(recentActivity.itemId);
-        console.log('Found existing artist from activity:', existingArtist ? existingArtist._id : 'Not found');
+        targetArtist = await Artist.findById(recentActivity.itemId);
+        console.log('Found existing artist from activity:', targetArtist ? targetArtist._id : 'Not found');
       }
       
-      // Fallback: search by name if no recent activity found
-      if (!existingArtist) {
+      // Strategy 2: Search by name if no recent activity found
+      if (!targetArtist) {
         console.log('No recent activity found, searching by name...');
-        existingArtist = await Artist.findOne({ 
+        targetArtist = await Artist.findOne({ 
           'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
         });
-        console.log('Found artist by name:', existingArtist ? existingArtist._id : 'Not found');
+        console.log('Found artist by name:', targetArtist ? targetArtist._id : 'Not found');
       }
       
-      if (existingArtist) {
-        console.log('Found existing artist:', existingArtist._id, 'Name:', existingArtist.name.value);
-        
-        // Merge All About data with existing data (don't overwrite)
-        if (!existingArtist.allAboutData) {
-          existingArtist.allAboutData = {};
-        }
-        
-        // Update specific fields
-        existingArtist.allAboutData.answer = allAboutData.answer;
-        existingArtist.allAboutData.images = allAboutData.images;
-        existingArtist.allAboutData.sources = allAboutData.sources;
-        existingArtist.allAboutData.citations = allAboutData.citations;
-        existingArtist.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
-        existingArtist.allAboutData.searchQuery = allAboutData.metadata?.searchQuery;
-        existingArtist.allAboutData.aiProvider = allAboutData.metadata?.aiProvider;
-        console.log('Updating existing artist with All About data:', existingArtist._id);
-        
-        // Ensure allAboutData exists
-        if (!existingArtist.allAboutData) {
-          existingArtist.allAboutData = {};
-        }
-        
-        // Update the answer field specifically
-        existingArtist.allAboutData.answer = {
-          value: allAboutData.answer?.value || '',
-          reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-          verified: false
-        };
-        
-        // Update other fields if they exist
-        if (allAboutData.images) existingArtist.allAboutData.images = allAboutData.images;
-        if (allAboutData.sources) existingArtist.allAboutData.sources = allAboutData.sources;
-        if (allAboutData.citations) existingArtist.allAboutData.citations = allAboutData.citations;
-        if (allAboutData.relatedQuestions) existingArtist.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
-        if (allAboutData.metadata?.searchQuery) existingArtist.allAboutData.searchQuery = allAboutData.metadata.searchQuery;
-        if (allAboutData.metadata?.aiProvider) existingArtist.allAboutData.aiProvider = allAboutData.metadata.aiProvider;
-        if (allAboutData.metadata?.aiModel) existingArtist.allAboutData.aiModel = allAboutData.metadata.aiModel;
-        
-        existingArtist.modifiedBy = userId;
-        existingArtist.updatedAt = new Date();
-        
-        const savedArtist = await existingArtist.save();
-        console.log('Successfully updated existing artist with All About data:', savedArtist._id);
-        console.log('All About answer saved:', !!savedArtist.allAboutData?.answer?.value);
-        console.log('Successfully saved All About data to existing artist:', savedArtist._id);
-        console.log('Updated artist allAboutData structure:', {
-          hasAnswer: !!savedArtist.allAboutData?.answer?.value,
-          answerLength: savedArtist.allAboutData?.answer?.value?.length || 0,
-          hasImages: !!savedArtist.allAboutData?.images?.length,
-          hasSources: !!savedArtist.allAboutData?.sources?.length,
-          aiProvider: savedArtist.allAboutData?.aiProvider,
-          aiModel: savedArtist.allAboutData?.aiModel
-        });
-      } else {
+      // Strategy 3: Create new artist if none found
+      if (!targetArtist) {
         console.log('No existing artist found, creating new artist with All About data for:', name);
+        isNewArtist = true;
         
-        // Create new artist with All About data
-       savedNewArtist = new Artist({
-          name: {
-            value: name,
-            reference: 'Summary Mode Search',
-            verified: false
-          },
-          guru: {
-            value: '',
-            reference: 'Not searched in Summary mode',
-            verified: false
-          },
-          gharana: {
-            value: '',
-            reference: 'Not searched in Summary mode',
-            verified: false
-          },
-          notableAchievements: {
-            value: '',
-            reference: 'Not searched in Summary mode',
-            verified: false
-          },
-          disciples: {
-            value: '',
-            reference: 'Not searched in Summary mode',
-            verified: false
-          },
-          summary: {
-            value: '',
-            reference: 'Not searched in Summary mode',
-            verified: false
-          },
-          allAboutData: {
-            answer: {
-              value: allAboutData.answer?.value || '',
-              reference: allAboutData.answer?.reference || 'Perplexity AI Response',
-              verified: false
-            },
-            images: allAboutData.images || [],
-            sources: allAboutData.sources || [],
-            citations: allAboutData.citations || [],
-            relatedQuestions: allAboutData.relatedQuestions || [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
-          },
+        targetArtist = new Artist({
+          name: { value: name, reference: 'All About Search', verified: false },
+          guru: { value: '', reference: 'Not searched in All About mode', verified: false },
+          gharana: { value: '', reference: 'Not searched in All About mode', verified: false },
+          notableAchievements: { value: '', reference: 'Not searched in All About mode', verified: false },
+          disciples: { value: '', reference: 'Not searched in All About mode', verified: false },
+          summary: { value: '', reference: 'Not searched in All About mode', verified: false },
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -335,29 +202,70 @@ exports.getAllAboutArtist = async (req, res) => {
           }
         });
         
-       await savedNewArtist.save();
-        console.log('Successfully created new artist with All About data:', savedNewArtist._id);
-        console.log('All About answer saved:', !!savedNewArtist.allAboutData?.answer?.value);
-        console.log('Successfully created new artist with All About data:', savedNewArtist._id);
-        console.log('New artist ID for future reference:', savedNewArtist._id);
-        console.log('New artist allAboutData structure:', {
-          hasAnswer: !!savedNewArtist.allAboutData?.answer?.value,
-          answerLength: savedNewArtist.allAboutData?.answer?.value?.length || 0,
-          hasImages: !!savedNewArtist.allAboutData?.images?.length,
-          hasSources: !!savedNewArtist.allAboutData?.sources?.length,
-          aiProvider: savedNewArtist.allAboutData?.aiProvider,
-          aiModel: savedNewArtist.allAboutData?.aiModel
-        });
+        await targetArtist.save();
+        console.log('Successfully created new artist:', targetArtist._id);
       }
-    } catch (saveError) {
-      console.error('Error saving All About data to artist:', saveError.message);
-      // Log the full error for debugging
-      console.error('Full save error details:', {
-        message: saveError.message,
-        stack: saveError.stack,
-        name: saveError.name
+      
+      // Now update/create the AllAboutData
+      console.log('Updating/creating AllAboutData for artist:', targetArtist._id);
+      
+      // Check if AllAboutData already exists for this artist
+      let allAboutRecord = await AllAboutData.findOne({
+        entityId: targetArtist._id,
+        entityType: 'Artist'
       });
-      console.error('Full save error:', saveError);
+      
+      if (allAboutRecord) {
+        console.log('Updating existing AllAboutData record:', allAboutRecord._id);
+        
+        // Update existing record
+        allAboutRecord.answer = {
+          value: allAboutData.answer?.value || '',
+          reference: allAboutData.answer?.reference || 'AI Response',
+          verified: false
+        };
+        allAboutRecord.images = allAboutData.images || [];
+        allAboutRecord.sources = allAboutData.sources || [];
+        allAboutRecord.citations = allAboutData.citations || [];
+        allAboutRecord.relatedQuestions = allAboutData.relatedQuestions || [];
+        allAboutRecord.searchQuery = allAboutData.metadata?.searchQuery || name;
+        allAboutRecord.aiProvider = allAboutData.metadata?.aiProvider || provider;
+        allAboutRecord.aiModel = allAboutData.metadata?.aiModel || model;
+        allAboutRecord.modifiedBy = userId;
+        allAboutRecord.updatedAt = new Date();
+        
+        await allAboutRecord.save();
+        console.log('Successfully updated AllAboutData record');
+      } else {
+        console.log('Creating new AllAboutData record for artist:', targetArtist._id);
+        
+        // Create new AllAboutData record
+        allAboutRecord = new AllAboutData({
+          entityId: targetArtist._id,
+          entityType: 'Artist',
+          entityName: name,
+          answer: {
+            value: allAboutData.answer?.value || '',
+            reference: allAboutData.answer?.reference || 'AI Response',
+            verified: false
+          },
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: allAboutData.metadata?.searchQuery || name,
+          aiProvider: allAboutData.metadata?.aiProvider || provider,
+          aiModel: allAboutData.metadata?.aiModel || model,
+          createdBy: userId,
+          modifiedBy: userId
+        });
+        
+        await allAboutRecord.save();
+        console.log('Successfully created new AllAboutData record:', allAboutRecord._id);
+      }
+      
+    } catch (saveError) {
+      console.error('Error saving All About data:', saveError);
       // Don't fail the request if saving fails, but log the error
     }
     
@@ -365,15 +273,15 @@ exports.getAllAboutArtist = async (req, res) => {
     res.json({
       success: true,
       data: allAboutData,
-      itemId: existingArtist?._id || savedNewArtist?._id,
+      itemId: targetArtist?._id,
+      allAboutId: allAboutRecord?._id,
       mode: 'summary',
       searchQuery: name,
       provider: provider,
       model: model
     });
   } catch (error) {
-    console.error('Error in getAllAboutArtist:', error.message);
-    console.error('Full error:', error);
+    console.error('Error in getAllAboutArtist:', error);
     res.status(500).json({ 
       success: false,
       message: error.message || 'Error in Summary search for artist' 
@@ -392,7 +300,33 @@ exports.updateArtist = async (req, res) => {
       return res.status(404).json({ message: 'Artist not found' });
     }
 
-    // Update all provided fields (including allAboutData)
+    // Handle AllAboutData updates separately
+    if (updates.allAboutData) {
+      console.log('Updating AllAboutData for artist:', id);
+      
+      let allAboutRecord = await AllAboutData.findOne({
+        entityId: id,
+        entityType: 'Artist'
+      });
+      
+      if (allAboutRecord) {
+        // Update existing AllAboutData
+        Object.keys(updates.allAboutData).forEach(field => {
+          if (updates.allAboutData[field] !== undefined) {
+            allAboutRecord[field] = updates.allAboutData[field];
+          }
+        });
+        allAboutRecord.modifiedBy = userId;
+        allAboutRecord.updatedAt = new Date();
+        await allAboutRecord.save();
+        console.log('AllAboutData updated successfully');
+      }
+      
+      // Remove allAboutData from artist updates
+      delete updates.allAboutData;
+    }
+
+    // Update artist fields
     Object.keys(updates).forEach(field => {
       if (updates[field] !== undefined) {
         artist[field] = updates[field];
@@ -438,7 +372,19 @@ exports.getArtistById = async (req, res) => {
       return res.status(404).json({ message: 'Artist not found' });
     }
 
-    res.json(artist);
+    // Also fetch AllAboutData if it exists
+    const allAboutData = await AllAboutData.findOne({
+      entityId: id,
+      entityType: 'Artist'
+    });
+
+    // Combine data for response
+    const response = {
+      ...artist.toObject(),
+      allAboutData: allAboutData || null
+    };
+
+    res.json(response);
   } catch (error) {
     console.error('Error in getArtistById:', error);
     res.status(500).json({ message: 'Error fetching artist' });
@@ -447,14 +393,12 @@ exports.getArtistById = async (req, res) => {
 
 exports.getVerifiedArtists = async (req, res) => {
   try {
-    const { field } = req.query; // Optional: filter by specific field
+    const { field } = req.query;
     let query = {};
     
     if (field) {
-      // Get artists where specific field is verified
       query[`${field}.verified`] = true;
     } else {
-      // Get artists where at least one field is verified
       query = {
         $or: [
           { 'name.verified': true },
@@ -479,14 +423,12 @@ exports.getVerifiedArtists = async (req, res) => {
 
 exports.getUnverifiedArtists = async (req, res) => {
   try {
-    const { field } = req.query; // Optional: filter by specific field
+    const { field } = req.query;
     let query = {};
     
     if (field) {
-      // Get artists where specific field is not verified
       query[`${field}.verified`] = false;
     } else {
-      // Get artists where all fields are unverified
       query = {
         $and: [
           { 'name.verified': false },
@@ -514,31 +456,31 @@ exports.getVerificationStats = async (req, res) => {
   try {
     const totalArtists = await Artist.countDocuments();
     
-    // Count verified fields
     const nameVerified = await Artist.countDocuments({ 'name.verified': true });
     const guruVerified = await Artist.countDocuments({ 'guru.verified': true });
     const gharanaVerified = await Artist.countDocuments({ 'gharana.verified': true });
     const achievementsVerified = await Artist.countDocuments({ 'notableAchievements.verified': true });
     const disciplesVerified = await Artist.countDocuments({ 'disciples.verified': true });
+    const summaryVerified = await Artist.countDocuments({ 'summary.verified': true });
     
-    // Count artists with at least one verified field
     const partiallyVerified = await Artist.countDocuments({
       $or: [
         { 'name.verified': true },
         { 'guru.verified': true },
         { 'gharana.verified': true },
         { 'notableAchievements.verified': true },
-        { 'disciples.verified': true }
+        { 'disciples.verified': true },
+        { 'summary.verified': true }
       ]
     });
     
-    // Count fully verified artists (all fields verified)
     const fullyVerified = await Artist.countDocuments({
       'name.verified': true,
       'guru.verified': true,
       'gharana.verified': true,
       'notableAchievements.verified': true,
-      'disciples.verified': true
+      'disciples.verified': true,
+      'summary.verified': true
     });
     
     const unverified = totalArtists - partiallyVerified;
@@ -553,7 +495,8 @@ exports.getVerificationStats = async (req, res) => {
         guru: guruVerified,
         gharana: gharanaVerified,
         notableAchievements: achievementsVerified,
-        disciples: disciplesVerified
+        disciples: disciplesVerified,
+        summary: summaryVerified
       },
       percentages: {
         fullyVerified: totalArtists > 0 ? ((fullyVerified / totalArtists) * 100).toFixed(2) : 0,
@@ -570,6 +513,13 @@ exports.getVerificationStats = async (req, res) => {
 exports.deleteArtist = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Delete associated AllAboutData first
+    await AllAboutData.deleteMany({
+      entityId: id,
+      entityType: 'Artist'
+    });
+    
     const artist = await Artist.findByIdAndDelete(id);
     
     if (!artist) {
@@ -612,7 +562,6 @@ exports.getPartiallyVerifiedArtists = async (req, res) => {
         ]
       };
     } else {
-      // Artists with some but not all fields verified
       query = {
         $and: [
           {
@@ -648,8 +597,6 @@ exports.getPartiallyVerifiedArtists = async (req, res) => {
   }
 };
 
-// Removed duplicate exportArtists (query-based) to avoid conflicts
-
 exports.bulkDeleteArtists = async (req, res) => {
   try {
     const { ids } = req.body;
@@ -661,7 +608,6 @@ exports.bulkDeleteArtists = async (req, res) => {
       });
     }
 
-    // Validate all IDs are valid MongoDB ObjectIds
     const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
     if (invalidIds.length > 0) {
       return res.status(400).json({
@@ -670,11 +616,15 @@ exports.bulkDeleteArtists = async (req, res) => {
       });
     }
 
-    // Get artist names before deletion for response
+    // Delete associated AllAboutData first
+    await AllAboutData.deleteMany({
+      entityId: { $in: ids },
+      entityType: 'Artist'
+    });
+
     const artistsToDelete = await Artist.find({ _id: { $in: ids } }).select('name.value');
     const deletedNames = artistsToDelete.map(artist => artist.name.value);
 
-    // Perform bulk deletion
     const result = await Artist.deleteMany({ _id: { $in: ids } });
     
     res.json({
@@ -708,46 +658,24 @@ exports.exportSingleArtist = async (req, res) => {
       });
     }
 
-    const exportData = this.formatArtistForExport(artist);
+    const exportData = formatArtistForExport(artist);
     const artistName = artist.name?.value || 'Unknown Artist';
     const shortId = artist._id.toString().slice(-8);
     const filename = `${artistName} ${shortId}`;
 
     switch (format.toLowerCase()) {
       case 'markdown':
-        const markdown = this.generateMarkdown([exportData]);
+        const markdown = generateArtistMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
         res.send(markdown);
         break;
         
-      case 'json':
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
-        res.json(exportData);
-        break;
-        
-      case 'pdf':
-        // Generate simple text content for PDF
-        const pdfContent = this.generateTextContent([exportData]);
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
-        res.send(pdfContent);
-        break;
-        
-      case 'word':
-        // Generate simple text content for Word
-        const wordContent = this.generateTextContent([exportData]);
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
-        res.send(wordContent);
-        break;
-        
       default:
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
-        res.json(exportData);
-        break;
+        res.json({
+          success: true,
+          data: exportData
+        });
     }
   } catch (error) {
     console.error('Error in exportSingleArtist:', error);
@@ -763,7 +691,6 @@ exports.exportArtists = async (req, res) => {
     const { format = 'json', ids } = req.body;
     let query = {};
     
-    // If specific IDs provided, export only those
     if (ids && Array.isArray(ids) && ids.length > 0) {
       query = { _id: { $in: ids } };
     }
@@ -843,14 +770,12 @@ function formatArtistForExport(artist) {
   };
 }
 
-// Helper function to calculate verification percentage
 function calculateArtistVerificationPercentage(artist) {
   const fields = ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'];
   const verifiedFields = fields.filter(field => artist[field]?.verified);
   return Math.round((verifiedFields.length / fields.length) * 100);
 }
 
-// Helper function to generate markdown
 function generateArtistMarkdown(artists) {
   let markdown = '# Indian Classical Music Artists\n\n';
   markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
@@ -878,17 +803,6 @@ function generateArtistMarkdown(artists) {
     markdown += `- **Achievements:** ${artist.verification.notableAchievements ? '✅ Verified' : '❌ Unverified'}\n`;
     markdown += `- **Disciples:** ${artist.verification.disciples ? '✅ Verified' : '❌ Unverified'}\n`;
     markdown += `- **Summary:** ${artist.verification.summary ? '✅ Verified' : '❌ Unverified'}\n\n`;
-    
-    markdown += '### Sources\n\n';
-    if (artist.sources.name !== 'N/A') markdown += `**Name Source:** ${artist.sources.name}\n\n`;
-    if (artist.sources.guru !== 'N/A') markdown += `**Guru Source:** ${artist.sources.guru}\n\n`;
-    if (artist.sources.gharana !== 'N/A') markdown += `**Gharana Source:** ${artist.sources.gharana}\n\n`;
-    if (artist.sources.notableAchievements !== 'N/A') markdown += `**Achievements Source:** ${artist.sources.notableAchievements}\n\n`;
-    if (artist.sources.disciples !== 'N/A') markdown += `**Disciples Source:** ${artist.sources.disciples}\n\n`;
-    if (artist.sources.summary !== 'N/A') markdown += `**Summary Source:** ${artist.sources.summary}\n\n`;
-    
-    markdown += `**Created:** ${new Date(artist.metadata.createdAt).toLocaleString()}\n\n`;
-    markdown += `**Last Updated:** ${new Date(artist.metadata.updatedAt).toLocaleString()}\n\n`;
     
     markdown += '---\n\n';
   });
