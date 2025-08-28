@@ -428,15 +428,15 @@ exports.exportSingleRaag = async (req, res) => {
     }
 
     const exportData = formatRaagForExport(raag);
+    const raagName = raag.name?.value || 'Unknown Raag';
+    const shortId = raag._id.toString().slice(-8);
+    const filename = `${raagName} ${shortId}`;
 
     switch (format.toLowerCase()) {
       case 'markdown':
         const markdown = generateRaagMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
-        const raagName = raag.name?.value || 'Unknown Raag';
-        const shortId = raag._id.toString().slice(-8);
-        const cleanName = raagName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
-        res.setHeader('Content-Disposition', `attachment; filename="${cleanName} ${shortId}.md"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
         res.send(markdown);
         break;
         
@@ -482,12 +482,12 @@ exports.exportRaags = async (req, res) => {
         const raag = raags[0];
         const raagName = raag.name?.value || 'Unknown Raag';
         const shortId = raag._id.toString().slice(-8);
-        filename = `${raagName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} ${shortId}`;
+        filename = `${raagName} ${shortId}`;
       } else {
         // Multiple selected raags: use first raag name + count
         const firstRaag = raags[0];
         const firstName = firstRaag.name?.value || 'Unknown';
-        filename = `${firstName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} and ${ids.length - 1} others`;
+        filename = `${firstName} And Other ${ids.length - 1}`;
       }
     } else {
       // All raags

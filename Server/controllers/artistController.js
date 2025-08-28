@@ -578,15 +578,15 @@ exports.exportSingleArtist = async (req, res) => {
     }
 
     const exportData = this.formatArtistForExport(artist);
+    const artistName = artist.name?.value || 'Unknown Artist';
+    const shortId = artist._id.toString().slice(-8);
+    const filename = `${artistName} ${shortId}`;
 
     switch (format.toLowerCase()) {
       case 'markdown':
         const markdown = this.generateMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
-        const artistName = artist.name?.value || 'Unknown Artist';
-        const shortId = artist._id.toString().slice(-8);
-        const cleanName = artistName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
-        res.setHeader('Content-Disposition', `attachment; filename="${cleanName} ${shortId}.md"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
         res.send(markdown);
         break;
         
@@ -597,7 +597,7 @@ exports.exportSingleArtist = async (req, res) => {
           data: {
             format: 'pdf',
             content: [exportData],
-            filename: `${cleanName} ${shortId}.pdf`
+            filename: `${filename}.pdf`
           }
         });
         break;
@@ -609,7 +609,7 @@ exports.exportSingleArtist = async (req, res) => {
           data: {
             format: 'word',
             content: [exportData],
-            filename: `${cleanName} ${shortId}.docx`
+            filename: `${filename}.docx`
           }
         });
         break;
@@ -657,12 +657,12 @@ exports.exportArtists = async (req, res) => {
         const artist = artists[0];
         const artistName = artist.name?.value || 'Unknown Artist';
         const shortId = artist._id.toString().slice(-8);
-        filename = `${artistName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} ${shortId}`;
+        filename = `${artistName} ${shortId}`;
       } else {
         // Multiple selected artists: use first artist name + count
         const firstArtist = artists[0];
         const firstName = firstArtist.name?.value || 'Unknown';
-        filename = `${firstName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} and ${ids.length - 1} others`;
+        filename = `${firstName} And Other ${ids.length - 1}`;
       }
     } else {
       // All artists

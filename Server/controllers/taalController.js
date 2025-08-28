@@ -398,14 +398,15 @@ exports.exportSingleTaal = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Taal not found' });
     }
     const exportData = formatTaalForExport(taal);
+    const taalName = taal.name?.value || 'Unknown Taal';
+    const shortId = taal._id.toString().slice(-8);
+    const filename = `${taalName} ${shortId}`;
+    
     switch (format.toLowerCase()) {
       case 'markdown': {
         const md = generateTaalMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
-        const taalName = taal.name?.value || 'Unknown Taal';
-        const shortId = taal._id.toString().slice(-8);
-        const cleanName = taalName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
-        res.setHeader('Content-Disposition', `attachment; filename="${cleanName} ${shortId}.md"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
         res.send(md);
         break;
       }
@@ -442,12 +443,12 @@ exports.exportTaals = async (req, res) => {
         const taal = taals[0];
         const taalName = taal.name?.value || 'Unknown Taal';
         const shortId = taal._id.toString().slice(-8);
-        filename = `${taalName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} ${shortId}`;
+        filename = `${taalName} ${shortId}`;
       } else {
         // Multiple selected taals: use first taal name + count
         const firstTaal = taals[0];
         const firstName = firstTaal.name?.value || 'Unknown';
-        filename = `${firstName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} and ${ids.length - 1} others`;
+        filename = `${firstName} And Other ${ids.length - 1}`;
       }
     } else {
       // All taals
@@ -465,7 +466,7 @@ exports.exportTaals = async (req, res) => {
       default:
         res.json({
           success: true,
-          data: { taals: exportData, count: taals.length, exported: new Date().toISOString() }
+          data: { taals: exportData, count: taals.length, exported: new Date().toISOString(), filename }
         });
     }
   } catch (error) {
