@@ -423,6 +423,13 @@ const VerificationDetail = () => {
       toast.error('Please login to verify data');
       return;
     }
+
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to verify data');
+      return;
+    }
     try {
       const updatedItem = { ...item };
       
@@ -444,12 +451,15 @@ const VerificationDetail = () => {
         }
       });
 
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Use the appropriate API service method
+      if (category === 'artists') {
+        await apiService.updateArtist(id, updatedItem);
+      } else if (category === 'raags') {
+        await apiService.updateRaag(id, updatedItem);
+      } else if (category === 'taals') {
+        await apiService.updateTaal(id, updatedItem);
+      }
+      
       setItem(updatedItem);
       setSelectedFields(new Set());
       
@@ -533,14 +543,14 @@ const VerificationDetail = () => {
             <div className="flex space-x-2">
               <button
                 onClick={handleSave}
-                className="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+                className={`flex items-center px-4 py-2 ${colors.button} text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md`}
               >
                 <CheckIcon className="h-4 w-4 mr-1" />
                 Save
               </button>
               <button
                 onClick={handleCancel}
-                className="flex items-center px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
               >
                 <XMarkIcon className="h-4 w-4 mr-1" />
                 Cancel

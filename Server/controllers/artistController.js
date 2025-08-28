@@ -337,6 +337,7 @@ exports.getUnverifiedArtists = async (req, res) => {
           { 'notableAchievements.verified': false },
           { 'disciples.verified': false },
           { 'summary.verified': false }
+          { 'summary.verified': false }
         ]
       };
     }
