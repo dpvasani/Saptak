@@ -63,6 +63,8 @@ class PerplexityAllAboutService {
       const result = response.data;
       const message = result.choices[0].message;
       
+      console.log('Full Perplexity API response structure:', JSON.stringify(result, null, 2));
+      
       // Extract all available data from Perplexity response
       const allAboutData = {
         name: {
@@ -315,8 +317,11 @@ class PerplexityAllAboutService {
   extractSources(result) {
     const sources = [];
     
+    console.log('Extracting sources from result:', JSON.stringify(result, null, 2));
+    
     // Extract from citations
     if (result.citations && Array.isArray(result.citations)) {
+      console.log('Found citations:', result.citations.length);
       result.citations.forEach(citation => {
         sources.push({
           title: citation.title || 'Untitled Source',
@@ -327,7 +332,62 @@ class PerplexityAllAboutService {
           verified: false
         });
       });
+    } else {
+      console.log('No citations found in result');
     }
+    
+    // Check for sources in the message content
+    if (result.choices && result.choices[0] && result.choices[0].message) {
+      const message = result.choices[0].message;
+      
+      // Check if message has sources property
+      if (message.sources && Array.isArray(message.sources)) {
+        console.log('Found sources in message:', message.sources.length);
+        message.sources.forEach(source => {
+          sources.push({
+            title: source.title || source.name || 'Referenced Source',
+            url: source.url || source.link || '',
+            snippet: source.snippet || source.description || '',
+            domain: this.extractDomain(source.url || source.link),
+            type: 'message_source',
+            verified: false
+          });
+        });
+      }
+      
+      // Check for citations in message
+      if (message.citations && Array.isArray(message.citations)) {
+        console.log('Found citations in message:', message.citations.length);
+        message.citations.forEach(citation => {
+          sources.push({
+            title: citation.title || citation.name || 'Message Citation',
+            url: citation.url || citation.link || '',
+            snippet: citation.snippet || citation.text || '',
+            domain: this.extractDomain(citation.url || citation.link),
+            type: 'message_citation',
+            verified: false
+          });
+        });
+      }
+    }
+    
+    // Check for sources at the root level with different property names
+    const possibleSourceKeys = ['sources', 'references', 'web_results', 'search_results'];
+    possibleSourceKeys.forEach(key => {
+      if (result[key] && Array.isArray(result[key])) {
+        console.log(`Found ${key}:`, result[key].length);
+        result[key].forEach(source => {
+          sources.push({
+            title: source.title || source.name || source.heading || 'Web Result',
+            url: source.url || source.link || source.href || '',
+            snippet: source.snippet || source.description || source.content || '',
+            domain: this.extractDomain(source.url || source.link || source.href),
+            type: key,
+            verified: false
+          });
+        });
+      }
+    });
     
     // Extract from message content if it contains source references
     if (result.choices && result.choices[0] && result.choices[0].message) {
@@ -335,6 +395,7 @@ class PerplexityAllAboutService {
       const urlMatches = content.match(/https?:\/\/[^\s\)]+/g);
       
       if (urlMatches) {
+        console.log('Found URLs in content:', urlMatches.length);
         urlMatches.forEach(url => {
           // Only add if not already in citations
           const exists = sources.some(source => source.url === url);
@@ -344,36 +405,28 @@ class PerplexityAllAboutService {
               url: url,
               snippet: '',
               domain: this.extractDomain(url),
-              type: 'reference'
+              type: 'reference',
+              verified: false
             });
           }
         });
+      } else {
+        console.log('No URLs found in message content');
       }
     }
     
-    // Extract from related sources if available
-    if (result.related_sources && Array.isArray(result.related_sources)) {
-      result.related_sources.forEach(source => {
-        sources.push({
-          title: source.title || 'Related Source',
-          url: source.url || '',
-          snippet: source.description || '',
-          domain: this.extractDomain(source.url),
-          type: 'related',
-          verified: false
-        });
-      });
-    }
-    
     console.log(`Extracted ${sources.length} sources`);
+    console.log('Sources details:', sources.map(s => ({ title: s.title, domain: s.domain, type: s.type })));
     return sources;
   }
 
   extractDomain(url) {
+    if (!url) return 'Unknown Domain';
     try {
       const urlObj = new URL(url);
       return urlObj.hostname;
     } catch (error) {
+      console.log('Failed to extract domain from URL:', url);
       return 'Unknown Domain';
     }
   }
