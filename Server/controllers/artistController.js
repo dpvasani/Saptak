@@ -651,6 +651,7 @@ exports.exportArtists = async (req, res) => {
     if (ids && ids.length > 0) {
       if (ids.length === 1) {
         // Single artist: use artist name with ID
+      }
       default:
         res.json({
           success: true,
