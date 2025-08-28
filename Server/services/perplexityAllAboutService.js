@@ -83,7 +83,7 @@ class PerplexityAllAboutService {
           aiProvider: 'perplexity',
           aiModel: model,
           searchQuery: prompt,
-          timestamp: new Date().toISOString(),
+          timestamp: new Date(),
           responseTime: result.usage?.total_tokens || 0
         }
       };
