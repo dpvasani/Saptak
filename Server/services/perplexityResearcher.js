@@ -189,8 +189,8 @@ RESPONSE REQUIREMENTS:
         temperature: 0.02, // Extremely low temperature for maximum factual accuracy
         max_tokens: 3000, // More tokens for comprehensive research
         top_p: 0.9, // Slightly higher for better source diversity
-        frequency_penalty: 0.1, // Reduce repetition
-        presence_penalty: 0.2 // Encourage diverse information sources
+        // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
+        frequency_penalty: 0.1 // Reduce repetition only
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
