@@ -1,5 +1,4 @@
 const Artist = require('../models/Artist');
-const DataActivity = require('../models/DataActivity');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
@@ -206,23 +205,21 @@ exports.getAllAboutArtist = async (req, res) => {
         createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
       }).sort({ createdAt: -1 });
       
-      if (!existingArtist) {
-        existingArtist = null;
+      let existingArtist = null;
       
-        if (recentActivity?.itemId) {
-          console.log('Found recent activity, looking for artist:', recentActivity.itemId);
-          existingArtist = await Artist.findById(recentActivity.itemId);
-          console.log('Found existing artist from activity:', existingArtist ? existingArtist._id : 'Not found');
-        }
-        
-        // Fallback: search by name if no recent activity found
-        if (!existingArtist) {
-          console.log('No recent activity found, searching by name...');
-          existingArtist = await Artist.findOne({ 
-            'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-          });
-          console.log('Found artist by name:', existingArtist ? existingArtist._id : 'Not found');
-        }
+      if (recentActivity?.itemId) {
+        console.log('Found recent activity, looking for artist:', recentActivity.itemId);
+        existingArtist = await Artist.findById(recentActivity.itemId);
+        console.log('Found existing artist from activity:', existingArtist ? existingArtist._id : 'Not found');
+      }
+      
+      // Fallback: search by name if no recent activity found
+      if (!existingArtist) {
+        console.log('No recent activity found, searching by name...');
+        existingArtist = await Artist.findOne({ 
+          'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+        });
+        console.log('Found artist by name:', existingArtist ? existingArtist._id : 'Not found');
       }
       
       if (existingArtist) {
