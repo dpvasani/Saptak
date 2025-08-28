@@ -20,7 +20,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
       'gharana.verified': true,
       'notableAchievements.verified': true,
       'disciples.verified': true,
-      'summary.verified': true
+      'summary.verified': true,
+      'allAboutData.answer.verified': true
     });
     
     const artistsPartiallyVerified = await Artist.countDocuments({
@@ -29,7 +30,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
         { 'guru.verified': true },
         { 'gharana.verified': true },
         { 'notableAchievements.verified': true },
-        { 'disciples.verified': true }
+        { 'disciples.verified': true },
+        { 'summary.verified': true },
+        { 'allAboutData.answer.verified': true }
       ]
     });
     
@@ -44,7 +47,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
       'thaat.verified': true,
       'rasBhaav.verified': true,
       'tanpuraTuning.verified': true,
-      'timeOfRendition.verified': true
+      'timeOfRendition.verified': true,
+      'allAboutData.answer.verified': true
     });
     
     const raagsPartiallyVerified = await Raag.countDocuments({
@@ -58,7 +62,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
         { 'thaat.verified': true },
         { 'rasBhaav.verified': true },
         { 'tanpuraTuning.verified': true },
-        { 'timeOfRendition.verified': true }
+        { 'timeOfRendition.verified': true },
+        { 'allAboutData.answer.verified': true }
       ]
     });
     
@@ -71,7 +76,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
       'taali.beatNumbers.verified': true,
       'khaali.count.verified': true,
       'khaali.beatNumbers.verified': true,
-      'jaati.verified': true
+      'jaati.verified': true,
+      'allAboutData.answer.verified': true
     });
     
     const taalsPartiallyVerified = await Taal.countDocuments({
@@ -83,7 +89,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
         { 'taali.beatNumbers.verified': true },
         { 'khaali.count.verified': true },
         { 'khaali.beatNumbers.verified': true },
-        { 'jaati.verified': true }
+        { 'jaati.verified': true },
+        { 'allAboutData.answer.verified': true }
       ]
     });
     

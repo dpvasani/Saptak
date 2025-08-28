@@ -32,7 +32,8 @@ const VerificationPage = () => {
         { key: 'gharana', label: 'Gharana' },
         { key: 'notableAchievements', label: 'Notable Achievements' },
         { key: 'disciples', label: 'Disciples' },
-        { key: 'summary', label: 'Summary' }
+        { key: 'summary', label: 'Summary' },
+        { key: 'allAboutData.answer', label: 'Summary Mode Answer' }
       ],
       color: 'green'
     },
@@ -48,7 +49,8 @@ const VerificationPage = () => {
         { key: 'thaat', label: 'Thaat' },
         { key: 'rasBhaav', label: 'Ras-Bhaav' },
         { key: 'tanpuraTuning', label: 'Tanpura Tuning' },
-        { key: 'timeOfRendition', label: 'Time of Rendition' }
+        { key: 'timeOfRendition', label: 'Time of Rendition' },
+        { key: 'allAboutData.answer', label: 'Summary Mode Answer' }
       ],
       color: 'purple'
     },
@@ -62,7 +64,8 @@ const VerificationPage = () => {
         { key: 'taali.beatNumbers', label: 'Taali Beat Numbers' },
         { key: 'khaali.count', label: 'Khaali Count' },
         { key: 'khaali.beatNumbers', label: 'Khaali Beat Numbers' },
-        { key: 'jaati', label: 'Jaati' }
+        { key: 'jaati', label: 'Jaati' },
+        { key: 'allAboutData.answer', label: 'Summary Mode Answer' }
       ],
       color: 'orange'
     }
@@ -155,17 +158,29 @@ const VerificationPage = () => {
   };
 
   const getFieldValue = (item, field) => {
+    if (!item) return '';
+    
     if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.value || '';
+      const parts = field.split('.');
+      let value = item;
+      for (const part of parts) {
+        value = value?.[part];
+      }
+      return value?.value || '';
     }
     return item[field]?.value || '';
   };
 
   const getFieldVerified = (item, field) => {
+    if (!item) return false;
+    
     if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      return item[parent]?.[child]?.verified || false;
+      const parts = field.split('.');
+      let value = item;
+      for (const part of parts) {
+        value = value?.[part];
+      }
+      return value?.verified || false;
     }
     return item[field]?.verified || false;
   };

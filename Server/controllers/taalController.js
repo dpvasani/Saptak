@@ -283,6 +283,7 @@ exports.getVerificationStats = async (req, res) => {
     const khaaliCountVerified = await Taal.countDocuments({ 'khaali.count.verified': true });
     const khaaliBeatNumbersVerified = await Taal.countDocuments({ 'khaali.beatNumbers.verified': true });
     const jaatiVerified = await Taal.countDocuments({ 'jaati.verified': true });
+    const allAboutAnswerVerified = await Taal.countDocuments({ 'allAboutData.answer.verified': true });
     
     const partiallyVerified = await Taal.countDocuments({
       $or: [
@@ -293,7 +294,8 @@ exports.getVerificationStats = async (req, res) => {
         { 'taali.beatNumbers.verified': true },
         { 'khaali.count.verified': true },
         { 'khaali.beatNumbers.verified': true },
-        { 'jaati.verified': true }
+        { 'jaati.verified': true },
+        { 'allAboutData.answer.verified': true }
       ]
     });
     
@@ -305,7 +307,8 @@ exports.getVerificationStats = async (req, res) => {
       'taali.beatNumbers.verified': true,
       'khaali.count.verified': true,
       'khaali.beatNumbers.verified': true,
-      'jaati.verified': true
+      'jaati.verified': true,
+      'allAboutData.answer.verified': true
     });
     
     const unverified = totalTaals - partiallyVerified;
@@ -323,7 +326,8 @@ exports.getVerificationStats = async (req, res) => {
         taaliBeatNumbers: taaliBeatNumbersVerified,
         khaaliCount: khaaliCountVerified,
         khaaliBeatNumbers: khaaliBeatNumbersVerified,
-        jaati: jaatiVerified
+        jaati: jaatiVerified,
+        allAboutAnswer: allAboutAnswerVerified
       },
       percentages: {
         fullyVerified: totalTaals > 0 ? ((fullyVerified / totalTaals) * 100).toFixed(2) : 0,

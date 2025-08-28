@@ -282,6 +282,7 @@ exports.getVerificationStats = async (req, res) => {
     const rasBhaavVerified = await Raag.countDocuments({ 'rasBhaav.verified': true });
     const tanpuraTuningVerified = await Raag.countDocuments({ 'tanpuraTuning.verified': true });
     const timeOfRenditionVerified = await Raag.countDocuments({ 'timeOfRendition.verified': true });
+    const allAboutAnswerVerified = await Raag.countDocuments({ 'allAboutData.answer.verified': true });
     
     const partiallyVerified = await Raag.countDocuments({
       $or: [
@@ -294,7 +295,8 @@ exports.getVerificationStats = async (req, res) => {
         { 'thaat.verified': true },
         { 'rasBhaav.verified': true },
         { 'tanpuraTuning.verified': true },
-        { 'timeOfRendition.verified': true }
+        { 'timeOfRendition.verified': true },
+        { 'allAboutData.answer.verified': true }
       ]
     });
     
@@ -308,7 +310,8 @@ exports.getVerificationStats = async (req, res) => {
       'thaat.verified': true,
       'rasBhaav.verified': true,
       'tanpuraTuning.verified': true,
-      'timeOfRendition.verified': true
+      'timeOfRendition.verified': true,
+      'allAboutData.answer.verified': true
     });
     
     const unverified = totalRaags - partiallyVerified;
@@ -328,7 +331,8 @@ exports.getVerificationStats = async (req, res) => {
         thaat: thaatVerified,
         rasBhaav: rasBhaavVerified,
         tanpuraTuning: tanpuraTuningVerified,
-        timeOfRendition: timeOfRenditionVerified
+        timeOfRendition: timeOfRenditionVerified,
+        allAboutAnswer: allAboutAnswerVerified
       },
       percentages: {
         fullyVerified: totalRaags > 0 ? ((fullyVerified / totalRaags) * 100).toFixed(2) : 0,
