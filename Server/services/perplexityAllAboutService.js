@@ -327,17 +327,19 @@ class PerplexityAllAboutService {
       console.log('Found citations:', result.citations.length);
       result.citations.forEach((citation, index) => {
         console.log(`Citation ${index}:`, citation);
-        const sourceUrl = citation.url || citation.link || citation.href || '';
+        const sourceUrl = String(citation.url || citation.link || citation.href || '').trim();
         console.log(`Citation URL: ${sourceUrl}`);
         
-        sources.push({
-          title: citation.title || citation.name || `Source ${index + 1}`,
-          url: sourceUrl,
-          snippet: citation.snippet || citation.text || citation.description || '',
-          domain: this.extractDomain(sourceUrl),
-          type: 'citation',
-          verified: false
-        });
+        if (sourceUrl && sourceUrl !== '') {
+          sources.push({
+            title: String(citation.title || citation.name || `Source ${index + 1}`).trim(),
+            url: sourceUrl,
+            snippet: String(citation.snippet || citation.text || citation.description || '').trim(),
+            domain: this.extractDomain(sourceUrl),
+            type: 'citation',
+            verified: false
+          });
+        }
       });
     } else {
       console.log('No citations found in result');
@@ -348,16 +350,18 @@ class PerplexityAllAboutService {
       console.log('Found web_results:', result.web_results.length);
       result.web_results.forEach((webResult, index) => {
         console.log(`Web result ${index}:`, webResult);
-        const sourceUrl = webResult.url || webResult.link || webResult.href || '';
+        const sourceUrl = String(webResult.url || webResult.link || webResult.href || '').trim();
         
-        sources.push({
-          title: webResult.title || webResult.name || `Web Result ${index + 1}`,
-          url: sourceUrl,
-          snippet: webResult.snippet || webResult.description || webResult.text || '',
-          domain: this.extractDomain(sourceUrl),
-          type: 'web_result',
-          verified: false
-        });
+        if (sourceUrl && sourceUrl !== '') {
+          sources.push({
+            title: String(webResult.title || webResult.name || `Web Result ${index + 1}`).trim(),
+            url: sourceUrl,
+            snippet: String(webResult.snippet || webResult.description || webResult.text || '').trim(),
+            domain: this.extractDomain(sourceUrl),
+            type: 'web_result',
+            verified: false
+          });
+        }
       });
     }
     
@@ -370,16 +374,18 @@ class PerplexityAllAboutService {
       if (message.sources && Array.isArray(message.sources)) {
         console.log('Found sources in message:', message.sources.length);
         message.sources.forEach((source, index) => {
-          const sourceUrl = source.url || source.link || source.href || '';
+          const sourceUrl = String(source.url || source.link || source.href || '').trim();
           
-          sources.push({
-            title: source.title || source.name || `Message Source ${index + 1}`,
-            url: sourceUrl,
-            snippet: source.snippet || source.description || source.text || '',
-            domain: this.extractDomain(sourceUrl),
-            type: 'message_source',
-            verified: false
-          });
+          if (sourceUrl && sourceUrl !== '') {
+            sources.push({
+              title: String(source.title || source.name || `Message Source ${index + 1}`).trim(),
+              url: sourceUrl,
+              snippet: String(source.snippet || source.description || source.text || '').trim(),
+              domain: this.extractDomain(sourceUrl),
+              type: 'message_source',
+              verified: false
+            });
+          }
         });
       }
       
@@ -387,16 +393,18 @@ class PerplexityAllAboutService {
       if (message.citations && Array.isArray(message.citations)) {
         console.log('Found citations in message:', message.citations.length);
         message.citations.forEach((citation, index) => {
-          const sourceUrl = citation.url || citation.link || citation.href || '';
+          const sourceUrl = String(citation.url || citation.link || citation.href || '').trim();
           
-          sources.push({
-            title: citation.title || citation.name || `Message Citation ${index + 1}`,
-            url: sourceUrl,
-            snippet: citation.snippet || citation.text || citation.description || '',
-            domain: this.extractDomain(sourceUrl),
-            type: 'message_citation',
-            verified: false
-          });
+          if (sourceUrl && sourceUrl !== '') {
+            sources.push({
+              title: String(citation.title || citation.name || `Message Citation ${index + 1}`).trim(),
+              url: sourceUrl,
+              snippet: String(citation.snippet || citation.text || citation.description || '').trim(),
+              domain: this.extractDomain(sourceUrl),
+              type: 'message_citation',
+              verified: false
+            });
+          }
         });
       }
     }
@@ -407,16 +415,18 @@ class PerplexityAllAboutService {
       if (result[key] && Array.isArray(result[key])) {
         console.log(`Found ${key}:`, result[key].length);
         result[key].forEach((source, index) => {
-          const sourceUrl = source.url || source.link || source.href || '';
+          const sourceUrl = String(source.url || source.link || source.href || '').trim();
           
-          sources.push({
-            title: source.title || source.name || source.heading || `${key} ${index + 1}`,
-            url: sourceUrl,
-            snippet: source.snippet || source.description || source.content || source.text || '',
-            domain: this.extractDomain(sourceUrl),
-            type: key,
-            verified: false
-          });
+          if (sourceUrl && sourceUrl !== '') {
+            sources.push({
+              title: String(source.title || source.name || source.heading || `${key} ${index + 1}`).trim(),
+              url: sourceUrl,
+              snippet: String(source.snippet || source.description || source.content || source.text || '').trim(),
+              domain: this.extractDomain(sourceUrl),
+              type: key,
+              verified: false
+            });
+          }
         });
       }
     });
@@ -424,19 +434,20 @@ class PerplexityAllAboutService {
     // Extract from message content if it contains source references
     if (result.choices && result.choices[0] && result.choices[0].message) {
       const content = result.choices[0].message.content;
-      const urlMatches = content.match(/https?:\/\/[^\s\)]+/g);
+      const urlMatches = String(content || '').match(/https?:\/\/[^\s\)]+/g);
       
       if (urlMatches) {
         console.log('Found URLs in content:', urlMatches.length);
         urlMatches.forEach((url, index) => {
           // Only add if not already in citations
-          const exists = sources.some(source => source.url === url);
+          const cleanUrl = String(url).trim();
+          const exists = sources.some(source => source.url === cleanUrl);
           if (!exists) {
             sources.push({
               title: `Referenced URL ${index + 1}`,
-              url: url,
+              url: cleanUrl,
               snippet: '',
-              domain: this.extractDomain(url),
+              domain: this.extractDomain(cleanUrl),
               type: 'reference',
               verified: false
             });
@@ -449,7 +460,7 @@ class PerplexityAllAboutService {
     
     // Filter out sources with empty URLs to prevent broken links
     const validSources = sources.filter(source => {
-      const hasValidUrl = source.url && source.url.trim() !== '';
+      const hasValidUrl = source.url && String(source.url).trim() !== '';
       if (!hasValidUrl) {
         console.log('Filtering out source with empty URL:', source.title);
       }
@@ -461,19 +472,24 @@ class PerplexityAllAboutService {
       title: s.title, 
       domain: s.domain, 
       type: s.type,
-      hasUrl: !!s.url 
+      hasUrl: !!s.url,
+      url: s.url
     })));
     
     return validSources;
   }
 
   extractDomain(url) {
-    if (!url) return 'Unknown Domain';
+    if (!url || typeof url !== 'string') return 'Unknown Domain';
+    
+    const cleanUrl = url.trim();
+    if (!cleanUrl) return 'Unknown Domain';
+    
     try {
-      const urlObj = new URL(url);
+      const urlObj = new URL(cleanUrl);
       return urlObj.hostname;
     } catch (error) {
-      console.log('Failed to extract domain from URL:', url, 'Error:', error.message);
+      console.log('Failed to extract domain from URL:', cleanUrl, 'Error:', error.message);
       return 'Unknown Domain';
     }
   }
