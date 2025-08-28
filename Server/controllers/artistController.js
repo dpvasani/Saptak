@@ -1,4 +1,5 @@
 const Artist = require('../models/Artist');
+const DataActivity = require('../models/DataActivity');
 const scraperService = require('../services/scraper');
 const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
@@ -195,6 +196,30 @@ exports.getAllAboutArtist = async (req, res) => {
         if (existingArtist) {
           console.log('Strategy 4 - Word match found:', existingArtist._id, existingArtist.name.value);
         }
+      // First, try to find artist from recent DataActivity within last 10 minutes
+      const recentActivity = await DataActivity.findOne({
+        user: userId,
+        category: 'artists',
+        action: { $in: ['search', 'create'] },
+        'details.searchQuery': name,
+        createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
+      }).sort({ createdAt: -1 });
+      
+      let existingArtist = null;
+      
+      if (recentActivity?.itemId) {
+        console.log('Found recent activity, looking for artist:', recentActivity.itemId);
+        existingArtist = await Artist.findById(recentActivity.itemId);
+        console.log('Found existing artist from activity:', existingArtist ? existingArtist._id : 'Not found');
+      }
+      
+      // Fallback: search by name if no recent activity found
+      if (!existingArtist) {
+        console.log('No recent activity found, searching by name...');
+        existingArtist = await Artist.findOne({ 
+          'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+        });
+        console.log('Found artist by name:', existingArtist ? existingArtist._id : 'Not found');
       }
       
       if (existingArtist) {
@@ -213,12 +238,35 @@ exports.getAllAboutArtist = async (req, res) => {
         existingArtist.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
         existingArtist.allAboutData.searchQuery = allAboutData.metadata?.searchQuery;
         existingArtist.allAboutData.aiProvider = allAboutData.metadata?.aiProvider;
-        existingArtist.allAboutData.aiModel = allAboutData.metadata?.aiModel;
+        console.log('Updating existing artist with All About data:', existingArtist._id);
+        
+        // Ensure allAboutData exists
+        if (!existingArtist.allAboutData) {
+          existingArtist.allAboutData = {};
+        }
+        
+        // Update the answer field specifically
+        existingArtist.allAboutData.answer = {
+          value: allAboutData.answer?.value || '',
+          reference: allAboutData.answer?.reference || 'Perplexity AI Response',
+          verified: false
+        };
+        
+        // Update other fields if they exist
+        if (allAboutData.images) existingArtist.allAboutData.images = allAboutData.images;
+        if (allAboutData.sources) existingArtist.allAboutData.sources = allAboutData.sources;
+        if (allAboutData.citations) existingArtist.allAboutData.citations = allAboutData.citations;
+        if (allAboutData.relatedQuestions) existingArtist.allAboutData.relatedQuestions = allAboutData.relatedQuestions;
+        if (allAboutData.metadata?.searchQuery) existingArtist.allAboutData.searchQuery = allAboutData.metadata.searchQuery;
+        if (allAboutData.metadata?.aiProvider) existingArtist.allAboutData.aiProvider = allAboutData.metadata.aiProvider;
+        if (allAboutData.metadata?.aiModel) existingArtist.allAboutData.aiModel = allAboutData.metadata.aiModel;
         
         existingArtist.modifiedBy = userId;
         existingArtist.updatedAt = new Date();
         
         const savedArtist = await existingArtist.save();
+        console.log('Successfully updated existing artist with All About data:', savedArtist._id);
+        console.log('All About answer saved:', !!savedArtist.allAboutData?.answer?.value);
         console.log('Successfully saved All About data to existing artist:', savedArtist._id);
         console.log('Updated artist allAboutData structure:', {
           hasAnswer: !!savedArtist.allAboutData?.answer?.value,
@@ -229,7 +277,7 @@ exports.getAllAboutArtist = async (req, res) => {
           aiModel: savedArtist.allAboutData?.aiModel
         });
       } else {
-        console.log('No existing artist found for name:', name, 'Creating new artist with All About data...');
+        console.log('No existing artist found, creating new artist with All About data for:', name);
         
         // Create new artist with All About data
         const newArtist = new Artist({
@@ -239,7 +287,20 @@ exports.getAllAboutArtist = async (req, res) => {
             verified: false
           },
           guru: {
-            value: '',
+          allAboutData: {
+            answer: {
+              value: allAboutData.answer?.value || '',
+              reference: allAboutData.answer?.reference || 'Perplexity AI Response',
+              verified: false
+            },
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
+            searchQuery: allAboutData.metadata?.searchQuery || name,
+            aiProvider: allAboutData.metadata?.aiProvider || provider,
+            aiModel: allAboutData.metadata?.aiModel || model
+          },
             reference: 'Not searched in Summary mode',
             verified: false
           },
@@ -286,6 +347,8 @@ exports.getAllAboutArtist = async (req, res) => {
         
         const savedNewArtist = await newArtist.save();
         console.log('Successfully created new artist with All About data:', savedNewArtist._id);
+        console.log('All About answer saved:', !!savedNewArtist.allAboutData?.answer?.value);
+        console.log('Successfully created new artist with All About data:', savedNewArtist._id);
         console.log('New artist ID for future reference:', savedNewArtist._id);
         console.log('New artist allAboutData structure:', {
           hasAnswer: !!savedNewArtist.allAboutData?.answer?.value,
@@ -298,6 +361,12 @@ exports.getAllAboutArtist = async (req, res) => {
       }
     } catch (saveError) {
       console.error('Error saving All About data to artist:', saveError.message);
+      // Log the full error for debugging
+      console.error('Full save error details:', {
+        message: saveError.message,
+        stack: saveError.stack,
+        name: saveError.name
+      });
       console.error('Full save error:', saveError);
       // Don't fail the request if saving fails, but log the error
     }
