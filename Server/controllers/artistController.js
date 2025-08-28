@@ -334,7 +334,6 @@ exports.getAllAboutArtist = async (req, res) => {
         savedArtist = await newArtist.save();
         console.log('Successfully created new artist with All About data:', savedArtist._id);
       }
-      }
     } catch (saveError) {
       console.error('Error saving All About data to artist:', saveError.message);
       console.error('Full save error:', saveError);
@@ -968,12 +967,12 @@ function cleanAllAboutDataForSave(allAboutData, name, provider, model) {
       cleanSources = sourcesData.map((source, index) => {
         console.log(`Processing source ${index}:`, typeof source, source);
         return {
-        title: String(source.title || ''),
-        url: String(source.url || ''),
-        snippet: String(source.snippet || ''),
-        domain: String(source.domain || ''),
-        type: String(source.type || ''),
-        verified: Boolean(source.verified || false)
+          title: String(source.title || ''),
+          url: String(source.url || ''),
+          snippet: String(source.snippet || ''),
+          domain: String(source.domain || ''),
+          type: String(source.type || ''),
+          verified: Boolean(source.verified || false)
         };
       });
     } else {
