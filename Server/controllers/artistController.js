@@ -151,9 +151,6 @@ exports.getAllAboutArtist = async (req, res) => {
     try {
       console.log('Attempting to save All About data for artist:', name);
       
-     let existingArtist = null;
-     let savedNewArtist = null;
-     
       // Try multiple strategies to find existing artist
       let existingArtist = null;
       
