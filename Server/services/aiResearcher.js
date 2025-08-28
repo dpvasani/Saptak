@@ -518,7 +518,7 @@ CRITICAL REQUIREMENTS:
   }
 
   async getAllAboutArtist(name, modelName = null) {
-    console.log('Starting OpenAI "All About" search for artist:', name);
+    console.log('Starting OpenAI Summary search for artist:', name);
     
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
       throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
@@ -547,7 +547,7 @@ CRITICAL REQUIREMENTS:
         searchQuery: name,
         name: {
           value: name,
-          reference: 'OpenAI All About Search',
+          reference: 'OpenAI Summary Search',
           verified: false
         },
         answer: {
@@ -574,8 +574,8 @@ CRITICAL REQUIREMENTS:
       
       return savedData;
     } catch (error) {
-      console.error('Error in OpenAI All About search:', error);
-      throw new Error('Failed to get "All About" information using OpenAI: ' + error.message);
+      console.error('Error in OpenAI Summary search:', error);
+      throw new Error('Failed to get Summary information using OpenAI: ' + error.message);
     }
   }
 
@@ -616,7 +616,7 @@ CRITICAL REQUIREMENTS:
       
       return savedData;
     } catch (error) {
-      throw new Error('Failed to get "All About" raag information using OpenAI: ' + error.message);
+      throw new Error('Failed to get Summary raag information using OpenAI: ' + error.message);
     }
   }
 
@@ -657,7 +657,7 @@ CRITICAL REQUIREMENTS:
       
       return savedData;
     } catch (error) {
-      throw new Error('Failed to get "All About" taal information using OpenAI: ' + error.message);
+      throw new Error('Failed to get Summary taal information using OpenAI: ' + error.message);
     }
   }
 

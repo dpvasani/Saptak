@@ -418,7 +418,7 @@ REQUIREMENTS:
   }
 
   async getAllAboutArtist(name, modelName = null) {
-    console.log('Starting Gemini "All About" search for artist:', name);
+    console.log('Starting Gemini Summary search for artist:', name);
     
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
       throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
@@ -437,7 +437,7 @@ REQUIREMENTS:
         searchQuery: name,
         name: {
           value: name,
-          reference: 'Gemini All About Search',
+          reference: 'Gemini Summary Search',
           verified: false
         },
         answer: {
@@ -464,8 +464,8 @@ REQUIREMENTS:
       
       return savedData;
     } catch (error) {
-      console.error('Error in Gemini All About search:', error);
-      throw new Error('Failed to get "All About" information using Gemini: ' + error.message);
+      console.error('Error in Gemini Summary search:', error);
+      throw new Error('Failed to get Summary information using Gemini: ' + error.message);
     }
   }
 
@@ -501,7 +501,7 @@ REQUIREMENTS:
       
       return savedData;
     } catch (error) {
-      throw new Error('Failed to get "All About" raag information using Gemini: ' + error.message);
+      throw new Error('Failed to get Summary raag information using Gemini: ' + error.message);
     }
   }
 
@@ -537,7 +537,7 @@ REQUIREMENTS:
       
       return savedData;
     } catch (error) {
-      throw new Error('Failed to get "All About" taal information using Gemini: ' + error.message);
+      throw new Error('Failed to get Summary taal information using Gemini: ' + error.message);
     }
   }
 

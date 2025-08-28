@@ -20,7 +20,7 @@ class PerplexityAllAboutService {
   }
 
   async getAllAboutArtist(name, modelName = null) {
-    console.log('Starting Perplexity "All About" search for artist:', name);
+    console.log('Starting Perplexity Summary search for artist:', name);
     
     if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
@@ -56,7 +56,7 @@ class PerplexityAllAboutService {
         timeout: 60000 // 60 second timeout for comprehensive search
       });
 
-      console.log('Perplexity "All About" API response received');
+      console.log('Perplexity Summary API response received');
       
       const result = response.data;
       const message = result.choices[0].message;
@@ -67,7 +67,7 @@ class PerplexityAllAboutService {
         searchQuery: name,
         name: {
           value: name,
-          reference: 'Perplexity All About Search',
+          reference: 'Perplexity Summary Search',
           verified: false
         },
         answer: {
@@ -90,9 +90,9 @@ class PerplexityAllAboutService {
 
       // Save to database
       const savedData = await this.saveAllAboutData(allAboutData);
-      console.log('Saved All About data to database:', savedData._id);
+      console.log('Saved Summary data to database:', savedData._id);
 
-      console.log('Perplexity "All About" data extracted:', {
+      console.log('Perplexity Summary data extracted:', {
         answerLength: allAboutData.answer.value.length,
         imageCount: allAboutData.images.length,
         sourceCount: allAboutData.sources.length,
@@ -101,17 +101,17 @@ class PerplexityAllAboutService {
 
       return savedData;
     } catch (error) {
-      console.error('Error in Perplexity "All About" search:', error);
+      console.error('Error in Perplexity Summary search:', error);
       if (error.response) {
         console.error('Perplexity API error:', error.response.data);
-        throw new Error(`Perplexity "All About" API error: ${error.response.data.error?.message || error.message}`);
+        throw new Error(`Perplexity Summary API error: ${error.response.data.error?.message || error.message}`);
       }
-      throw new Error('Failed to get "All About" information using Perplexity AI: ' + error.message);
+      throw new Error('Failed to get Summary information using Perplexity AI: ' + error.message);
     }
   }
 
   async getAllAboutRaag(name, modelName = null) {
-    console.log('Starting Perplexity "All About" search for raag:', name);
+    console.log('Starting Perplexity Summary search for raag:', name);
     
     if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
@@ -152,7 +152,7 @@ class PerplexityAllAboutService {
         searchQuery: name,
         name: {
           value: name,
-          reference: 'Perplexity All About Search',
+          reference: 'Perplexity Summary Search',
           verified: false
         },
         answer: {
@@ -174,17 +174,17 @@ class PerplexityAllAboutService {
 
       // Save to database
       const savedData = await this.saveAllAboutData(allAboutData);
-      console.log('Saved All About raag data to database:', savedData._id);
+      console.log('Saved Summary raag data to database:', savedData._id);
 
       return savedData;
     } catch (error) {
-      console.error('Error in Perplexity "All About" raag search:', error);
-      throw new Error('Failed to get "All About" raag information: ' + error.message);
+      console.error('Error in Perplexity Summary raag search:', error);
+      throw new Error('Failed to get Summary raag information: ' + error.message);
     }
   }
 
   async getAllAboutTaal(name, modelName = null) {
-    console.log('Starting Perplexity "All About" search for taal:', name);
+    console.log('Starting Perplexity Summary search for taal:', name);
     
     if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
@@ -225,7 +225,7 @@ class PerplexityAllAboutService {
         searchQuery: name,
         name: {
           value: name,
-          reference: 'Perplexity All About Search',
+          reference: 'Perplexity Summary Search',
           verified: false
         },
         answer: {
@@ -247,12 +247,12 @@ class PerplexityAllAboutService {
 
       // Save to database
       const savedData = await this.saveAllAboutData(allAboutData);
-      console.log('Saved All About taal data to database:', savedData._id);
+      console.log('Saved Summary taal data to database:', savedData._id);
 
       return savedData;
     } catch (error) {
-      console.error('Error in Perplexity "All About" taal search:', error);
-      throw new Error('Failed to get "All About" taal information: ' + error.message);
+      console.error('Error in Perplexity Summary taal search:', error);
+      throw new Error('Failed to get Summary taal information: ' + error.message);
     }
   }
 
@@ -262,8 +262,8 @@ class PerplexityAllAboutService {
       await allAboutData.save();
       return allAboutData;
     } catch (error) {
-      console.error('Error saving All About data:', error);
-      throw new Error('Failed to save All About data to database');
+      console.error('Error saving Summary data:', error);
+      throw new Error('Failed to save Summary data to database');
     }
   }
 
