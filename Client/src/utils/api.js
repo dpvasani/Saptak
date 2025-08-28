@@ -66,16 +66,21 @@ api.interceptors.response.use(
           break;
         case 401:
           console.log('Authentication failed, redirecting to login...');
+          toast.error('Please login to access this feature');
           // Redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          // Don't show toast here as it will be handled by the component
           setTimeout(() => {
             window.location.href = '/';
           }, 100);
           break;
         case 403:
-          toast.error('Access denied. Insufficient permissions.');
+          toast.error('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 100);
           break;
         case 404:
           toast.error(data.message || 'Resource not found');

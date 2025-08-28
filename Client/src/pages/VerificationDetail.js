@@ -179,6 +179,13 @@ const VerificationDetail = () => {
 
   const handleVerification = async (field, currentStatus) => {
     try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to verify data');
+        return;
+      }
+
       const updatedItem = { ...item };
       
       if (field.includes('.')) {
@@ -197,7 +204,12 @@ const VerificationDetail = () => {
         };
       }
 
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
+      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       // Update local state immediately
       updateItemField(field, { verified: !currentStatus });
@@ -205,7 +217,16 @@ const VerificationDetail = () => {
       toast.success(`${field} verification updated successfully`);
     } catch (error) {
       console.error('Error updating verification:', error);
-      toast.error('Failed to update verification status');
+      if (error.response?.status === 401) {
+        toast.error('Please login to verify data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        toast.error('Failed to update verification status');
+      }
     }
   };
 
@@ -216,6 +237,13 @@ const VerificationDetail = () => {
 
   const handleSave = async () => {
     try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to save changes');
+        return;
+      }
+
       const updatedItem = { ...item };
       
       if (editingField.includes('.')) {
@@ -234,7 +262,12 @@ const VerificationDetail = () => {
         };
       }
 
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
+      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       // Update local state immediately
       updateItemField(editingField, { value: editValue });
@@ -245,7 +278,16 @@ const VerificationDetail = () => {
       toast.success('Field updated successfully');
     } catch (error) {
       console.error('Error updating field:', error);
-      toast.error('Failed to update field');
+      if (error.response?.status === 401) {
+        toast.error('Please login to save changes');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        toast.error('Failed to update field');
+      }
     }
   };
 
@@ -372,6 +414,12 @@ const VerificationDetail = () => {
       return;
     }
 
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to verify data');
+      return;
+    }
     try {
       const updatedItem = { ...item };
       
@@ -393,14 +441,28 @@ const VerificationDetail = () => {
         }
       });
 
-      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem);
+      await axios.put(`http://localhost:5000/api/${category}/${id}`, updatedItem, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       setItem(updatedItem);
       setSelectedFields(new Set());
       
       toast.success(`${selectedFields.size} fields ${verify ? 'verified' : 'unverified'} successfully`);
     } catch (error) {
       console.error('Error in bulk verification:', error);
-      toast.error('Failed to update verification status');
+      if (error.response?.status === 401) {
+        toast.error('Please login to verify data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        toast.error('Failed to update verification status');
+      }
     }
   };
 

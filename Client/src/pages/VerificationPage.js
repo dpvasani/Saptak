@@ -201,10 +201,20 @@ const VerificationPage = () => {
       return;
     }
 
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to delete data');
+      return;
+    }
     setBulkLoading(true);
     try {
       const response = await axios.delete(`http://localhost:5000/api/${category}`, {
-        data: { ids: Array.from(selectedItems) }
+        data: { ids: Array.from(selectedItems) },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.data.success) {
@@ -216,7 +226,16 @@ const VerificationPage = () => {
       }
     } catch (error) {
       console.error('Error deleting artists:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete artists');
+      if (error.response?.status === 401) {
+        toast.error('Please login to delete data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to delete items');
+      }
     } finally {
       setBulkLoading(false);
     }
@@ -225,6 +244,14 @@ const VerificationPage = () => {
   const handleExport = async (exportType = 'selected') => {
     setBulkLoading(true);
     try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to export data');
+        setBulkLoading(false);
+        return;
+      }
+
       let exportIds = null;
       let filename = '';
       
@@ -244,6 +271,11 @@ const VerificationPage = () => {
       const response = await axios.post(`http://localhost:5000/api/${category}/export`, {
         format: exportFormat,
         ids: exportIds
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (exportFormat === 'markdown') {
@@ -269,7 +301,16 @@ const VerificationPage = () => {
       setSelectedItems(new Set());
     } catch (error) {
       console.error('Error exporting:', error);
-      toast.error(error.response?.data?.message || 'Failed to export data');
+      if (error.response?.status === 401) {
+        toast.error('Please login to export data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to export data');
+      }
     } finally {
       setBulkLoading(false);
     }

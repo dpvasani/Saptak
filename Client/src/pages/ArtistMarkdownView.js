@@ -125,8 +125,18 @@ const ArtistMarkdownView = () => {
 
   const handleExport = async (format) => {
     try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to export data');
+        return;
+      }
+
       const response = await axios.get(`http://localhost:5000/api/${category}/${id}/export?format=${format}`, {
-        responseType: format === 'markdown' ? 'text' : 'json'
+        responseType: format === 'markdown' ? 'text' : 'json',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (format === 'markdown') {
@@ -144,7 +154,16 @@ const ArtistMarkdownView = () => {
       toast.success(`${config.title} exported successfully`);
     } catch (error) {
       console.error('Error exporting item:', error);
-      toast.error('Failed to export item');
+      if (error.response?.status === 401) {
+        toast.error('Please login to export data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        toast.error('Failed to export item');
+      }
     }
   };
 

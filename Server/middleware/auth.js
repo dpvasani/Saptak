@@ -9,12 +9,13 @@ const authenticateToken = async (req, res, next) => {
 
     console.log('Auth middleware - Token received:', !!token);
     console.log('Auth middleware - Request URL:', req.url);
+    console.log('Auth middleware - Request method:', req.method);
 
     if (!token) {
       console.log('Auth middleware - No token provided');
       return res.status(401).json({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required. Please login to access this feature.'
       });
     }
 
@@ -26,7 +27,7 @@ const authenticateToken = async (req, res, next) => {
       console.log('Auth middleware - JWT verification failed:', jwtError.message);
       return res.status(403).json({
         success: false,
-        message: 'Invalid or expired token'
+        message: 'Session expired. Please login again.'
       });
     }
     
@@ -36,7 +37,7 @@ const authenticateToken = async (req, res, next) => {
       console.log('Auth middleware - User not found or inactive:', decoded.userId);
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired token'
+        message: 'User account not found or inactive. Please login again.'
       });
     }
 
@@ -47,7 +48,7 @@ const authenticateToken = async (req, res, next) => {
     console.error('Auth middleware error:', error);
     return res.status(403).json({
       success: false,
-      message: 'Invalid or expired token'
+      message: 'Authentication failed. Please login again.'
     });
   }
 };
