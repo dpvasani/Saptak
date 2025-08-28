@@ -337,7 +337,6 @@ exports.getUnverifiedArtists = async (req, res) => {
           { 'notableAchievements.verified': false },
           { 'disciples.verified': false },
           { 'summary.verified': false }
-          { 'summary.verified': false }
         ]
       };
     }
@@ -448,7 +447,8 @@ exports.getPartiallyVerifiedArtists = async (req, res) => {
               { 'guru.verified': false },
               { 'gharana.verified': false },
               { 'notableAchievements.verified': false },
-              { 'disciples.verified': false }
+              { 'disciples.verified': false },
+              { 'summary.verified': false }
             ]
           }
         ]
