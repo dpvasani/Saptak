@@ -205,34 +205,134 @@ exports.getAllAboutArtist = async (req, res) => {
       } else {
         console.log('No existing artist found for name:', name, 'Creating new artist with All About data...');
         
-        // CRITICAL: Deep clean and validate all data before saving
-        const cleanAllAboutData = cleanAllAboutDataForSave(allAboutData, name, provider, model);
+        // CRITICAL FIX: Create artist first, then assign allAboutData separately
+        const newArtist = new Artist();
         
-        console.log('Clean All About data structure:', {
-          hasAnswer: !!cleanAllAboutData.answer,
-          imagesType: typeof cleanAllAboutData.images,
-          imagesIsArray: Array.isArray(cleanAllAboutData.images),
-          imagesLength: cleanAllAboutData.images?.length,
-          sourcesType: typeof cleanAllAboutData.sources,
-          sourcesIsArray: Array.isArray(cleanAllAboutData.sources),
-          sourcesLength: cleanAllAboutData.sources?.length,
-          citationsType: typeof cleanAllAboutData.citations,
-          citationsIsArray: Array.isArray(cleanAllAboutData.citations),
-          citationsLength: cleanAllAboutData.citations?.length
+        // Set basic fields first
+        newArtist.name = {
+          value: name,
+          reference: 'All About Search',
+          verified: false
+        };
+        newArtist.guru = {
+          value: '',
+          reference: 'Not searched in All About mode',
+          verified: false
+        };
+        newArtist.gharana = {
+          value: '',
+          reference: 'Not searched in All About mode',
+          verified: false
+        };
+        newArtist.notableAchievements = {
+          value: '',
+          reference: 'Not searched in All About mode',
+          verified: false
+        };
+        newArtist.disciples = {
+          value: '',
+          reference: 'Not searched in All About mode',
+          verified: false
+        };
+        newArtist.summary = {
+          value: '',
+          reference: 'Not searched in All About mode',
+          verified: false
+        };
+        
+        // Set user tracking
+        newArtist.createdBy = userId;
+        newArtist.modifiedBy = userId;
+        newArtist.searchMetadata = {
+          searchMethod: 'ai',
+          aiProvider: provider,
+          aiModel: model,
+          searchQuery: name,
+          searchTimestamp: new Date()
+        };
+        
+        // CRITICAL: Set allAboutData using direct assignment to prevent stringification
+        newArtist.allAboutData = {};
+        newArtist.allAboutData.answer = {
+          value: allAboutData.answer?.value || '',
+          reference: allAboutData.answer?.reference || 'Perplexity AI Response',
+          verified: false
+        };
+        
+        // Handle images array
+        newArtist.allAboutData.images = [];
+        if (Array.isArray(allAboutData.images)) {
+          allAboutData.images.forEach(img => {
+            if (img && typeof img === 'object' && img.url) {
+              newArtist.allAboutData.images.push({
+                url: String(img.url || ''),
+                title: String(img.title || ''),
+                description: String(img.description || ''),
+                source: String(img.source || ''),
+                verified: false
+              });
+            }
+          });
+        }
+        
+        // Handle sources array - CRITICAL FIX
+        newArtist.allAboutData.sources = [];
+        if (Array.isArray(allAboutData.sources)) {
+          allAboutData.sources.forEach(source => {
+            if (source && typeof source === 'object' && source.url) {
+              newArtist.allAboutData.sources.push({
+                title: String(source.title || ''),
+                url: String(source.url || ''),
+                snippet: String(source.snippet || ''),
+                domain: String(source.domain || ''),
+                type: String(source.type || ''),
+                verified: false
+              });
+            }
+          });
+        }
+        
+        // Handle citations array
+        newArtist.allAboutData.citations = [];
+        if (Array.isArray(allAboutData.citations)) {
+          allAboutData.citations.forEach(citation => {
+            if (citation && typeof citation === 'object' && citation.url) {
+              newArtist.allAboutData.citations.push({
+                title: String(citation.title || ''),
+                url: String(citation.url || ''),
+                snippet: String(citation.snippet || ''),
+                verified: false
+              });
+            }
+          });
+        }
+        
+        // Handle related questions array
+        newArtist.allAboutData.relatedQuestions = [];
+        if (Array.isArray(allAboutData.relatedQuestions)) {
+          allAboutData.relatedQuestions.forEach(question => {
+            if (question && typeof question === 'string') {
+              newArtist.allAboutData.relatedQuestions.push(String(question));
+            }
+          });
+        }
+        
+        // Set metadata
+        newArtist.allAboutData.searchQuery = String(allAboutData.metadata?.searchQuery || name);
+        newArtist.allAboutData.aiProvider = String(allAboutData.metadata?.aiProvider || provider);
+        newArtist.allAboutData.aiModel = String(allAboutData.metadata?.aiModel || model);
+        
+        console.log('About to save artist with manually assigned allAboutData...');
+        console.log('Final allAboutData structure:', {
+          hasAnswer: !!newArtist.allAboutData.answer,
+          sourcesLength: newArtist.allAboutData.sources.length,
+          imagesLength: newArtist.allAboutData.images.length,
+          citationsLength: newArtist.allAboutData.citations.length,
+          relatedQuestionsLength: newArtist.allAboutData.relatedQuestions.length
         });
         
-        // CRITICAL: Deep clone to prevent reference issues
-        const safeAllAboutData = JSON.parse(JSON.stringify(cleanAllAboutData));
-        console.log('Safe All About data after JSON clone:', {
-          sourcesType: typeof safeAllAboutData.sources,
-          sourcesIsArray: Array.isArray(safeAllAboutData.sources),
-          sourcesLength: safeAllAboutData.sources?.length,
-          firstSourceType: typeof safeAllAboutData.sources?.[0],
-          firstSource: safeAllAboutData.sources?.[0]
-        });
-        
-        // Create new artist with All About data
-        const newArtist = new Artist({
+        savedArtist = await newArtist.save();
+        console.log('Successfully created new artist with All About data:', savedArtist._id);
           name: {
             value: name,
             reference: 'All About Search',
