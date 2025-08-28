@@ -77,10 +77,10 @@ class PerplexityAllAboutService {
           reference: 'Perplexity AI Response',
           verified: false
         },
-        images: this.extractImages(result),
-        sources: this.extractSources(result),
-        citations: result.citations || [],
-        relatedQuestions: result.related_questions || [],
+        images: this.extractImages(result) || [],
+        sources: this.extractSources(result) || [],
+        citations: this.extractCitations(result) || [],
+        relatedQuestions: this.extractRelatedQuestions(result) || [],
         metadata: {
           timestamp: new Date(),
           searchQuery: name,
@@ -322,55 +322,119 @@ class PerplexityAllAboutService {
     console.log('Citations available:', !!result.citations);
     console.log('Choices available:', !!result.choices);
     
-    // Extract from citations - but skip them as they're returning function objects
-    if (result.citations && Array.isArray(result.citations)) {
-      console.log('Found citations:', result.citations.length);
-      // Skip citations as they're returning function objects instead of URLs
-      console.log('Skipping citations due to function object issue');
-    } else {
-      console.log('No citations found in result');
+    // Extract from citations with proper validation
+    if (result.citations) {
+      console.log('Found citations:', result.citations);
+      console.log('Citations type:', typeof result.citations);
+      
+      // Handle stringified citations
+      let citationsData = result.citations;
+      if (typeof citationsData === 'string') {
+        try {
+          citationsData = JSON.parse(citationsData);
+          console.log('Successfully parsed stringified citations');
+        } catch (parseError) {
+          console.log('Failed to parse citations string, treating as single URL');
+          if (citationsData.startsWith('http')) {
+            sources.push({
+              title: 'Citation Reference',
+              url: citationsData,
+              snippet: '',
+              domain: this.extractDomain(citationsData),
+              type: 'citation',
+              verified: false
+            });
+          }
+          citationsData = [];
+        }
+      }
+      
+      if (Array.isArray(citationsData)) {
+        citationsData.forEach((citation, index) => {
+          if (citation && typeof citation === 'object' && citation.url) {
+            sources.push({
+              title: citation.title || `Citation ${index + 1}`,
+              url: citation.url,
+              snippet: citation.snippet || '',
+              domain: this.extractDomain(citation.url),
+              type: 'citation',
+              verified: false
+            });
+          }
+        });
+      }
     }
     
     // Extract from search_results (this is where the real URLs are)
     if (result.search_results && Array.isArray(result.search_results)) {
       console.log('Found search_results:', result.search_results.length);
-      result.search_results.forEach((searchResult, index) => {
-        console.log(`Search result ${index}:`, searchResult);
-        const sourceUrl = String(searchResult.url || searchResult.link || searchResult.href || '').trim();
-        console.log(`Search result URL: ${sourceUrl}`);
-        
-        if (sourceUrl && sourceUrl !== '' && !sourceUrl.includes('function')) {
-          sources.push({
-            title: String(searchResult.title || searchResult.name || `Search Result ${index + 1}`).trim(),
-            url: sourceUrl,
-            snippet: String(searchResult.snippet || searchResult.description || searchResult.text || '').trim(),
-            domain: this.extractDomain(sourceUrl),
-            type: 'search_result',
-            verified: false
-          });
+      
+      // Handle stringified search_results
+      let searchResultsData = result.search_results;
+      if (typeof searchResultsData === 'string') {
+        try {
+          searchResultsData = JSON.parse(searchResultsData);
+          console.log('Successfully parsed stringified search_results');
+        } catch (parseError) {
+          console.log('Failed to parse search_results string');
+          searchResultsData = [];
         }
-      });
+      }
+      
+      if (Array.isArray(searchResultsData)) {
+        searchResultsData.forEach((searchResult, index) => {
+          console.log(`Search result ${index}:`, searchResult);
+          const sourceUrl = String(searchResult.url || searchResult.link || searchResult.href || '').trim();
+          console.log(`Search result URL: ${sourceUrl}`);
+          
+          if (sourceUrl && sourceUrl !== '' && !sourceUrl.includes('function') && this.isValidUrl(sourceUrl)) {
+            sources.push({
+              title: String(searchResult.title || searchResult.name || `Search Result ${index + 1}`).trim(),
+              url: sourceUrl,
+              snippet: String(searchResult.snippet || searchResult.description || searchResult.text || '').trim(),
+              domain: this.extractDomain(sourceUrl),
+              type: 'search_result',
+              verified: false
+            });
+          }
+        });
+      }
     }
     
     // Extract from web_results if available (fallback)
     if (result.web_results && Array.isArray(result.web_results)) {
       console.log('Found web_results:', result.web_results.length);
-      result.web_results.forEach((webResult, index) => {
-        console.log(`Web result ${index}:`, webResult);
-        const sourceUrl = String(webResult.url || webResult.link || webResult.href || '').trim();
-        console.log(`Web result URL: ${sourceUrl}`);
-        
-        if (sourceUrl && sourceUrl !== '' && !sourceUrl.includes('function')) {
-          sources.push({
-            title: String(webResult.title || webResult.name || `Web Result ${index + 1}`).trim(),
-            url: sourceUrl,
-            snippet: String(webResult.snippet || webResult.description || webResult.text || '').trim(),
-            domain: this.extractDomain(sourceUrl),
-            type: 'web_result',
-            verified: false
-          });
+      
+      // Handle stringified web_results
+      let webResultsData = result.web_results;
+      if (typeof webResultsData === 'string') {
+        try {
+          webResultsData = JSON.parse(webResultsData);
+          console.log('Successfully parsed stringified web_results');
+        } catch (parseError) {
+          console.log('Failed to parse web_results string');
+          webResultsData = [];
         }
-      });
+      }
+      
+      if (Array.isArray(webResultsData)) {
+        webResultsData.forEach((webResult, index) => {
+          console.log(`Web result ${index}:`, webResult);
+          const sourceUrl = String(webResult.url || webResult.link || webResult.href || '').trim();
+          console.log(`Web result URL: ${sourceUrl}`);
+          
+          if (sourceUrl && sourceUrl !== '' && !sourceUrl.includes('function') && this.isValidUrl(sourceUrl)) {
+            sources.push({
+              title: String(webResult.title || webResult.name || `Web Result ${index + 1}`).trim(),
+              url: sourceUrl,
+              snippet: String(webResult.snippet || webResult.description || webResult.text || '').trim(),
+              domain: this.extractDomain(sourceUrl),
+              type: 'web_result',
+              verified: false
+            });
+          }
+        });
+      }
     }
     
     // Check for sources in the message content
@@ -384,7 +448,7 @@ class PerplexityAllAboutService {
         message.sources.forEach((source, index) => {
           const sourceUrl = String(source.url || source.link || source.href || '').trim();
           
-          if (sourceUrl && sourceUrl !== '') {
+          if (sourceUrl && sourceUrl !== '' && this.isValidUrl(sourceUrl)) {
             sources.push({
               title: String(source.title || source.name || `Message Source ${index + 1}`).trim(),
               url: sourceUrl,
@@ -403,7 +467,7 @@ class PerplexityAllAboutService {
         message.citations.forEach((citation, index) => {
           const sourceUrl = String(citation.url || citation.link || citation.href || '').trim();
           
-          if (sourceUrl && sourceUrl !== '') {
+          if (sourceUrl && sourceUrl !== '' && this.isValidUrl(sourceUrl)) {
             sources.push({
               title: String(citation.title || citation.name || `Message Citation ${index + 1}`).trim(),
               url: sourceUrl,
@@ -425,7 +489,7 @@ class PerplexityAllAboutService {
         result[key].forEach((source, index) => {
           const sourceUrl = String(source.url || source.link || source.href || '').trim();
           
-          if (sourceUrl && sourceUrl !== '') {
+          if (sourceUrl && sourceUrl !== '' && this.isValidUrl(sourceUrl)) {
             sources.push({
               title: String(source.title || source.name || source.heading || `${key} ${index + 1}`).trim(),
               url: sourceUrl,
@@ -450,7 +514,7 @@ class PerplexityAllAboutService {
           // Only add if not already in citations
           const cleanUrl = String(url).trim();
           const exists = sources.some(source => source.url === cleanUrl);
-          if (!exists) {
+          if (!exists && this.isValidUrl(cleanUrl)) {
             sources.push({
               title: `Referenced URL ${index + 1}`,
               url: cleanUrl,
@@ -468,15 +532,20 @@ class PerplexityAllAboutService {
     
     // Filter out sources with empty URLs to prevent broken links
     const validSources = sources.filter(source => {
-      const hasValidUrl = source.url && String(source.url).trim() !== '';
+      const hasValidUrl = source.url && String(source.url).trim() !== '' && this.isValidUrl(source.url);
       if (!hasValidUrl) {
         console.log('Filtering out source with empty URL:', source.title);
       }
       return hasValidUrl;
     });
     
-    console.log(`Extracted ${validSources.length} valid sources out of ${sources.length} total`);
-    console.log('Valid sources details:', validSources.map(s => ({ 
+    // Remove duplicates based on URL
+    const uniqueSources = validSources.filter((source, index, self) => 
+      index === self.findIndex(s => s.url === source.url)
+    );
+    
+    console.log(`Extracted ${uniqueSources.length} unique valid sources out of ${sources.length} total`);
+    console.log('Valid sources details:', uniqueSources.map(s => ({ 
       title: s.title, 
       domain: s.domain, 
       type: s.type,
@@ -484,7 +553,82 @@ class PerplexityAllAboutService {
       url: s.url
     })));
     
-    return validSources;
+    return uniqueSources;
+  }
+
+  extractCitations(result) {
+    const citations = [];
+    
+    // Handle citations from various locations
+    if (result.citations) {
+      let citationsData = result.citations;
+      
+      // Handle stringified citations
+      if (typeof citationsData === 'string') {
+        try {
+          citationsData = JSON.parse(citationsData);
+        } catch (parseError) {
+          console.log('Failed to parse citations string');
+          if (citationsData.startsWith('http') && this.isValidUrl(citationsData)) {
+            return [{
+              title: 'Citation Reference',
+              url: citationsData,
+              snippet: '',
+              verified: false
+            }];
+          }
+          return [];
+        }
+      }
+      
+      if (Array.isArray(citationsData)) {
+        citationsData.forEach((citation, index) => {
+          if (citation && typeof citation === 'object') {
+            const url = String(citation.url || citation.link || citation.href || '').trim();
+            if (url && this.isValidUrl(url)) {
+              citations.push({
+                title: String(citation.title || citation.name || `Citation ${index + 1}`).trim(),
+                url: url,
+                snippet: String(citation.snippet || citation.text || citation.description || '').trim(),
+                verified: false
+              });
+            }
+          }
+        });
+      }
+    }
+    
+    return citations;
+  }
+
+  extractRelatedQuestions(result) {
+    let questions = result.related_questions || [];
+    
+    // Handle stringified related questions
+    if (typeof questions === 'string') {
+      try {
+        questions = JSON.parse(questions);
+      } catch (parseError) {
+        console.log('Failed to parse related questions string');
+        return [];
+      }
+    }
+    
+    // Ensure it's an array of strings
+    if (Array.isArray(questions)) {
+      return questions.filter(q => typeof q === 'string' && q.trim().length > 0);
+    }
+    
+    return [];
+  }
+  isValidUrl(string) {
+    if (!string || typeof string !== 'string') return false;
+    try {
+      const url = new URL(string.trim());
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (error) {
+      return false;
+    }
   }
 
   extractDomain(url) {
