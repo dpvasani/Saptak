@@ -51,23 +51,22 @@ const Dashboard = ({ user }) => {
   };
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color, link }) => (
-    <div className={`bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300 transform hover:-translate-y-1`}>
+    <div className="group bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-400 uppercase tracking-wide">{title}</p>
-          <p className="text-3xl font-bold text-white mt-2">{value}</p>
-          {subtitle && <p className="text-sm text-gray-300 mt-1">{subtitle}</p>}
-          }
+          <p className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">{title}</p>
+          <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent group-hover:from-green-300 group-hover:to-emerald-400 transition-all duration-300">{value}</p>
+          {subtitle && <p className="text-sm text-gray-300 mt-2 opacity-80 group-hover:opacity-100 transition-opacity duration-300">{subtitle}</p>}
         </div>
-        <div className="p-3 rounded-full bg-gray-800 bg-opacity-50 border border-gray-700">
-          <Icon className="h-8 w-8 text-green-400" />
+        <div className="p-4 rounded-full bg-gradient-to-br from-gray-800 to-gray-700 bg-opacity-50 border border-gray-700 group-hover:border-green-500/50 group-hover:shadow-lg transition-all duration-300">
+          <Icon className="h-10 w-10 text-green-400 group-hover:text-green-300 group-hover:scale-110 transition-all duration-300" />
         </div>
       </div>
       {link && (
         <div className="mt-4">
           <Link 
             to={link} 
-            className="inline-flex items-center text-sm font-medium text-green-400 hover:text-green-300 hover:underline"
+            className="inline-flex items-center text-sm font-medium text-green-400 hover:text-green-300 hover:underline group-hover:translate-x-1 transition-all duration-300"
           >
             View details
             <EyeIcon className="ml-1 h-4 w-4" />
@@ -78,49 +77,49 @@ const Dashboard = ({ user }) => {
   );
 
   const VerificationCard = ({ category, data, color }) => (
-    <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300">
+    <div className="group bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-105">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white capitalize">{category}</h3>
-        <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-500 bg-opacity-20 text-green-400 border border-green-500/30">
+        <h3 className="text-xl font-bold text-white capitalize group-hover:text-green-400 transition-colors duration-300">{category}</h3>
+        <span className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-opacity-20 text-green-400 border border-green-500/30 group-hover:border-green-400/50 group-hover:shadow-lg transition-all duration-300">
           {data.verificationRate}% verified
         </span>
       </div>
       
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">Total Entries</span>
-          <span className="font-semibold text-white">{data.total}</span>
+          <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">Total Entries</span>
+          <span className="font-bold text-white text-lg group-hover:text-green-400 transition-colors duration-300">{data.total}</span>
         </div>
         
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-400 flex items-center">
-            <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
+            <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2 group-hover:scale-110 transition-transform duration-300" />
             Fully Verified
           </span>
-          <span className="font-semibold text-green-600">{data.fullyVerified}</span>
+          <span className="font-bold text-green-500 text-lg group-hover:text-green-400 transition-colors duration-300">{data.fullyVerified}</span>
         </div>
         
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-400 flex items-center">
-            <ExclamationCircleIcon className="h-4 w-4 text-yellow-500 mr-1" />
+            <ExclamationCircleIcon className="h-4 w-4 text-yellow-500 mr-2 group-hover:scale-110 transition-transform duration-300" />
             Partially Verified
           </span>
-          <span className="font-semibold text-yellow-600">{data.partiallyVerified}</span>
+          <span className="font-bold text-yellow-500 text-lg group-hover:text-yellow-400 transition-colors duration-300">{data.partiallyVerified}</span>
         </div>
         
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-400 flex items-center">
-            <ClockIcon className="h-4 w-4 text-red-500 mr-1" />
+            <ClockIcon className="h-4 w-4 text-red-500 mr-2 group-hover:scale-110 transition-transform duration-300" />
             Unverified
           </span>
-          <span className="font-semibold text-red-600">{data.unverified}</span>
+          <span className="font-bold text-red-500 text-lg group-hover:text-red-400 transition-colors duration-300">{data.unverified}</span>
         </div>
       </div>
       
       <div className="mt-4 flex space-x-2">
         <Link 
           to={`/verification/${category}`} 
-          className="flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg"
+          className="flex-1 text-center px-4 py-3 rounded-lg text-sm font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl group-hover:scale-105"
         >
           Manage
         </Link>
@@ -161,8 +160,15 @@ const Dashboard = ({ user }) => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-2">Dashboard</h1>
-          <p className="text-gray-300">Overview of your Indian Classical Music data collection</p>
+          <div className="text-center mb-8">
+            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 text-transparent bg-clip-text mb-4 tracking-tight">
+              📊 Dashboard
+            </h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              Overview of your Indian Classical Music data collection journey
+            </p>
+            <div className="mt-4 h-1 w-24 bg-gradient-to-r from-green-400 to-emerald-600 rounded-full mx-auto"></div>
+          </div>
         </div>
 
         {/* Overview Stats */}
@@ -198,25 +204,28 @@ const Dashboard = ({ user }) => {
         </div>
 
         {/* Verification Status */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Verification Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-2">
+              🔍 Verification Status
+            </h2>
+            <p className="text-gray-300">Track verification progress across all categories</p>
+            <div className="mt-3 h-0.5 w-16 bg-gradient-to-r from-green-400 to-emerald-600 rounded-full mx-auto"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {stats?.verification && (
               <>
                 <VerificationCard 
                   category="artists" 
                   data={stats.verification.artists} 
-                  color="border-l-green-500"
                 />
                 <VerificationCard 
                   category="raags" 
                   data={stats.verification.raags} 
-                  color="border-l-purple-500"
                 />
                 <VerificationCard 
                   category="taals" 
                   data={stats.verification.taals} 
-                  color="border-l-orange-500"
                 />
               </>
             )}
@@ -224,43 +233,53 @@ const Dashboard = ({ user }) => {
         </div>
 
         {/* Recent Additions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-2">
+              🕒 Recent Activity
+            </h2>
+            <p className="text-gray-300">Latest additions to your music database</p>
+            <div className="mt-3 h-0.5 w-16 bg-gradient-to-r from-green-400 to-emerald-600 rounded-full mx-auto"></div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {['artists', 'raags', 'taals'].map((category) => (
-            <div key={category} className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 capitalize">
+            <div key={category} className="group bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-6 border border-gray-800 hover:shadow-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-105">
+              <h3 className="text-xl font-bold text-white mb-6 capitalize group-hover:text-green-400 transition-colors duration-300 flex items-center">
+                {category === 'artists' ? '👤' : category === 'raags' ? '🎼' : '🥁'} 
                 Recent {category}
               </h3>
               <div className="space-y-3">
                 {stats?.recent?.[category]?.slice(0, 5).map((item) => (
-                  <div key={item._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={item._id} className="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 rounded-lg border border-gray-700 hover:border-green-500/30 transition-all duration-200 group-hover:bg-opacity-70">
                     <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-semibold text-white group-hover:text-green-400 transition-colors duration-300">{item.name}</p>
+                      <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
                         {new Date(item.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex items-center">
                       {item.verified ? (
-                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                        <CheckCircleIcon className="h-6 w-6 text-green-500 group-hover:scale-110 transition-transform duration-300" />
                       ) : (
-                        <ClockIcon className="h-5 w-5 text-yellow-500" />
+                        <ClockIcon className="h-6 w-6 text-yellow-500 group-hover:scale-110 transition-transform duration-300" />
                       )}
                     </div>
                   </div>
                 )) || (
-                  <p className="text-gray-500 text-center py-4">No recent {category}</p>
+                  <p className="text-gray-400 text-center py-8 italic">No recent {category}</p>
                 )}
               </div>
               <div className="mt-4">
                 <Link 
                   to={`/verification/${category}`}
-                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                  className="inline-flex items-center text-sm font-bold text-green-400 hover:text-green-300 group-hover:translate-x-1 transition-all duration-300"
                 >
                   View all {category} →
                 </Link>
               </div>
             </div>
           ))}
+          </div>
         </div>
       </div>
     </div>
