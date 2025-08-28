@@ -616,6 +616,7 @@ exports.exportSingleArtist = async (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
         res.json(exportData);
+        break;
     }
   } catch (error) {
     console.error('Error in exportSingleArtist:', error);
@@ -663,6 +664,7 @@ exports.exportArtists = async (req, res) => {
             format: format
           }
         });
+        break;
     }
   } catch (error) {
     console.error('Error in exportArtists:', error);
