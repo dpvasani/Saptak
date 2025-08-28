@@ -556,7 +556,18 @@ class PerplexityAllAboutService {
     // CRITICAL: Ensure we return a proper array, not a string
     console.log('Final sources type check:', typeof uniqueSources, 'isArray:', Array.isArray(uniqueSources));
     
-    return uniqueSources;
+    // FINAL SAFETY CHECK: Ensure no stringified objects in array
+    const safeSources = uniqueSources.filter(source => {
+      if (typeof source === 'string') {
+        console.log('WARNING: Found stringified source in array, filtering out:', source.substring(0, 50));
+        return false;
+      }
+      return typeof source === 'object' && source.url;
+    });
+    
+    console.log('Final safe sources count:', safeSources.length);
+    
+    return safeSources;
   }
 
   extractCitations(result) {

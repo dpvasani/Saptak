@@ -221,6 +221,16 @@ exports.getAllAboutArtist = async (req, res) => {
           citationsLength: cleanAllAboutData.citations?.length
         });
         
+        // CRITICAL: Deep clone to prevent reference issues
+        const safeAllAboutData = JSON.parse(JSON.stringify(cleanAllAboutData));
+        console.log('Safe All About data after JSON clone:', {
+          sourcesType: typeof safeAllAboutData.sources,
+          sourcesIsArray: Array.isArray(safeAllAboutData.sources),
+          sourcesLength: safeAllAboutData.sources?.length,
+          firstSourceType: typeof safeAllAboutData.sources?.[0],
+          firstSource: safeAllAboutData.sources?.[0]
+        });
+        
         // Create new artist with All About data
         const newArtist = new Artist({
           name: {
@@ -253,7 +263,7 @@ exports.getAllAboutArtist = async (req, res) => {
             reference: 'Not searched in All About mode',
             verified: false
           },
-          allAboutData: cleanAllAboutData,
+          allAboutData: safeAllAboutData,
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -830,131 +840,142 @@ function cleanAllAboutDataForSave(allAboutData, name, provider, model) {
     relatedQuestions: typeof allAboutData.relatedQuestions
   });
   
+  // CRITICAL: Handle stringified data that might come from API
+  let workingData = allAboutData;
+  if (typeof allAboutData === 'string') {
+    try {
+      workingData = JSON.parse(allAboutData);
+      console.log('Parsed stringified allAboutData');
+    } catch (parseError) {
+      console.error('Failed to parse stringified allAboutData:', parseError);
+      workingData = allAboutData;
+    }
+  }
+  
   // Clean answer
   let cleanAnswer = { value: '', reference: '', verified: false };
-  if (allAboutData.answer && typeof allAboutData.answer === 'object') {
+  if (workingData.answer && typeof workingData.answer === 'object') {
     cleanAnswer = {
-      value: String(allAboutData.answer.value || ''),
-      reference: String(allAboutData.answer.reference || ''),
-      verified: Boolean(allAboutData.answer.verified || false)
+      value: String(workingData.answer.value || ''),
+      reference: String(workingData.answer.reference || ''),
+      verified: Boolean(workingData.answer.verified || false)
     };
   }
   
   // Clean images - ensure it's a proper array
   let cleanImages = [];
-  if (allAboutData.images) {
-    if (Array.isArray(allAboutData.images)) {
-      cleanImages = allAboutData.images.map(img => ({
+  if (workingData.images) {
+    // Handle stringified images
+    let imagesData = workingData.images;
+    if (typeof imagesData === 'string') {
+      try {
+        imagesData = JSON.parse(imagesData);
+        console.log('Parsed stringified images');
+      } catch (parseError) {
+        console.log('Failed to parse images string, using empty array');
+        imagesData = [];
+      }
+    }
+    
+    if (Array.isArray(imagesData)) {
+      cleanImages = imagesData.map(img => ({
         url: String(img.url || ''),
         title: String(img.title || ''),
         description: String(img.description || ''),
         source: String(img.source || ''),
         verified: Boolean(img.verified || false)
       }));
-    } else if (typeof allAboutData.images === 'string') {
-      try {
-        const parsed = JSON.parse(allAboutData.images);
-        if (Array.isArray(parsed)) {
-          cleanImages = parsed.map(img => ({
-            url: String(img.url || ''),
-            title: String(img.title || ''),
-            description: String(img.description || ''),
-            source: String(img.source || ''),
-            verified: Boolean(img.verified || false)
-          }));
-        }
-      } catch (parseError) {
-        console.log('Failed to parse images string, using empty array');
-        cleanImages = [];
-      }
     }
   }
   
   // Clean sources - ensure it's a proper array
   let cleanSources = [];
-  if (allAboutData.sources) {
-    if (Array.isArray(allAboutData.sources)) {
-      cleanSources = allAboutData.sources.map(source => ({
+  if (workingData.sources) {
+    // Handle stringified sources - THIS IS THE CRITICAL FIX
+    let sourcesData = workingData.sources;
+    console.log('Sources data type before processing:', typeof sourcesData);
+    console.log('Sources data is array:', Array.isArray(sourcesData));
+    
+    if (typeof sourcesData === 'string') {
+      try {
+        sourcesData = JSON.parse(sourcesData);
+        console.log('Successfully parsed stringified sources');
+      } catch (parseError) {
+        console.log('Failed to parse sources string, using empty array');
+        sourcesData = [];
+      }
+    }
+    
+    if (Array.isArray(sourcesData)) {
+      console.log('Processing sources array with length:', sourcesData.length);
+      cleanSources = sourcesData.map((source, index) => {
+        console.log(`Processing source ${index}:`, typeof source, source);
+        return {
         title: String(source.title || ''),
         url: String(source.url || ''),
         snippet: String(source.snippet || ''),
         domain: String(source.domain || ''),
         type: String(source.type || ''),
         verified: Boolean(source.verified || false)
-      }));
-    } else if (typeof allAboutData.sources === 'string') {
-      try {
-        const parsed = JSON.parse(allAboutData.sources);
-        if (Array.isArray(parsed)) {
-          cleanSources = parsed.map(source => ({
-            title: String(source.title || ''),
-            url: String(source.url || ''),
-            snippet: String(source.snippet || ''),
-            domain: String(source.domain || ''),
-            type: String(source.type || ''),
-            verified: Boolean(source.verified || false)
-          }));
-        }
-      } catch (parseError) {
-        console.log('Failed to parse sources string, using empty array');
-        cleanSources = [];
-      }
+        };
+      });
+    } else {
+      console.log('Sources is not an array after parsing, using empty array');
+      cleanSources = [];
     }
   }
   
   // Clean citations - ensure it's a proper array
   let cleanCitations = [];
-  if (allAboutData.citations) {
-    if (Array.isArray(allAboutData.citations)) {
-      cleanCitations = allAboutData.citations.map(citation => ({
-        title: String(citation.title || ''),
-        url: String(citation.url || ''),
-        snippet: String(citation.snippet || ''),
-        verified: Boolean(citation.verified || false)
-      }));
-    } else if (typeof allAboutData.citations === 'string') {
+  if (workingData.citations) {
+    // Handle stringified citations
+    let citationsData = workingData.citations;
+    if (typeof citationsData === 'string') {
       // Handle single URL string
-      if (allAboutData.citations.startsWith('http')) {
+      if (citationsData.startsWith('http')) {
         cleanCitations = [{
           title: 'Citation Reference',
-          url: String(allAboutData.citations),
+          url: String(citationsData),
           snippet: '',
           verified: false
         }];
       } else {
         try {
-          const parsed = JSON.parse(allAboutData.citations);
-          if (Array.isArray(parsed)) {
-            cleanCitations = parsed.map(citation => ({
-              title: String(citation.title || ''),
-              url: String(citation.url || ''),
-              snippet: String(citation.snippet || ''),
-              verified: Boolean(citation.verified || false)
-            }));
-          }
+          citationsData = JSON.parse(citationsData);
+          console.log('Parsed stringified citations');
         } catch (parseError) {
           console.log('Failed to parse citations string, using empty array');
-          cleanCitations = [];
+          citationsData = [];
         }
       }
+    }
+    
+    if (Array.isArray(citationsData)) {
+      cleanCitations = citationsData.map(citation => ({
+        title: String(citation.title || ''),
+        url: String(citation.url || ''),
+        snippet: String(citation.snippet || ''),
+        verified: Boolean(citation.verified || false)
+      }));
     }
   }
   
   // Clean related questions - ensure it's a proper array of strings
   let cleanRelatedQuestions = [];
-  if (allAboutData.relatedQuestions) {
-    if (Array.isArray(allAboutData.relatedQuestions)) {
-      cleanRelatedQuestions = allAboutData.relatedQuestions.map(q => String(q || ''));
-    } else if (typeof allAboutData.relatedQuestions === 'string') {
+  if (workingData.relatedQuestions) {
+    let questionsData = workingData.relatedQuestions;
+    if (typeof questionsData === 'string') {
       try {
-        const parsed = JSON.parse(allAboutData.relatedQuestions);
-        if (Array.isArray(parsed)) {
-          cleanRelatedQuestions = parsed.map(q => String(q || ''));
-        }
+        questionsData = JSON.parse(questionsData);
+        console.log('Parsed stringified related questions');
       } catch (parseError) {
         console.log('Failed to parse relatedQuestions string, using empty array');
-        cleanRelatedQuestions = [];
+        questionsData = [];
       }
+    }
+    
+    if (Array.isArray(questionsData)) {
+      cleanRelatedQuestions = questionsData.map(q => String(q || ''));
     }
   }
   
@@ -964,9 +985,9 @@ function cleanAllAboutDataForSave(allAboutData, name, provider, model) {
     sources: cleanSources,
     citations: cleanCitations,
     relatedQuestions: cleanRelatedQuestions,
-    searchQuery: String(allAboutData.metadata?.searchQuery || name),
-    aiProvider: String(allAboutData.metadata?.aiProvider || provider),
-    aiModel: String(allAboutData.metadata?.aiModel || model)
+    searchQuery: String(workingData.metadata?.searchQuery || name),
+    aiProvider: String(workingData.metadata?.aiProvider || provider),
+    aiModel: String(workingData.metadata?.aiModel || model)
   };
   
   console.log('Final cleaned data types:', {
@@ -980,6 +1001,25 @@ function cleanAllAboutDataForSave(allAboutData, name, provider, model) {
     relatedQuestions: typeof result.relatedQuestions,
     relatedQuestionsIsArray: Array.isArray(result.relatedQuestions)
   });
+  
+  // FINAL VALIDATION: Ensure no nested stringified arrays
+  if (result.sources && Array.isArray(result.sources)) {
+    result.sources = result.sources.filter(source => {
+      if (typeof source === 'string') {
+        console.log('Found stringified source, attempting to parse:', source.substring(0, 100));
+        try {
+          const parsed = JSON.parse(source);
+          if (typeof parsed === 'object' && parsed.title && parsed.url) {
+            return parsed;
+          }
+        } catch (e) {
+          console.log('Failed to parse stringified source, filtering out');
+          return false;
+        }
+      }
+      return typeof source === 'object' && source.title && source.url;
+    });
+  }
   
   return result;
 }
