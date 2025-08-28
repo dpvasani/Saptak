@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
+import AllAboutDisplay from '../components/AllAboutDisplay';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -23,6 +24,7 @@ const VerificationDetail = () => {
   const [editValue, setEditValue] = useState('');
   const [selectedFields, setSelectedFields] = useState(new Set());
   const [bulkAction, setBulkAction] = useState('');
+  const [showAllAboutData, setShowAllAboutData] = useState(false);
 
   const categoryConfig = {
     artists: {
@@ -694,6 +696,41 @@ const VerificationDetail = () => {
           {config.fields.map(renderField)}
         </div>
 
+        {/* Summary Mode Data Section */}
+        {item?.allAboutData && (
+          <div className="mt-8">
+            <div className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl border border-gray-800 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-white flex items-center">
+                    📝 Summary Mode Data
+                  </h3>
+                  <button
+                    onClick={() => setShowAllAboutData(!showAllAboutData)}
+                    className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+                  >
+                    {showAllAboutData ? 'Hide' : 'Show'} Summary Data
+                  </button>
+                </div>
+              </div>
+              
+              {showAllAboutData && (
+                <div className="p-6">
+                  <AllAboutDisplay
+                    data={item.allAboutData}
+                    category={category}
+                    onDataUpdate={(updatedData) => {
+                      setItem(prevItem => ({
+                        ...prevItem,
+                        allAboutData: updatedData
+                      }));
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {/* Metadata */}
         <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Metadata</h3>

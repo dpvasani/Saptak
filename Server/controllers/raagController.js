@@ -135,27 +135,37 @@ exports.updateRaag = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const userId = req.user?.userId;
 
-    // Only allow updating verified fields
     const raag = await Raag.findById(id);
     if (!raag) {
       return res.status(404).json({ message: 'Raag not found' });
     }
 
-    // Update only verified fields
+    // Update all provided fields (including allAboutData)
     Object.keys(updates).forEach(field => {
-      if (raag[field] && updates[field].verified) {
+      if (updates[field] !== undefined) {
         raag[field] = updates[field];
       }
     });
 
+    if (userId) {
+      raag.modifiedBy = userId;
+    }
     raag.updatedAt = Date.now();
     await raag.save();
 
-    res.json(raag);
+    res.json({
+      success: true,
+      data: raag,
+      message: 'Raag updated successfully'
+    });
   } catch (error) {
     console.error('Error in updateRaag:', error);
-    res.status(500).json({ message: 'Error updating raag' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error updating raag' 
+    });
   }
 };
 

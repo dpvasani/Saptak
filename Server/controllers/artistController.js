@@ -227,27 +227,37 @@ exports.updateArtist = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const userId = req.user?.userId;
 
-    // Only allow updating verified fields
     const artist = await Artist.findById(id);
     if (!artist) {
       return res.status(404).json({ message: 'Artist not found' });
     }
 
-    // Update only verified fields
+    // Update all provided fields (including allAboutData)
     Object.keys(updates).forEach(field => {
-      if (artist[field] && updates[field].verified) {
+      if (updates[field] !== undefined) {
         artist[field] = updates[field];
       }
     });
 
+    if (userId) {
+      artist.modifiedBy = userId;
+    }
     artist.updatedAt = Date.now();
     await artist.save();
 
-    res.json(artist);
+    res.json({
+      success: true,
+      data: artist,
+      message: 'Artist updated successfully'
+    });
   } catch (error) {
     console.error('Error in updateArtist:', error);
-    res.status(500).json({ message: 'Error updating artist' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error updating artist' 
+    });
   }
 };
 

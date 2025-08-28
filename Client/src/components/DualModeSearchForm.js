@@ -249,7 +249,7 @@ const DualModeSearchForm = ({
 
                   {/* Option 2: Summary Mode */}
                   <div className={`bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg p-4 border-2 border-gray-700 shadow-sm relative transition-all duration-300 ${
-                    structuredDropdownOpen ? 'mt-80' : ''
+                    (structuredDropdownOpen || allAboutDropdownOpen) ? 'mt-80' : ''
                   }`}>
                     <div className="flex items-start space-x-3">
                       <input

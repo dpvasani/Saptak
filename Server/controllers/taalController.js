@@ -135,27 +135,37 @@ exports.updateTaal = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const userId = req.user?.userId;
 
-    // Only allow updating verified fields
     const taal = await Taal.findById(id);
     if (!taal) {
       return res.status(404).json({ message: 'Taal not found' });
     }
 
-    // Update only verified fields
+    // Update all provided fields (including allAboutData)
     Object.keys(updates).forEach(field => {
-      if (taal[field] && updates[field].verified) {
+      if (updates[field] !== undefined) {
         taal[field] = updates[field];
       }
     });
 
+    if (userId) {
+      taal.modifiedBy = userId;
+    }
     taal.updatedAt = Date.now();
     await taal.save();
 
-    res.json(taal);
+    res.json({
+      success: true,
+      data: taal,
+      message: 'Taal updated successfully'
+    });
   } catch (error) {
     console.error('Error in updateTaal:', error);
-    res.status(500).json({ message: 'Error updating taal' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error updating taal' 
+    });
   }
 };
 
