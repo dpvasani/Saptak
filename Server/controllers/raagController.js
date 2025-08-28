@@ -433,7 +433,10 @@ exports.exportSingleRaag = async (req, res) => {
       case 'markdown':
         const markdown = generateRaagMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="${raag.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.md"`);
+        const raagName = raag.name?.value || 'Unknown Raag';
+        const shortId = raag._id.toString().slice(-8);
+        const cleanName = raagName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+        res.setHeader('Content-Disposition', `attachment; filename="${cleanName} ${shortId}.md"`);
         res.send(markdown);
         break;
         
@@ -471,9 +474,25 @@ exports.exportRaags = async (req, res) => {
     }
 
     const exportData = raags.map(raag => formatRaagForExport(raag));
-    const filename = ids && ids.length > 0 ? 
-      `selected-raags-${ids.length}` : 
-      `all-raags-${raags.length}`;
+    
+    let filename;
+    if (ids && ids.length > 0) {
+      if (ids.length === 1) {
+        // Single raag: use raag name with ID
+        const raag = raags[0];
+        const raagName = raag.name?.value || 'Unknown Raag';
+        const shortId = raag._id.toString().slice(-8);
+        filename = `${raagName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} ${shortId}`;
+      } else {
+        // Multiple selected raags: use first raag name + count
+        const firstRaag = raags[0];
+        const firstName = firstRaag.name?.value || 'Unknown';
+        filename = `${firstName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} and ${ids.length - 1} others`;
+      }
+    } else {
+      // All raags
+      filename = `All Raags ${raags.length}`;
+    }
 
     switch (format.toLowerCase()) {
       case 'markdown':

@@ -402,7 +402,10 @@ exports.exportSingleTaal = async (req, res) => {
       case 'markdown': {
         const md = generateTaalMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="${(taal.name?.value || 'taal').replace(/[^a-zA-Z0-9]/g, '-')}.md"`);
+        const taalName = taal.name?.value || 'Unknown Taal';
+        const shortId = taal._id.toString().slice(-8);
+        const cleanName = taalName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+        res.setHeader('Content-Disposition', `attachment; filename="${cleanName} ${shortId}.md"`);
         res.send(md);
         break;
       }
@@ -431,7 +434,26 @@ exports.exportTaals = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No taals found to export' });
     }
     const exportData = taals.map(t => formatTaalForExport(t));
-    const filename = ids && ids.length > 0 ? `selected-taals-${ids.length}` : `all-taals-${taals.length}`;
+    
+    let filename;
+    if (ids && ids.length > 0) {
+      if (ids.length === 1) {
+        // Single taal: use taal name with ID
+        const taal = taals[0];
+        const taalName = taal.name?.value || 'Unknown Taal';
+        const shortId = taal._id.toString().slice(-8);
+        filename = `${taalName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} ${shortId}`;
+      } else {
+        // Multiple selected taals: use first taal name + count
+        const firstTaal = taals[0];
+        const firstName = firstTaal.name?.value || 'Unknown';
+        filename = `${firstName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} and ${ids.length - 1} others`;
+      }
+    } else {
+      // All taals
+      filename = `All Taals ${taals.length}`;
+    }
+    
     switch (format.toLowerCase()) {
       case 'markdown': {
         const md = generateTaalMarkdown(exportData);

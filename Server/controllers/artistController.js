@@ -583,7 +583,10 @@ exports.exportSingleArtist = async (req, res) => {
       case 'markdown':
         const markdown = this.generateMarkdown([exportData]);
         res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.md"`);
+        const artistName = artist.name?.value || 'Unknown Artist';
+        const shortId = artist._id.toString().slice(-8);
+        const cleanName = artistName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+        res.setHeader('Content-Disposition', `attachment; filename="${cleanName} ${shortId}.md"`);
         res.send(markdown);
         break;
         
@@ -594,7 +597,7 @@ exports.exportSingleArtist = async (req, res) => {
           data: {
             format: 'pdf',
             content: [exportData],
-            filename: `${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`
+            filename: `${cleanName} ${shortId}.pdf`
           }
         });
         break;
@@ -606,7 +609,7 @@ exports.exportSingleArtist = async (req, res) => {
           data: {
             format: 'word',
             content: [exportData],
-            filename: `${artist.name.value.replace(/[^a-zA-Z0-9]/g, '-')}.docx`
+            filename: `${cleanName} ${shortId}.docx`
           }
         });
         break;
@@ -646,9 +649,25 @@ exports.exportArtists = async (req, res) => {
     }
 
     const exportData = artists.map(artist => this.formatArtistForExport(artist));
-    const filename = ids && ids.length > 0 ? 
-      `selected-artists-${ids.length}` : 
-      `all-artists-${artists.length}`;
+    
+    let filename;
+    if (ids && ids.length > 0) {
+      if (ids.length === 1) {
+        // Single artist: use artist name with ID
+        const artist = artists[0];
+        const artistName = artist.name?.value || 'Unknown Artist';
+        const shortId = artist._id.toString().slice(-8);
+        filename = `${artistName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} ${shortId}`;
+      } else {
+        // Multiple selected artists: use first artist name + count
+        const firstArtist = artists[0];
+        const firstName = firstArtist.name?.value || 'Unknown';
+        filename = `${firstName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-')} and ${ids.length - 1} others`;
+      }
+    } else {
+      // All artists
+      filename = `All Artists ${artists.length}`;
+    }
 
     switch (format.toLowerCase()) {
       case 'markdown':
