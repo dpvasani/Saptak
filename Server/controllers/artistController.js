@@ -333,50 +333,7 @@ exports.getAllAboutArtist = async (req, res) => {
         
         savedArtist = await newArtist.save();
         console.log('Successfully created new artist with All About data:', savedArtist._id);
-          name: {
-            value: name,
-            reference: 'All About Search',
-            verified: false
-          },
-          guru: {
-            value: '',
-            reference: 'Not searched in All About mode',
-            verified: false
-          },
-          gharana: {
-            value: '',
-            reference: 'Not searched in All About mode',
-            verified: false
-          },
-          notableAchievements: {
-            value: '',
-            reference: 'Not searched in All About mode',
-            verified: false
-          },
-          disciples: {
-            value: '',
-            reference: 'Not searched in All About mode',
-            verified: false
-          },
-          summary: {
-            value: '',
-            reference: 'Not searched in All About mode',
-            verified: false
-          },
-          allAboutData: safeAllAboutData,
-          createdBy: userId,
-          modifiedBy: userId,
-          searchMetadata: {
-            searchMethod: 'ai',
-            aiProvider: provider,
-            aiModel: model,
-            searchQuery: name,
-            searchTimestamp: new Date()
-          }
-        });
-        
-        savedArtist = await newArtist.save();
-        console.log('Successfully created new artist with All About data:', savedArtist._id);
+      }
       }
     } catch (saveError) {
       console.error('Error saving All About data to artist:', saveError.message);
