@@ -1,744 +1,393 @@
-const axios = require('axios');
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import debounce from 'lodash.debounce';
+import AIModelSelector from './AIModelSelector';
+import { 
+  MagnifyingGlassIcon,
+  GlobeAltIcon,
+  CpuChipIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
 
-class PerplexityResearcher {
-  constructor() {
-    this.apiKey = process.env.PERPLEXITY_API_KEY;
-    this.baseURL = 'https://api.perplexity.ai/chat/completions';
-    // Use sonar-pro for faster, reliable research
-    this.model = 'sonar-pro'; // Fast and comprehensive
-    this.fallbackModels = [
-      'sonar', // Lightweight for quick responses
-      'sonar-reasoning-pro', // Advanced reasoning for complex queries
-      'sonar-reasoning', // Fast reasoning for general tasks
-      'r1-1776', // Specialized for factuality and precision
-      // Third-party models for fallback
-      'gpt-4-turbo', // OpenAI GPT-4 Turbo
-      'claude-3-sonnet', // Anthropic Claude 3
-      'gemini-1.5-pro', // Google Gemini 1.5 Pro
-    ];
-  }
-
-  async researchArtist(name) {
-    console.log('Starting Perplexity AI research for artist:', name);
-    
-    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
-      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
-    }
-    
-    // Simplified, faster prompt for structured data extraction
-    const prompt = `Research the Indian Classical Music artist "${name}" and provide structured information in JSON format.
-
-Find information about:
-- Full name and basic details
-- Primary guru/teacher
-- Gharana/musical tradition
-- Major awards and achievements
-- Notable disciples/students
-- Brief biographical summary
-
-Provide the information in this exact JSON format:
-
-{
-  "name": {
-    "value": "${name}",
-    "reference": "Primary source URL",
-    "verified": false
-  },
-  "guru": {
-    "value": "Primary guru/teacher name with title (Ustad/Pandit)",
-    "reference": "Source URL for guru information",
-    "verified": false
-  },
-  "gharana": {
-    "value": "Gharana name (e.g., 'Patiala Gharana', 'Kirana Gharana')",
-    "reference": "Source URL for gharana information",
-    "verified": false
-  },
-  "notableAchievements": {
-    "value": "Major awards and achievements with years",
-    "reference": "Source URL for achievements",
-    "verified": false
-  },
-  "disciples": {
-    "value": "Notable disciples/students or 'No specific disciples documented'",
-    "reference": "Source URL for disciples information",
-    "verified": false
-  },
-  "summary": {
-    "value": "Brief biographical summary (150-200 words)",
-    "reference": "Primary biographical source URL",
-    "verified": false
-  }
-}
-
-- **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
-- **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
-`;
-
-    try {
-      const response = await axios.post(this.baseURL, {
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
-
-RESEARCH EXPERTISE:
-- Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
-- Advanced web research techniques for finding official artist information
-- Social media intelligence for extracting biographical details
-- Academic and institutional database navigation
-- Cross-referencing and fact-verification across multiple sources
-- Understanding of gharana systems, guru-shishya traditions, and musical lineages
-
-SEARCH METHODOLOGY:
-1. **Official Source Priority**: Always search for official websites, verified social media, artist biographies first
-2. **Social Media Mining**: Extract valuable biographical information from Facebook, Instagram, Twitter, YouTube profiles and posts
-3. **Institutional Deep Dive**: Thoroughly search music institutions, academies, universities, and cultural organizations
-4. **Academic Cross-Reference**: Use scholarly articles, research papers, and academic publications for verification
-5. **Contemporary Sources**: Include recent interviews, articles, and current biographical content
-6. **Lineage Tracking**: Pay special attention to guru-shishya relationships and gharana affiliations
-7. **Legacy Documentation**: Focus on finding information about disciples and teaching contributions
-
-CRITICAL SUCCESS FACTORS:
-- Conduct multi-step, systematic research as outlined in the user prompt
-- Never skip the specific searches for gharana, guru, disciples, and achievements
-- Use official websites and verified social media as primary sources when available
-- Cross-verify information from multiple independent sources
-- Return comprehensive, accurate information with working URLs
-- If information is genuinely not available, clearly state this in the reference field
-
-RESPONSE REQUIREMENTS:
-- Return ONLY valid JSON without any additional text
-- Use real, accessible URLs that can be verified
-- Be precise with Indian music terminology and proper names
-- Include titles (Ustad, Pandit) when mentioned in sources
-- Focus on factual, verifiable biographical and musical information`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.02, // Extremely low temperature for maximum factual accuracy
-        max_tokens: 2000, // Reduced tokens for faster response
-        top_p: 0.9, // Slightly higher for better source diversity
-        // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
-        frequency_penalty: 0.1 // Reduce repetition only
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 60000 // 60 second timeout for comprehensive research
-      });
-
-      console.log('Perplexity API response received');
-      const responseText = response.data.choices[0].message.content;
-      console.log('Raw Perplexity response:', responseText);
-      return this.parseAIResponse(responseText);
-    } catch (error) {
-      console.error('Error in Perplexity research:', error);
-      if (error.response) {
-        console.error('Perplexity API error:', error.response.data);
-        
-        // Try fallback models if primary model fails
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt, 'artist');
-        }
-        
-        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
-      }
-      throw new Error('Failed to research artist using Perplexity AI: ' + error.message);
-    }
-  }
-
-  async researchRaag(name) {
-    console.log('Starting Perplexity AI research for raag:', name);
-    
-    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
-      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
-    }
-    
-    const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
-
-**STEP 1: Primary Musical Sources**
-- Search Wikipedia for detailed "${name}" raag article
-- Look for "${name}" in specialized raga databases and music theory websites
-- Check classical music learning platforms and educational resources
-- Find "${name}" in music institution websites (Sangeet Natak Akademi, ITC SRA)
-
-**STEP 2: Academic and Scholarly Sources**
-- Search academic musicology papers mentioning "${name}"
-- Look for university music department resources and course materials
-- Check scholarly articles on Indian music theory featuring "${name}"
-- Find research publications and dissertations about "${name}"
-
-**STEP 3: Practical Music Sources**
-- Search for "${name}" in tabla/sitar/vocal learning websites
-- Look for "${name}" performance guides and tutorials
-- Check music teacher resources and instructional materials
-- Find "${name}" in concert programs and performance notes
-
-**STEP 4: Specific Technical Information**
-For AROHA/AVROHA: Search for:
-- "${name} aroha avroha notes"
-- "${name} scale ascending descending"
-- "${name} swaras sequence"
-
-For THAAT: Search for:
-- "${name} thaat parent scale"
-- "${name} belongs to thaat"
-- "${name} classification"
-
-For VADI/SAMVADI: Search for:
-- "${name} vadi samvadi notes"
-- "${name} important notes"
-- "${name} dominant subdominant"
-
-Provide accurate musical information in this JSON format:
-
-{
-  "name": {
-    "value": "${name}",
-    "reference": "Most authoritative source URL",
-    "verified": false
-  },
-  "aroha": {
-    "value": "Complete ascending note sequence using proper sargam notation (Sa Re Ga Ma Pa Dha Ni Sa format with komal/tivra markings)",
-    "reference": "Specific URL where aroha/ascending scale is clearly mentioned",
-    "verified": false
-  },
-  "avroha": {
-    "value": "Complete descending note sequence using proper sargam notation with komal/tivra markings",
-    "reference": "Specific URL where avroha/descending scale is clearly mentioned",
-    "verified": false
-  },
-  "chalan": {
-    "value": "Characteristic melodic phrases, pakad, or typical note movements that define the raag",
-    "reference": "URL mentioning chalan, pakad, or characteristic phrases",
-    "verified": false
-  },
-  "vadi": {
-    "value": "Most important/dominant note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
-    "reference": "URL specifically mentioning vadi swara or dominant note",
-    "verified": false
-  },
-  "samvadi": {
-    "value": "Second most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
-    "reference": "URL specifically mentioning samvadi swara or subdominant note",
-    "verified": false
-  },
-  "thaat": {
-    "value": "Parent thaat/scale name (e.g., Bilawal, Khamaj, Kafi, Kalyan, Bhairav, etc.)",
-    "reference": "URL specifically mentioning thaat classification or parent scale",
-    "verified": false
-  },
-  "rasBhaav": {
-    "value": "Emotional content, mood, and aesthetic expression (e.g., devotional, romantic, peaceful, heroic, melancholic)",
-    "reference": "URL discussing emotional aspects, mood, or aesthetic qualities",
-    "verified": false
-  },
-  "tanpuraTuning": {
-    "value": "Recommended tanpura tuning notes (e.g., Sa Pa Sa Sa, Sa Ma Sa Sa)",
-    "reference": "URL mentioning tanpura tuning or drone notes",
-    "verified": false
-  },
-  "timeOfRendition": {
-    "value": "Traditional time of performance with specific periods (early morning, late morning, afternoon, evening, night, late night)",
-    "reference": "URL mentioning traditional performance time or time theory",
-    "verified": false
-  }
-}
-
-REQUIREMENTS:
-- Conduct systematic multi-step research as outlined above
-- Use proper sargam notation with komal (♭) and tivra (♯) markings when applicable
-- Provide specific note names for vadi/samvadi with proper notation
-- Use standard, recognized thaat names from Indian music theory
-- Include detailed aroha/avroha sequences as found in authoritative sources
-- Return only verified musical information found in your comprehensive search
-- Use real, accessible URLs as references that can be verified`;
-
-    try {
-      const response = await axios.post(this.baseURL, {
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert Indian Classical Music theorist and raga researcher with comprehensive knowledge of:
-
-MUSICAL EXPERTISE:
-- Deep understanding of raga theory, thaat system, and melodic structures
-- Expertise in sargam notation, swara relationships, and musical scales
-- Knowledge of traditional performance practices and time theory
-- Understanding of emotional aesthetics (rasa-bhava) in Indian music
-- Familiarity with both Hindustani and Carnatic traditions
-
-RESEARCH METHODOLOGY:
-1. **Technical Source Priority**: Focus on music theory websites, academic papers, and educational resources
-2. **Cross-Reference Verification**: Verify technical details across multiple authoritative sources
-3. **Notation Accuracy**: Ensure proper sargam notation with correct komal/tivra markings
-4. **Traditional Knowledge**: Include traditional performance practices and cultural context
-5. **Contemporary Resources**: Use modern learning platforms and digital music resources
-
-CRITICAL REQUIREMENTS:
-- Conduct thorough multi-step research as specified in the user prompt
-- Pay special attention to technical musical details (aroha, avroha, vadi, samvadi)
-- Use proper Indian music terminology and notation systems
-- Verify information across multiple independent musical sources
-- Include both theoretical and practical aspects of the raga
-- Return comprehensive, technically accurate information with working URLs`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.02,
-        max_tokens: 3000,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.2
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 45000
-      });
-
-      console.log('Perplexity API response received');
-      const responseText = response.data.choices[0].message.content;
-      console.log('Raw Perplexity response:', responseText);
-      return this.parseAIResponse(responseText);
-    } catch (error) {
-      console.error('Error in Perplexity research:', error);
-      if (error.response) {
-        console.error('Perplexity API error:', error.response.data);
-        
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt, 'raag');
-        }
-        
-        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
-      }
-      throw new Error('Failed to research raag using Perplexity AI: ' + error.message);
-    }
-  }
-
-  async researchTaal(name) {
-    console.log('Starting Perplexity AI research for taal:', name);
-    
-    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
-      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
-    }
-    
-    const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
-
-**STEP 1: Primary Rhythm Sources**
-- Search Wikipedia for detailed "${name}" taal article
-- Look for "${name}" in tabla learning websites and percussion resources
-- Check rhythm and taal databases, music theory websites
-- Find "${name}" in classical music institution websites
-
-**STEP 2: Educational and Academic Sources**
-- Search academic papers on Indian rhythm systems mentioning "${name}"
-- Look for music conservatory and university resources about "${name}"
-- Check scholarly articles on taal theory and rhythmic systems
-- Find research publications about Indian percussion and rhythm
-
-**STEP 3: Practical Learning Sources**
-- Search tabla tutorial websites and learning platforms for "${name}"
-- Look for "${name}" in music teacher resources and instructional materials
-- Check percussion method books and educational content
-- Find "${name}" in concert programs and performance guides
-
-**STEP 4: Specific Technical Information**
-For BEAT STRUCTURE: Search for:
-- "${name} beats matras structure"
-- "${name} rhythm pattern"
-- "${name} time signature"
-
-For TAALI/KHAALI: Search for:
-- "${name} taali khaali positions"
-- "${name} clap wave pattern"
-- "${name} beat emphasis"
-
-For DIVISIONS: Search for:
-- "${name} vibhag divisions"
-- "${name} sections structure"
-- "${name} rhythmic grouping"
-
-Provide accurate rhythmic information in this JSON format:
-
-{
-  "name": {
-    "value": "${name}",
-    "reference": "Most authoritative source URL",
-    "verified": false
-  },
-  "numberOfBeats": {
-    "value": "Total number of matras/beats as a number (e.g., 16, 12, 10, 14, 7)",
-    "reference": "URL specifically mentioning the total beat count or matra structure",
-    "verified": false
-  },
-  "divisions": {
-    "value": "Complete vibhag/section structure description (e.g., '4 vibhags of 4 beats each', '3 vibhags: 4+2+2')",
-    "reference": "URL describing vibhag structure or rhythmic divisions",
-    "verified": false
-  },
-  "taali": {
-    "count": {
-      "value": "Number of taali (clap) positions as a number",
-      "reference": "URL mentioning taali count or clap positions",
-      "verified": false
-    },
-    "beatNumbers": {
-      "value": "Specific beat numbers where taali/claps occur (e.g., '1, 5, 13' or '1, 4, 7')",
-      "reference": "URL showing exact taali positions or clap beats",
-      "verified": false
-    }
-  },
-  "khaali": {
-    "count": {
-      "value": "Number of khaali (wave) positions as a number",
-      "reference": "URL mentioning khaali count or wave positions",
-      "verified": false
-    },
-    "beatNumbers": {
-      "value": "Specific beat numbers where khaali/waves occur (e.g., '9' or '5, 9')",
-      "reference": "URL showing exact khaali positions or wave beats",
-      "verified": false
-    }
-  },
-  "jaati": {
-    "value": "Jaati classification based on subdivision (Chatusra, Tisra, Khanda, Misra, or Sankeerna)",
-    "reference": "URL mentioning jaati classification or rhythmic subdivision",
-    "verified": false
-  }
-}
-
-REQUIREMENTS:
-- Conduct systematic multi-step research as outlined above
-- Provide exact beat numbers, counts, and mathematical relationships
-- Use standard jaati terminology from Indian rhythm theory
-- Ensure mathematical accuracy (taali + khaali positions should align with total beats)
-- Include complete vibhag structure with proper divisions
-- Return only verified rhythmic information found in your comprehensive search
-- Use real, accessible URLs as references that can be verified`;
-
-    try {
-      const response = await axios.post(this.baseURL, {
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert Indian Classical Music rhythmist and taal researcher with comprehensive knowledge of:
-
-RHYTHMIC EXPERTISE:
-- Deep understanding of taal theory, matra systems, and rhythmic structures
-- Expertise in taali-khaali patterns, vibhag divisions, and beat mathematics
-- Knowledge of jaati classifications and rhythmic subdivisions
-- Understanding of tabla, pakhawaj, and other percussion traditions
-- Familiarity with both theoretical and practical aspects of Indian rhythm
-
-RESEARCH METHODOLOGY:
-1. **Percussion Source Priority**: Focus on tabla websites, rhythm learning platforms, and percussion resources
-2. **Mathematical Verification**: Ensure all beat counts, divisions, and patterns are mathematically accurate
-3. **Pattern Analysis**: Verify taali-khaali patterns across multiple authoritative sources
-4. **Traditional Knowledge**: Include traditional performance practices and cultural context
-5. **Educational Resources**: Use modern learning platforms and digital rhythm resources
-
-CRITICAL REQUIREMENTS:
-- Conduct thorough multi-step research as specified in the user prompt
-- Pay special attention to mathematical accuracy of beat structures
-- Verify taali-khaali patterns and vibhag divisions across multiple sources
-- Use proper Indian rhythm terminology and classification systems
-- Include both theoretical framework and practical performance aspects
-- Return comprehensive, mathematically accurate information with working URLs`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.02,
-        max_tokens: 3000,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.2
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 45000
-      });
-
-      console.log('Perplexity API response received');
-      const responseText = response.data.choices[0].message.content;
-      console.log('Raw Perplexity response:', responseText);
-      return this.parseAIResponse(responseText);
-    } catch (error) {
-      console.error('Error in Perplexity research:', error);
-      if (error.response) {
-        console.error('Perplexity API error:', error.response.data);
-        
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt, 'taal');
-        }
-        
-        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
-      }
-      throw new Error('Failed to research taal using Perplexity AI: ' + error.message);
-    }
-  }
-
-  async researchWithFallbackModel(name, prompt, type) {
-    for (const model of this.fallbackModels) {
-      try {
-        console.log(`Trying fallback model: ${model}`);
-        const response = await axios.post(this.baseURL, {
-          model: model,
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
-- Deep knowledge of Indian Classical Music traditions
-- Access to academic and institutional sources
-- Ability to verify information across multiple sources
-- Understanding of proper musicological terminology
-Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting.`
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.02,
-          max_tokens: 2000,
-          top_p: 0.9
-        }, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 60000
-        });
-
-        console.log(`Fallback model ${model} worked!`);
-        const responseText = response.data.choices[0].message.content;
-        return this.parseAIResponse(responseText);
-      } catch (fallbackError) {
-        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
-        continue;
-      }
-    }
-
-    throw new Error('All Perplexity models failed. Please check your API access and model availability.');
-  }
-
-  parseAIResponse(response) {
-    try {
-      // Clean the response to extract JSON
-      let cleanResponse = response.trim();
-      
-      // Remove any thinking blocks that Perplexity might include
-      cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/g, '');
-      
-      // Remove markdown code blocks if present
-      cleanResponse = cleanResponse.replace(/``\`json\n?/g, '').replace(/```\n?/g, '');
-      
-      // More aggressive cleaning to handle various response formats
-      cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/s, '');
-      
-      // Handle cases where there might be explanatory text after JSON
-      const jsonEndIndex = cleanResponse.lastIndexOf('}');
-      if (jsonEndIndex !== -1) {
-        cleanResponse = cleanResponse.substring(0, jsonEndIndex + 1);
-      }
-      
-      // Find JSON object
-      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        // Convert arrays to strings for fields that expect strings
-        this.normalizeDataTypes(parsed);
-        
-        // Validate and clean the data
-        this.validateAndCleanData(parsed);
-        
-        console.log('Parsed Perplexity response:', parsed);
-        return parsed;
-      }
-      
-      throw new Error('No valid JSON found in Perplexity response');
-    } catch (error) {
-      console.error('Error parsing Perplexity response:', error);
-      console.error('Raw response:', response);
-      throw new Error('Failed to parse Perplexity research results: ' + error.message);
-    }
-  }
-
-  normalizeDataTypes(data) {
-    // Convert arrays to comma-separated strings for fields that expect strings
-    const fieldsToNormalize = ['notableAchievements', 'disciples'];
-    
-    fieldsToNormalize.forEach(field => {
-      if (data[field] && data[field].value && Array.isArray(data[field].value)) {
-        data[field].value = data[field].value.join(', ');
-      }
-    });
-    
-    // Handle nested fields for taals
-    if (data.taali) {
-      if (data.taali.count && data.taali.count.value && Array.isArray(data.taali.count.value)) {
-        data.taali.count.value = data.taali.count.value.join(', ');
-      }
-      if (data.taali.beatNumbers && data.taali.beatNumbers.value && Array.isArray(data.taali.beatNumbers.value)) {
-        data.taali.beatNumbers.value = data.taali.beatNumbers.value.join(', ');
-      }
-    }
-    
-    if (data.khaali) {
-      if (data.khaali.count && data.khaali.count.value && Array.isArray(data.khaali.count.value)) {
-        data.khaali.count.value = data.khaali.count.value.join(', ');
-      }
-      if (data.khaali.beatNumbers && data.khaali.beatNumbers.value && Array.isArray(data.khaali.beatNumbers.value)) {
-        data.khaali.beatNumbers.value = data.khaali.beatNumbers.value.join(', ');
-      }
-    }
-  }
-
-  validateAndCleanData(data) {
-    // Ensure all required fields exist with proper structure
-    const requiredFields = ['name'];
-    const optionalFields = ['guru', 'gharana', 'notableAchievements', 'disciples', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition', 'numberOfBeats', 'divisions', 'jaati'];
-    
-    requiredFields.forEach(field => {
-      if (!data[field]) {
-        data[field] = { value: '', reference: 'Required field - information not found in comprehensive search', verified: false };
-      } else {
-        // Ensure each field has the required structure
-        if (typeof data[field].value === 'undefined') data[field].value = '';
-        if (typeof data[field].reference === 'undefined') data[field].reference = 'Source reference not provided';
-        if (typeof data[field].verified === 'undefined') data[field].verified = false;
-        
-        // Convert verified to boolean if it's not already
-        data[field].verified = Boolean(data[field].verified);
-        
-        // Clean and format references
-        data[field].reference = this.cleanReference(data[field].reference);
-      }
-    });
-    
-    // Handle optional fields
-    optionalFields.forEach(field => {
-      if (data[field]) {
-        if (typeof data[field].value === 'undefined') data[field].value = '';
-        if (typeof data[field].reference === 'undefined') data[field].reference = 'Information found but source not specified';
-        if (typeof data[field].verified === 'undefined') data[field].verified = false;
-        data[field].verified = Boolean(data[field].verified);
-        
-        // Clean and format references
-        data[field].reference = this.cleanReference(data[field].reference);
-      }
-    });
-
-    // Special handling for taal nested fields
-    if (data.taali) {
-      if (!data.taali.count) data.taali.count = { value: '', reference: 'Information not found', verified: false };
-      if (!data.taali.beatNumbers) data.taali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-      
-      // Clean references for nested fields
-      data.taali.count.reference = this.cleanReference(data.taali.count.reference);
-      data.taali.beatNumbers.reference = this.cleanReference(data.taali.beatNumbers.reference);
-    }
-    
-    if (data.khaali) {
-      if (!data.khaali.count) data.khaali.count = { value: '', reference: 'Information not found', verified: false };
-      if (!data.khaali.beatNumbers) data.khaali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-      
-      // Clean references for nested fields
-      data.khaali.count.reference = this.cleanReference(data.khaali.count.reference);
-      data.khaali.beatNumbers.reference = this.cleanReference(data.khaali.beatNumbers.reference);
-    }
-  }
-
-  cleanReference(reference) {
-    if (!reference) return 'No source provided';
-    
-    // Handle multiple URLs separated by various delimiters
-    const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
-    let cleanRef = reference;
-    
-    // Check if it contains multiple URLs
-    let hasMultipleUrls = false;
-    for (const separator of urlSeparators) {
-      if (cleanRef.includes(separator)) {
-        hasMultipleUrls = true;
-        break;
-      }
-    }
-    
-    if (hasMultipleUrls) {
-      // Split and clean multiple URLs
-      let urls = cleanRef;
-      for (const separator of urlSeparators) {
-        urls = urls.split(separator).join(' | ');
-      }
-      
-      // Clean each URL
-      const urlList = urls.split(' | ').map(url => {
-        const trimmedUrl = url.trim();
-        
-        // Remove parenthetical descriptions
-        const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
-        
-        // Validate URL format
-        if (this.isValidUrl(cleanUrl)) {
-          return cleanUrl;
-        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
-          return `Invalid URL format: ${cleanUrl}`;
-        } else {
-          return `Non-URL reference: ${cleanUrl}`;
-        }
-      }).filter(url => url.length > 0);
-      
-      return urlList.join(' | ');
-    } else {
-      // Single reference
-      const trimmedRef = cleanRef.trim();
-      
-      // Remove parenthetical descriptions
-      const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
-      
-      // Validate single URL
-      if (this.isValidUrl(cleanSingleRef)) {
-        return cleanSingleRef;
-      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
-        return `Invalid URL format: ${cleanSingleRef}`;
-      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
-        return cleanSingleRef; // Keep explanatory messages as-is
-      } else {
-        return `Non-URL reference: ${cleanSingleRef}`;
-      }
-    }
-  }
+const DualModeSearchForm = ({ 
+  onStructuredSearch, 
+  onAllAboutSearch, 
+  loading, 
+  searchQuery, 
+  setSearchQuery,
+  category = 'artists'
+}) => {
+  // Search method state
+  const [searchMethod, setSearchMethod] = useState('ai');
   
-  isValidUrl(string) {
-    try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch (_) {
-      return false;
-    }
-  }
-}
+  // AI Mode Selection
+  const [useStructuredMode, setUseStructuredMode] = useState(true);
+  const [useAllAboutMode, setUseAllAboutMode] = useState(true);
+  
+  // Structured Mode AI Configuration
+  const [structuredProvider, setStructuredProvider] = useState('perplexity');
+  const [structuredModel, setStructuredModel] = useState('sonar');
+  const [structuredModelData, setStructuredModelData] = useState(null);
+  
+  // Summary Mode AI Configuration
+  const [allAboutProvider, setAllAboutProvider] = useState('perplexity');
+  const [allAboutModel, setAllAboutModel] = useState('sonar-pro');
+  const [allAboutModelData, setAllAboutModelData] = useState(null);
+  
+  // UI State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-module.exports = new PerplexityResearcher();
+  // Set default models when providers change
+  useEffect(() => {
+    if (structuredProvider === 'perplexity') {
+      setStructuredModel('sonar');
+    } else if (structuredProvider === 'openai') {
+      setStructuredModel('gpt-4-turbo');
+    } else if (structuredProvider === 'gemini') {
+      setStructuredModel('gemini-2.5-flash');
+    }
+  }, [structuredProvider]);
+
+  useEffect(() => {
+    if (allAboutProvider === 'perplexity') {
+      setAllAboutModel('sonar-pro');
+    } else if (allAboutProvider === 'openai') {
+      setAllAboutModel('gpt-4-turbo');
+    } else if (allAboutProvider === 'gemini') {
+      setAllAboutModel('gemini-2.5-pro');
+    }
+  }, [allAboutProvider]);
+
+  const handleStructuredModelChange = ({ provider, model, modelData }) => {
+    setStructuredProvider(provider);
+    setStructuredModel(model);
+    setStructuredModelData(modelData);
+  };
+
+  const handleAllAboutModelChange = ({ provider, model, modelData }) => {
+    setAllAboutProvider(provider);
+    setAllAboutModel(model);
+    setAllAboutModelData(modelData);
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    
+    if (!searchQuery.trim()) {
+      return;
+    }
+
+    if (searchMethod === 'web') {
+      // Web scraping mode
+      await onStructuredSearch(searchQuery, false, '', '', null);
+    } else {
+      // AI mode with sequential processing
+      const searchPromises = [];
+      
+      // Validate AI mode selections
+      if (!useStructuredMode && !useAllAboutMode) {
+        alert('Please select at least one AI search mode (Structured Mode or Summary Mode)');
+        return;
+      }
+
+      if (useStructuredMode && (!structuredProvider || !structuredModel)) {
+        alert('Please select AI provider and model for Structured Mode');
+        return;
+      }
+
+      if (useAllAboutMode && (!allAboutProvider || !allAboutModel)) {
+        alert('Please select AI provider and model for Summary Mode');
+        return;
+      }
+
+      // 🔄 SEQUENTIAL PROCESSING: Execute searches in sequence
+      try {
+        let entityId = null;
+
+        // Step 1: Execute structured search first (if selected)
+        if (useStructuredMode) {
+          console.log('🔄 Step 1: Starting Structured Mode search...');
+          const structuredResult = await onStructuredSearch(
+            searchQuery, 
+            true, 
+            structuredProvider, 
+            structuredModel, 
+            structuredModelData
+          );
+          
+          // Extract entity ID from structured search result
+          if (structuredResult && structuredResult._id) {
+            entityId = structuredResult._id;
+            console.log('✅ Step 1 Complete: Got entity ID:', entityId);
+          }
+        }
+
+        // Step 2: Execute Summary Mode search second (if selected)
+        if (useAllAboutMode) {
+          console.log('🔄 Step 2: Starting Summary Mode search...');
+          console.log('🔗 Using entity ID from Step 1:', entityId);
+          
+          await onAllAboutSearch(
+            searchQuery, 
+            allAboutProvider, 
+            allAboutModel, 
+            allAboutModelData,
+            entityId // Pass the entity ID from Step 1
+          );
+          
+          console.log('✅ Step 2 Complete: Summary Mode data saved');
+        }
+
+        console.log('🎉 Sequential processing completed successfully!');
+      } catch (error) {
+        console.error('❌ Sequential processing failed:', error);
+        throw error;
+      }
+    }
+  };
+
+  const categoryLabels = {
+    artists: 'Artist',
+    raags: 'Raag', 
+    taals: 'Taal'
+  };
+
+  return (
+    <motion.div
+      className="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8 border border-gray-800"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <form onSubmit={handleSearch} className="space-y-6">
+        {/* Search Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-3">
+            {categoryLabels[category]} Name
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Enter ${categoryLabels[category].toLowerCase()} name...`}
+              className="w-full px-4 py-3 pl-12 bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-white placeholder-gray-400 backdrop-blur-sm"
+              disabled={loading}
+            />
+            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          </div>
+        </div>
+
+        {/* Search Method Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-3">
+            Search Method
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setSearchMethod('web')}
+              className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                searchMethod === 'web'
+                  ? 'border-blue-500 bg-blue-500 bg-opacity-20 text-blue-400'
+                  : 'border-gray-700 bg-gray-800 bg-opacity-50 text-gray-300 hover:border-blue-500/50'
+              }`}
+              disabled={loading}
+            >
+              <div className="flex items-center justify-center mb-2">
+                <GlobeAltIcon className="h-6 w-6" />
+              </div>
+              <div className="text-sm font-medium">Web Scraping</div>
+              <div className="text-xs text-gray-400 mt-1">Traditional web search</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSearchMethod('ai')}
+              className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                searchMethod === 'ai'
+                  ? 'border-green-500 bg-green-500 bg-opacity-20 text-green-400'
+                  : 'border-gray-700 bg-gray-800 bg-opacity-50 text-gray-300 hover:border-green-500/50'
+              }`}
+              disabled={loading}
+            >
+              <div className="flex items-center justify-center mb-2">
+                <CpuChipIcon className="h-6 w-6" />
+              </div>
+              <div className="text-sm font-medium">AI Search</div>
+              <div className="text-xs text-gray-400 mt-1">AI-powered research</div>
+            </button>
+          </div>
+        </div>
+
+        {/* AI Mode Options - Only shown when AI Search is selected */}
+        {searchMethod === 'ai' && (
+          <motion.div
+            className="space-y-6"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* AI Mode Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-3">
+                AI Search Modes (Sequential Processing)
+              </label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="structuredMode"
+                    checked={useStructuredMode}
+                    onChange={(e) => setUseStructuredMode(e.target.checked)}
+                    className="rounded border-gray-600 text-green-500 shadow-sm focus:border-green-500 focus:ring focus:ring-green-500 focus:ring-opacity-50 bg-gray-700"
+                    disabled={loading}
+                  />
+                  <label htmlFor="structuredMode" className="text-gray-200 font-medium">
+                    🔍 Option 1: Structured Mode (Runs First)
+                  </label>
+                </div>
+                <p className="text-sm text-gray-400 ml-6">
+                  Generates organized field data (guru, gharana, achievements, etc.)
+                </p>
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="allAboutMode"
+                    checked={useAllAboutMode}
+                    onChange={(e) => setUseAllAboutMode(e.target.checked)}
+                    className="rounded border-gray-600 text-green-500 shadow-sm focus:border-green-500 focus:ring focus:ring-green-500 focus:ring-opacity-50 bg-gray-700"
+                    disabled={loading}
+                  />
+                  <label htmlFor="allAboutMode" className="text-gray-200 font-medium">
+                    📝 Option 2: Summary Mode (Runs Second)
+                  </label>
+                </div>
+                <p className="text-sm text-gray-400 ml-6">
+                  Generates comprehensive research summary with images and sources
+                </p>
+              </div>
+            </div>
+
+            {/* Structured Mode AI Configuration */}
+            {useStructuredMode && (
+              <motion.div
+                className="bg-gray-800 bg-opacity-50 rounded-lg p-6 border border-gray-700"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h4 className="text-lg font-semibold text-green-400 mb-4 flex items-center">
+                  🔍 Option 1: Structured Mode Configuration
+                  <span className="ml-2 text-xs bg-green-500 bg-opacity-20 text-green-400 px-2 py-1 rounded-full">
+                    Runs First
+                  </span>
+                </h4>
+                <AIModelSelector
+                  onModelChange={handleStructuredModelChange}
+                  selectedProvider={structuredProvider}
+                  selectedModel={structuredModel}
+                  onDropdownStateChange={setIsDropdownOpen}
+                />
+              </motion.div>
+            )}
+
+            {/* Summary Mode AI Configuration */}
+            {useAllAboutMode && (
+              <motion.div
+                className="bg-gray-800 bg-opacity-50 rounded-lg p-6 border border-gray-700"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h4 className="text-lg font-semibold text-blue-400 mb-4 flex items-center">
+                  📝 Option 2: Summary Mode Configuration
+                  <span className="ml-2 text-xs bg-blue-500 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full">
+                    Runs Second
+                  </span>
+                </h4>
+                <AIModelSelector
+                  onModelChange={handleAllAboutModelChange}
+                  selectedProvider={allAboutProvider}
+                  selectedModel={allAboutModel}
+                  onDropdownStateChange={setIsDropdownOpen}
+                />
+              </motion.div>
+            )}
+
+            {/* Sequential Processing Info */}
+            <div className="bg-blue-500 bg-opacity-10 border border-blue-500/30 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <ClockIcon className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-400 mb-1">Sequential Processing</h4>
+                  <p className="text-xs text-blue-300">
+                    When both modes are selected, Option 1 runs first and creates the document. 
+                    Option 2 then uses the MongoDB ID to update the same document, ensuring all data is saved together.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Search Button */}
+        <button
+          type="submit"
+          disabled={loading || !searchQuery.trim() || (searchMethod === 'ai' && !useStructuredMode && !useAllAboutMode) || isDropdownOpen}
+          className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+              {searchMethod === 'web' ? 'Web Scraping...' : 'AI Researching... (This may take up to 2 minutes)'}
+            </>
+          ) : (
+            <>
+              <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
+              Search {categoryLabels[category]}
+            </>
+          )}
+        </button>
+
+        {/* Search Method Info */}
+        {!loading && (
+          <div className="text-center">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+              searchMethod === 'web' 
+                ? 'bg-blue-500 bg-opacity-20 text-blue-400 border border-blue-500/30'
+                : 'bg-green-500 bg-opacity-20 text-green-400 border border-green-500/30'
+            }`}>
+              {searchMethod === 'web' ? (
+                <>
+                  <GlobeAltIcon className="h-3 w-3 mr-1" />
+                  Web Scraping Mode
+                </>
+              ) : (
+                <>
+                  <CpuChipIcon className="h-3 w-3 mr-1" />
+                  AI Research Mode
+                  {useStructuredMode && useAllAboutMode && (
+                    <span className="ml-1">(Both Options)</span>
+                  )}
+                  {useStructuredMode && !useAllAboutMode && (
+                    <span className="ml-1">(Option 1 Only)</span>
+                  )}
+                  {!useStructuredMode && useAllAboutMode && (
+                    <span className="ml-1">(Option 2 Only)</span>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </form>
+    </motion.div>
+  );
+};
+
+export default DualModeSearchForm;
