@@ -4,20 +4,17 @@ class PerplexityResearcher {
   constructor() {
     this.apiKey = process.env.PERPLEXITY_API_KEY;
     this.baseURL = 'https://api.perplexity.ai/chat/completions';
-    // Use sonar-deep-research for comprehensive music research
-    this.model = 'sonar-deep-research'; // Best for detailed research tasks
+    // Use sonar-pro for faster, reliable research
+    this.model = 'sonar-pro'; // Fast and comprehensive
     this.fallbackModels = [
-      'sonar-pro', // Comprehensive answers with large context
+      'sonar', // Lightweight for quick responses
       'sonar-reasoning-pro', // Advanced reasoning for complex queries
       'sonar-reasoning', // Fast reasoning for general tasks
       'r1-1776', // Specialized for factuality and precision
-      'sonar', // Lightweight for quick responses
       // Third-party models for fallback
       'gpt-4-turbo', // OpenAI GPT-4 Turbo
       'claude-3-sonnet', // Anthropic Claude 3
       'gemini-1.5-pro', // Google Gemini 1.5 Pro
-      'mistral-large', // Mistral AI large model
-      'grok-1' // xAI Grok for general reasoning
     ];
   }
 
@@ -187,7 +184,7 @@ RESPONSE REQUIREMENTS:
           }
         ],
         temperature: 0.02, // Extremely low temperature for maximum factual accuracy
-        max_tokens: 3000, // More tokens for comprehensive research
+        max_tokens: 2000, // Reduced tokens for faster response
         top_p: 0.9, // Slightly higher for better source diversity
         // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
         frequency_penalty: 0.1 // Reduce repetition only
@@ -196,7 +193,7 @@ RESPONSE REQUIREMENTS:
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 45000 // 45 second timeout for comprehensive research
+        timeout: 60000 // 60 second timeout for comprehensive research
       });
 
       console.log('Perplexity API response received');
