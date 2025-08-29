@@ -1,675 +1,744 @@
-const Taal = require('../models/Taal');
-const scraperService = require('../services/scraper');
-const aiResearcher = require('../services/aiResearcher');
-const geminiResearcher = require('../services/geminiResearcher');
-const perplexityResearcher = require('../services/perplexityResearcher');
-const perplexityAllAboutService = require('../services/perplexityAllAboutService');
-const { webScrapingLimiter } = require('../middleware/rateLimiter');
-const mongoose = require('mongoose');
+const axios = require('axios');
 
-exports.searchTaal = async (req, res) => {
-  try {
-    const { name, useAI, aiProvider, aiModel } = req.query;
-    const userId = req.user?.userId;
-    console.log('Search request received:', { name, useAI, aiProvider, aiModel });
+class PerplexityResearcher {
+  constructor() {
+    this.apiKey = process.env.PERPLEXITY_API_KEY;
+    this.baseURL = 'https://api.perplexity.ai/chat/completions';
+    // Use sonar-pro for faster, reliable research
+    this.model = 'sonar-pro'; // Fast and comprehensive
+    this.fallbackModels = [
+      'sonar', // Lightweight for quick responses
+      'sonar-reasoning-pro', // Advanced reasoning for complex queries
+      'sonar-reasoning', // Fast reasoning for general tasks
+      'r1-1776', // Specialized for factuality and precision
+      // Third-party models for fallback
+      'gpt-4-turbo', // OpenAI GPT-4 Turbo
+      'claude-3-sonnet', // Anthropic Claude 3
+      'gemini-1.5-pro', // Google Gemini 1.5 Pro
+    ];
+  }
+
+  async researchArtist(name) {
+    console.log('Starting Perplexity AI research for artist:', name);
     
-    if (!name) {
-      return res.status(400).json({ message: 'Taal name is required' });
+    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
+      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
+    
+    // Simplified, faster prompt for structured data extraction
+    const prompt = `Research the Indian Classical Music artist "${name}" and provide structured information in JSON format.
 
-    if (!userId) {
-      return res.status(401).json({ message: 'Authentication required for search operations' });
-    }
+Find information about:
+- Full name and basic details
+- Primary guru/teacher
+- Gharana/musical tradition
+- Major awards and achievements
+- Notable disciples/students
+- Brief biographical summary
 
-    let data;
-    if (useAI === 'true') {
-      // Use AI research - always get fresh data
-      const provider = aiProvider || 'openai'; // Default to OpenAI
-      const model = aiModel || 'default';
-      console.log(`Using ${provider} AI research (${model}) for taal:`, name);
-      try {
-        if (provider === 'perplexity') {
-          data = await perplexityResearcher.researchTaal(name, model);
-          console.log('Perplexity AI research successful, data received:', data);
-        } else if (provider === 'gemini') {
-          data = await geminiResearcher.researchTaal(name, model);
-          console.log('Gemini AI research successful, data received:', data);
-        } else {
-          data = await aiResearcher.researchTaal(name, model);
-          console.log('OpenAI research successful, data received:', data);
+Provide the information in this exact JSON format:
+
+{
+  "name": {
+    "value": "${name}",
+    "reference": "Primary source URL",
+    "verified": false
+  },
+  "guru": {
+    "value": "Primary guru/teacher name with title (Ustad/Pandit)",
+    "reference": "Source URL for guru information",
+    "verified": false
+  },
+  "gharana": {
+    "value": "Gharana name (e.g., 'Patiala Gharana', 'Kirana Gharana')",
+    "reference": "Source URL for gharana information",
+    "verified": false
+  },
+  "notableAchievements": {
+    "value": "Major awards and achievements with years",
+    "reference": "Source URL for achievements",
+    "verified": false
+  },
+  "disciples": {
+    "value": "Notable disciples/students or 'No specific disciples documented'",
+    "reference": "Source URL for disciples information",
+    "verified": false
+  },
+  "summary": {
+    "value": "Brief biographical summary (150-200 words)",
+    "reference": "Primary biographical source URL",
+    "verified": false
+  }
+}
+
+- **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
+- **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
+`;
+
+    try {
+      const response = await axios.post(this.baseURL, {
+        model: this.model,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
+
+RESEARCH EXPERTISE:
+- Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
+- Advanced web research techniques for finding official artist information
+- Social media intelligence for extracting biographical details
+- Academic and institutional database navigation
+- Cross-referencing and fact-verification across multiple sources
+- Understanding of gharana systems, guru-shishya traditions, and musical lineages
+
+SEARCH METHODOLOGY:
+1. **Official Source Priority**: Always search for official websites, verified social media, artist biographies first
+2. **Social Media Mining**: Extract valuable biographical information from Facebook, Instagram, Twitter, YouTube profiles and posts
+3. **Institutional Deep Dive**: Thoroughly search music institutions, academies, universities, and cultural organizations
+4. **Academic Cross-Reference**: Use scholarly articles, research papers, and academic publications for verification
+5. **Contemporary Sources**: Include recent interviews, articles, and current biographical content
+6. **Lineage Tracking**: Pay special attention to guru-shishya relationships and gharana affiliations
+7. **Legacy Documentation**: Focus on finding information about disciples and teaching contributions
+
+CRITICAL SUCCESS FACTORS:
+- Conduct multi-step, systematic research as outlined in the user prompt
+- Never skip the specific searches for gharana, guru, disciples, and achievements
+- Use official websites and verified social media as primary sources when available
+- Cross-verify information from multiple independent sources
+- Return comprehensive, accurate information with working URLs
+- If information is genuinely not available, clearly state this in the reference field
+
+RESPONSE REQUIREMENTS:
+- Return ONLY valid JSON without any additional text
+- Use real, accessible URLs that can be verified
+- Be precise with Indian music terminology and proper names
+- Include titles (Ustad, Pandit) when mentioned in sources
+- Focus on factual, verifiable biographical and musical information`
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.02, // Extremely low temperature for maximum factual accuracy
+        max_tokens: 2000, // Reduced tokens for faster response
+        top_p: 0.9, // Slightly higher for better source diversity
+        // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
+        frequency_penalty: 0.1 // Reduce repetition only
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000 // 60 second timeout for comprehensive research
+      });
+
+      console.log('Perplexity API response received');
+      const responseText = response.data.choices[0].message.content;
+      console.log('Raw Perplexity response:', responseText);
+      return this.parseAIResponse(responseText);
+    } catch (error) {
+      console.error('Error in Perplexity research:', error);
+      if (error.response) {
+        console.error('Perplexity API error:', error.response.data);
+        
+        // Try fallback models if primary model fails
+        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback models...');
+          return await this.researchWithFallbackModel(name, prompt, 'artist');
         }
-      } catch (aiError) {
-        console.error(`${provider} AI research failed:`, aiError);
-        return res.status(500).json({ message: `${provider} AI research (${model}) failed: ` + aiError.message });
+        
+        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
       }
-    } else {
-      // Use traditional scraping
-      // Apply web scraping rate limiting
-      await new Promise((resolve, reject) => {
-        webScrapingLimiter(req, res, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      
-      console.log('Using traditional scraping for taal:', name);
-      data = await scraperService.scrapeTaal(name);
+      throw new Error('Failed to research artist using Perplexity AI: ' + error.message);
     }
+  }
 
-    // Find existing taal or create new one (same logic as getAllAboutTaal)
-    let savedTaal = null;
+  async researchRaag(name) {
+    console.log('Starting Perplexity AI research for raag:', name);
+    
+    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
+      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
+    }
+    
+    const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
+
+**STEP 1: Primary Musical Sources**
+- Search Wikipedia for detailed "${name}" raag article
+- Look for "${name}" in specialized raga databases and music theory websites
+- Check classical music learning platforms and educational resources
+- Find "${name}" in music institution websites (Sangeet Natak Akademi, ITC SRA)
+
+**STEP 2: Academic and Scholarly Sources**
+- Search academic musicology papers mentioning "${name}"
+- Look for university music department resources and course materials
+- Check scholarly articles on Indian music theory featuring "${name}"
+- Find research publications and dissertations about "${name}"
+
+**STEP 3: Practical Music Sources**
+- Search for "${name}" in tabla/sitar/vocal learning websites
+- Look for "${name}" performance guides and tutorials
+- Check music teacher resources and instructional materials
+- Find "${name}" in concert programs and performance notes
+
+**STEP 4: Specific Technical Information**
+For AROHA/AVROHA: Search for:
+- "${name} aroha avroha notes"
+- "${name} scale ascending descending"
+- "${name} swaras sequence"
+
+For THAAT: Search for:
+- "${name} thaat parent scale"
+- "${name} belongs to thaat"
+- "${name} classification"
+
+For VADI/SAMVADI: Search for:
+- "${name} vadi samvadi notes"
+- "${name} important notes"
+- "${name} dominant subdominant"
+
+Provide accurate musical information in this JSON format:
+
+{
+  "name": {
+    "value": "${name}",
+    "reference": "Most authoritative source URL",
+    "verified": false
+  },
+  "aroha": {
+    "value": "Complete ascending note sequence using proper sargam notation (Sa Re Ga Ma Pa Dha Ni Sa format with komal/tivra markings)",
+    "reference": "Specific URL where aroha/ascending scale is clearly mentioned",
+    "verified": false
+  },
+  "avroha": {
+    "value": "Complete descending note sequence using proper sargam notation with komal/tivra markings",
+    "reference": "Specific URL where avroha/descending scale is clearly mentioned",
+    "verified": false
+  },
+  "chalan": {
+    "value": "Characteristic melodic phrases, pakad, or typical note movements that define the raag",
+    "reference": "URL mentioning chalan, pakad, or characteristic phrases",
+    "verified": false
+  },
+  "vadi": {
+    "value": "Most important/dominant note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
+    "reference": "URL specifically mentioning vadi swara or dominant note",
+    "verified": false
+  },
+  "samvadi": {
+    "value": "Second most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
+    "reference": "URL specifically mentioning samvadi swara or subdominant note",
+    "verified": false
+  },
+  "thaat": {
+    "value": "Parent thaat/scale name (e.g., Bilawal, Khamaj, Kafi, Kalyan, Bhairav, etc.)",
+    "reference": "URL specifically mentioning thaat classification or parent scale",
+    "verified": false
+  },
+  "rasBhaav": {
+    "value": "Emotional content, mood, and aesthetic expression (e.g., devotional, romantic, peaceful, heroic, melancholic)",
+    "reference": "URL discussing emotional aspects, mood, or aesthetic qualities",
+    "verified": false
+  },
+  "tanpuraTuning": {
+    "value": "Recommended tanpura tuning notes (e.g., Sa Pa Sa Sa, Sa Ma Sa Sa)",
+    "reference": "URL mentioning tanpura tuning or drone notes",
+    "verified": false
+  },
+  "timeOfRendition": {
+    "value": "Traditional time of performance with specific periods (early morning, late morning, afternoon, evening, night, late night)",
+    "reference": "URL mentioning traditional performance time or time theory",
+    "verified": false
+  }
+}
+
+REQUIREMENTS:
+- Conduct systematic multi-step research as outlined above
+- Use proper sargam notation with komal (♭) and tivra (♯) markings when applicable
+- Provide specific note names for vadi/samvadi with proper notation
+- Use standard, recognized thaat names from Indian music theory
+- Include detailed aroha/avroha sequences as found in authoritative sources
+- Return only verified musical information found in your comprehensive search
+- Use real, accessible URLs as references that can be verified`;
+
     try {
-      console.log('Looking for existing taal for structured data:', name);
-      
-      let existingTaal = await Taal.findOne({ 
-        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-      });
-      
-      if (!existingTaal) {
-        existingTaal = await Taal.findOne({ 
-          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
-        });
-      }
-      
-      if (existingTaal) {
-        console.log('Found existing taal for structured data:', existingTaal._id);
-        
-        // Update existing taal with structured data
-        Object.keys(data).forEach(field => {
-          if (data[field] && typeof data[field] === 'object' && data[field].value !== undefined) {
-            existingTaal[field] = data[field];
-          }
-        });
-        
-        existingTaal.modifiedBy = userId;
-        existingTaal.updatedAt = new Date();
-        
-        savedTaal = await existingTaal.save();
-        console.log('Successfully updated existing taal with structured data:', savedTaal._id);
-      } else {
-        console.log('No existing taal found, creating new taal with structured data...');
-        
-        const newTaal = new Taal({
-          ...data,
-          createdBy: userId,
-          modifiedBy: userId,
-          searchMetadata: {
-            searchMethod: useAI === 'true' ? 'ai' : 'web',
-            aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
-            aiModel: useAI === 'true' ? (aiModel || 'default') : null,
-            searchQuery: name,
-            searchTimestamp: new Date()
-          }
-        });
-        savedTaal = await newTaal.save();
-        console.log('Successfully created new taal with structured data:', savedTaal._id);
-      }
-    } catch (saveError) {
-      console.error('Error saving structured data to taal:', saveError);
-      return res.status(500).json({ message: 'Failed to save structured data: ' + saveError.message });
-    }
+      const response = await axios.post(this.baseURL, {
+        model: this.model,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert Indian Classical Music theorist and raga researcher with comprehensive knowledge of:
 
-    res.json(savedTaal);
-  } catch (error) {
-    console.error('Error in searchTaal:', error);
-    res.status(500).json({ message: error.message || 'Error searching for taal' });
+MUSICAL EXPERTISE:
+- Deep understanding of raga theory, thaat system, and melodic structures
+- Expertise in sargam notation, swara relationships, and musical scales
+- Knowledge of traditional performance practices and time theory
+- Understanding of emotional aesthetics (rasa-bhava) in Indian music
+- Familiarity with both Hindustani and Carnatic traditions
+
+RESEARCH METHODOLOGY:
+1. **Technical Source Priority**: Focus on music theory websites, academic papers, and educational resources
+2. **Cross-Reference Verification**: Verify technical details across multiple authoritative sources
+3. **Notation Accuracy**: Ensure proper sargam notation with correct komal/tivra markings
+4. **Traditional Knowledge**: Include traditional performance practices and cultural context
+5. **Contemporary Resources**: Use modern learning platforms and digital music resources
+
+CRITICAL REQUIREMENTS:
+- Conduct thorough multi-step research as specified in the user prompt
+- Pay special attention to technical musical details (aroha, avroha, vadi, samvadi)
+- Use proper Indian music terminology and notation systems
+- Verify information across multiple independent musical sources
+- Include both theoretical and practical aspects of the raga
+- Return comprehensive, technically accurate information with working URLs`
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.02,
+        max_tokens: 3000,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.2
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 45000
+      });
+
+      console.log('Perplexity API response received');
+      const responseText = response.data.choices[0].message.content;
+      console.log('Raw Perplexity response:', responseText);
+      return this.parseAIResponse(responseText);
+    } catch (error) {
+      console.error('Error in Perplexity research:', error);
+      if (error.response) {
+        console.error('Perplexity API error:', error.response.data);
+        
+        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback models...');
+          return await this.researchWithFallbackModel(name, prompt, 'raag');
+        }
+        
+        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
+      }
+      throw new Error('Failed to research raag using Perplexity AI: ' + error.message);
+    }
   }
-};
 
-exports.getAllAboutTaal = async (req, res) => {
-  try {
-    const { name, aiProvider, aiModel } = req.query;
-    const userId = req.user?.userId;
-    console.log('Summary search request received for taal:', name);
+  async researchTaal(name) {
+    console.log('Starting Perplexity AI research for taal:', name);
     
-    if (!name) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Taal name is required' 
-      });
-    }
-
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Authentication required for AI search operations' 
-      });
-    }
-
-    const provider = aiProvider || 'perplexity';
-    const model = aiModel || 'sonar-pro';
-    console.log(`Using ${provider} Summary mode (${model}) for taal:`, name);
-    
-    let allAboutData;
-    if (provider === 'perplexity') {
-      allAboutData = await perplexityAllAboutService.getAllAboutTaal(name, model);
-    } else if (provider === 'openai') {
-      allAboutData = await aiResearcher.getAllAboutTaal(name, model);
-    } else if (provider === 'gemini') {
-      allAboutData = await geminiResearcher.getAllAboutTaal(name, model);
-    } else {
-      throw new Error(`Unsupported AI provider: ${provider}`);
+    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
+      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Try to find existing taal by name to save the All About data
-    let savedTaal = null;
+    const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
+
+**STEP 1: Primary Rhythm Sources**
+- Search Wikipedia for detailed "${name}" taal article
+- Look for "${name}" in tabla learning websites and percussion resources
+- Check rhythm and taal databases, music theory websites
+- Find "${name}" in classical music institution websites
+
+**STEP 2: Educational and Academic Sources**
+- Search academic papers on Indian rhythm systems mentioning "${name}"
+- Look for music conservatory and university resources about "${name}"
+- Check scholarly articles on taal theory and rhythmic systems
+- Find research publications about Indian percussion and rhythm
+
+**STEP 3: Practical Learning Sources**
+- Search tabla tutorial websites and learning platforms for "${name}"
+- Look for "${name}" in music teacher resources and instructional materials
+- Check percussion method books and educational content
+- Find "${name}" in concert programs and performance guides
+
+**STEP 4: Specific Technical Information**
+For BEAT STRUCTURE: Search for:
+- "${name} beats matras structure"
+- "${name} rhythm pattern"
+- "${name} time signature"
+
+For TAALI/KHAALI: Search for:
+- "${name} taali khaali positions"
+- "${name} clap wave pattern"
+- "${name} beat emphasis"
+
+For DIVISIONS: Search for:
+- "${name} vibhag divisions"
+- "${name} sections structure"
+- "${name} rhythmic grouping"
+
+Provide accurate rhythmic information in this JSON format:
+
+{
+  "name": {
+    "value": "${name}",
+    "reference": "Most authoritative source URL",
+    "verified": false
+  },
+  "numberOfBeats": {
+    "value": "Total number of matras/beats as a number (e.g., 16, 12, 10, 14, 7)",
+    "reference": "URL specifically mentioning the total beat count or matra structure",
+    "verified": false
+  },
+  "divisions": {
+    "value": "Complete vibhag/section structure description (e.g., '4 vibhags of 4 beats each', '3 vibhags: 4+2+2')",
+    "reference": "URL describing vibhag structure or rhythmic divisions",
+    "verified": false
+  },
+  "taali": {
+    "count": {
+      "value": "Number of taali (clap) positions as a number",
+      "reference": "URL mentioning taali count or clap positions",
+      "verified": false
+    },
+    "beatNumbers": {
+      "value": "Specific beat numbers where taali/claps occur (e.g., '1, 5, 13' or '1, 4, 7')",
+      "reference": "URL showing exact taali positions or clap beats",
+      "verified": false
+    }
+  },
+  "khaali": {
+    "count": {
+      "value": "Number of khaali (wave) positions as a number",
+      "reference": "URL mentioning khaali count or wave positions",
+      "verified": false
+    },
+    "beatNumbers": {
+      "value": "Specific beat numbers where khaali/waves occur (e.g., '9' or '5, 9')",
+      "reference": "URL showing exact khaali positions or wave beats",
+      "verified": false
+    }
+  },
+  "jaati": {
+    "value": "Jaati classification based on subdivision (Chatusra, Tisra, Khanda, Misra, or Sankeerna)",
+    "reference": "URL mentioning jaati classification or rhythmic subdivision",
+    "verified": false
+  }
+}
+
+REQUIREMENTS:
+- Conduct systematic multi-step research as outlined above
+- Provide exact beat numbers, counts, and mathematical relationships
+- Use standard jaati terminology from Indian rhythm theory
+- Ensure mathematical accuracy (taali + khaali positions should align with total beats)
+- Include complete vibhag structure with proper divisions
+- Return only verified rhythmic information found in your comprehensive search
+- Use real, accessible URLs as references that can be verified`;
+
     try {
-      let existingTaal = await Taal.findOne({ 
-        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-      });
-      
-      if (!existingTaal) {
-        existingTaal = await Taal.findOne({ 
-          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
-        });
-      }
-      
-      if (existingTaal) {
-        console.log('Found existing taal, updating with All About data...');
-        existingTaal.allAboutData = {
-          answer: allAboutData.answer,
-          images: allAboutData.images || [],
-          sources: allAboutData.sources || [],
-          citations: allAboutData.citations || [],
-          relatedQuestions: allAboutData.relatedQuestions || [],
-          searchQuery: allAboutData.metadata?.searchQuery,
-          aiProvider: allAboutData.metadata?.aiProvider,
-          aiModel: allAboutData.metadata?.aiModel
-        };
-        existingTaal.modifiedBy = userId;
-        existingTaal.updatedAt = new Date();
-        savedTaal = await existingTaal.save();
-        console.log('Successfully saved All About data to existing taal:', savedTaal._id);
-      } else {
-        console.log('No existing taal found, creating new taal with All About data...');
-        const newTaal = new Taal({
-          name: { value: name, reference: 'All About Search', verified: false },
-          numberOfBeats: { value: '', reference: 'Not searched in All About mode', verified: false },
-          divisions: { value: '', reference: 'Not searched in All About mode', verified: false },
-          taali: {
-            count: { value: '', reference: 'Not searched in All About mode', verified: false },
-            beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
+      const response = await axios.post(this.baseURL, {
+        model: this.model,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert Indian Classical Music rhythmist and taal researcher with comprehensive knowledge of:
+
+RHYTHMIC EXPERTISE:
+- Deep understanding of taal theory, matra systems, and rhythmic structures
+- Expertise in taali-khaali patterns, vibhag divisions, and beat mathematics
+- Knowledge of jaati classifications and rhythmic subdivisions
+- Understanding of tabla, pakhawaj, and other percussion traditions
+- Familiarity with both theoretical and practical aspects of Indian rhythm
+
+RESEARCH METHODOLOGY:
+1. **Percussion Source Priority**: Focus on tabla websites, rhythm learning platforms, and percussion resources
+2. **Mathematical Verification**: Ensure all beat counts, divisions, and patterns are mathematically accurate
+3. **Pattern Analysis**: Verify taali-khaali patterns across multiple authoritative sources
+4. **Traditional Knowledge**: Include traditional performance practices and cultural context
+5. **Educational Resources**: Use modern learning platforms and digital rhythm resources
+
+CRITICAL REQUIREMENTS:
+- Conduct thorough multi-step research as specified in the user prompt
+- Pay special attention to mathematical accuracy of beat structures
+- Verify taali-khaali patterns and vibhag divisions across multiple sources
+- Use proper Indian rhythm terminology and classification systems
+- Include both theoretical framework and practical performance aspects
+- Return comprehensive, mathematically accurate information with working URLs`
           },
-          khaali: {
-            count: { value: '', reference: 'Not searched in All About mode', verified: false },
-            beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
-          },
-          jaati: { value: '', reference: 'Not searched in All About mode', verified: false },
-          allAboutData: {
-            answer: allAboutData.answer,
-            images: allAboutData.images || [],
-            sources: allAboutData.sources || [],
-            citations: allAboutData.citations || [],
-            relatedQuestions: allAboutData.relatedQuestions || [],
-            searchQuery: allAboutData.metadata?.searchQuery,
-            aiProvider: allAboutData.metadata?.aiProvider,
-            aiModel: allAboutData.metadata?.aiModel
-          },
-          createdBy: userId,
-          modifiedBy: userId,
-          searchMetadata: {
-            searchMethod: 'ai',
-            aiProvider: provider,
-            aiModel: model,
-            searchQuery: name,
-            searchTimestamp: new Date()
+          {
+            role: "user",
+            content: prompt
           }
+        ],
+        temperature: 0.02,
+        max_tokens: 3000,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.2
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 45000
+      });
+
+      console.log('Perplexity API response received');
+      const responseText = response.data.choices[0].message.content;
+      console.log('Raw Perplexity response:', responseText);
+      return this.parseAIResponse(responseText);
+    } catch (error) {
+      console.error('Error in Perplexity research:', error);
+      if (error.response) {
+        console.error('Perplexity API error:', error.response.data);
+        
+        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
+          console.log('Trying with fallback models...');
+          return await this.researchWithFallbackModel(name, prompt, 'taal');
+        }
+        
+        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
+      }
+      throw new Error('Failed to research taal using Perplexity AI: ' + error.message);
+    }
+  }
+
+  async researchWithFallbackModel(name, prompt, type) {
+    for (const model of this.fallbackModels) {
+      try {
+        console.log(`Trying fallback model: ${model}`);
+        const response = await axios.post(this.baseURL, {
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
+- Deep knowledge of Indian Classical Music traditions
+- Access to academic and institutional sources
+- Ability to verify information across multiple sources
+- Understanding of proper musicological terminology
+Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting.`
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.02,
+          max_tokens: 2000,
+          top_p: 0.9
+        }, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
         });
-        savedTaal = await newTaal.save();
-        console.log('Successfully created new taal with All About data:', savedTaal._id);
+
+        console.log(`Fallback model ${model} worked!`);
+        const responseText = response.data.choices[0].message.content;
+        return this.parseAIResponse(responseText);
+      } catch (fallbackError) {
+        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
+        continue;
       }
-    } catch (saveError) {
-      console.error('Error saving All About data to taal:', saveError);
     }
-    
-    res.json({
-      success: true,
-      data: {
-        ...allAboutData,
-        _id: savedTaal?._id,
-        itemId: savedTaal?._id,
-        taalId: savedTaal?._id
-      },
-      mode: 'summary',
-      searchQuery: name,
-      provider: provider,
-      model: model
-    });
-  } catch (error) {
-    console.error('Error in getAllAboutTaal:', error);
-    res.status(500).json({ 
-      success: false,
-      message: error.message || 'Error in Summary search for taal' 
-    });
+
+    throw new Error('All Perplexity models failed. Please check your API access and model availability.');
   }
-};
 
-exports.updateTaal = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
-    const userId = req.user?.userId;
-
-    const taal = await Taal.findById(id);
-    if (!taal) {
-      return res.status(404).json({ message: 'Taal not found' });
+  parseAIResponse(response) {
+    try {
+      // Clean the response to extract JSON
+      let cleanResponse = response.trim();
+      
+      // Remove any thinking blocks that Perplexity might include
+      cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/g, '');
+      
+      // Remove markdown code blocks if present
+      cleanResponse = cleanResponse.replace(/``\`json\n?/g, '').replace(/```\n?/g, '');
+      
+      // More aggressive cleaning to handle various response formats
+      cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/s, '');
+      
+      // Handle cases where there might be explanatory text after JSON
+      const jsonEndIndex = cleanResponse.lastIndexOf('}');
+      if (jsonEndIndex !== -1) {
+        cleanResponse = cleanResponse.substring(0, jsonEndIndex + 1);
+      }
+      
+      // Find JSON object
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Convert arrays to strings for fields that expect strings
+        this.normalizeDataTypes(parsed);
+        
+        // Validate and clean the data
+        this.validateAndCleanData(parsed);
+        
+        console.log('Parsed Perplexity response:', parsed);
+        return parsed;
+      }
+      
+      throw new Error('No valid JSON found in Perplexity response');
+    } catch (error) {
+      console.error('Error parsing Perplexity response:', error);
+      console.error('Raw response:', response);
+      throw new Error('Failed to parse Perplexity research results: ' + error.message);
     }
+  }
 
-    // Update all provided fields (including allAboutData)
-    Object.keys(updates).forEach(field => {
-      if (updates[field] !== undefined) {
-        taal[field] = updates[field];
+  normalizeDataTypes(data) {
+    // Convert arrays to comma-separated strings for fields that expect strings
+    const fieldsToNormalize = ['notableAchievements', 'disciples'];
+    
+    fieldsToNormalize.forEach(field => {
+      if (data[field] && data[field].value && Array.isArray(data[field].value)) {
+        data[field].value = data[field].value.join(', ');
       }
     });
-
-    if (userId) {
-      taal.modifiedBy = userId;
-    }
-    taal.updatedAt = Date.now();
-    await taal.save();
-
-    res.json({
-      success: true,
-      data: taal,
-      message: 'Taal updated successfully'
-    });
-  } catch (error) {
-    console.error('Error in updateTaal:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Error updating taal' 
-    });
-  }
-};
-
-exports.getAllTaals = async (req, res) => {
-  try {
-    const taals = await Taal.find();
-    res.json(taals);
-  } catch (error) {
-    console.error('Error in getAllTaals:', error);
-    res.status(500).json({ message: 'Error fetching taals' });
-  }
-};
-
-exports.getTaalById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid taal id' });
-    }
-    const taal = await Taal.findById(id);
     
-    if (!taal) {
-      return res.status(404).json({ message: 'Taal not found' });
+    // Handle nested fields for taals
+    if (data.taali) {
+      if (data.taali.count && data.taali.count.value && Array.isArray(data.taali.count.value)) {
+        data.taali.count.value = data.taali.count.value.join(', ');
+      }
+      if (data.taali.beatNumbers && data.taali.beatNumbers.value && Array.isArray(data.taali.beatNumbers.value)) {
+        data.taali.beatNumbers.value = data.taali.beatNumbers.value.join(', ');
+      }
     }
-
-    res.json(taal);
-  } catch (error) {
-    console.error('Error in getTaalById:', error);
-    res.status(500).json({ message: 'Error fetching taal' });
-  }
-};
-
-exports.getVerifiedTaals = async (req, res) => {
-  try {
-    const { field } = req.query;
-    let query = {};
     
-    if (field) {
-      if (field.includes('.')) {
-        // Handle nested fields like taali.count, khaali.beatNumbers
-        query[`${field}.verified`] = true;
+    if (data.khaali) {
+      if (data.khaali.count && data.khaali.count.value && Array.isArray(data.khaali.count.value)) {
+        data.khaali.count.value = data.khaali.count.value.join(', ');
+      }
+      if (data.khaali.beatNumbers && data.khaali.beatNumbers.value && Array.isArray(data.khaali.beatNumbers.value)) {
+        data.khaali.beatNumbers.value = data.khaali.beatNumbers.value.join(', ');
+      }
+    }
+  }
+
+  validateAndCleanData(data) {
+    // Ensure all required fields exist with proper structure
+    const requiredFields = ['name'];
+    const optionalFields = ['guru', 'gharana', 'notableAchievements', 'disciples', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition', 'numberOfBeats', 'divisions', 'jaati'];
+    
+    requiredFields.forEach(field => {
+      if (!data[field]) {
+        data[field] = { value: '', reference: 'Required field - information not found in comprehensive search', verified: false };
       } else {
-        query[`${field}.verified`] = true;
-      }
-    } else {
-      query = {
-        $or: [
-          { 'name.verified': true },
-          { 'numberOfBeats.verified': true },
-          { 'divisions.verified': true },
-          { 'taali.count.verified': true },
-          { 'taali.beatNumbers.verified': true },
-          { 'khaali.count.verified': true },
-          { 'khaali.beatNumbers.verified': true },
-          { 'jaati.verified': true }
-        ]
-      };
-    }
-    
-    const taals = await Taal.find(query).sort({ updatedAt: -1 });
-    res.json({
-      count: taals.length,
-      data: taals
-    });
-  } catch (error) {
-    console.error('Error in getVerifiedTaals:', error);
-    res.status(500).json({ message: 'Error fetching verified taals' });
-  }
-};
-
-exports.getUnverifiedTaals = async (req, res) => {
-  try {
-    const { field } = req.query;
-    let query = {};
-    
-    if (field) {
-      if (field.includes('.')) {
-        query[`${field}.verified`] = false;
-      } else {
-        query[`${field}.verified`] = false;
-      }
-    } else {
-      query = {
-        'name.verified': false,
-        'numberOfBeats.verified': false,
-        'divisions.verified': false,
-        'taali.count.verified': false,
-        'taali.beatNumbers.verified': false,
-        'khaali.count.verified': false,
-        'khaali.beatNumbers.verified': false,
-        'jaati.verified': false
-      };
-    }
-    
-    const taals = await Taal.find(query).sort({ createdAt: -1 });
-    res.json({
-      count: taals.length,
-      data: taals
-    });
-  } catch (error) {
-    console.error('Error in getUnverifiedTaals:', error);
-    res.status(500).json({ message: 'Error fetching unverified taals' });
-  }
-};
-
-exports.getVerificationStats = async (req, res) => {
-  try {
-    const totalTaals = await Taal.countDocuments();
-    
-    const nameVerified = await Taal.countDocuments({ 'name.verified': true });
-    const numberOfBeatsVerified = await Taal.countDocuments({ 'numberOfBeats.verified': true });
-    const divisionsVerified = await Taal.countDocuments({ 'divisions.verified': true });
-    const taaliCountVerified = await Taal.countDocuments({ 'taali.count.verified': true });
-    const taaliBeatNumbersVerified = await Taal.countDocuments({ 'taali.beatNumbers.verified': true });
-    const khaaliCountVerified = await Taal.countDocuments({ 'khaali.count.verified': true });
-    const khaaliBeatNumbersVerified = await Taal.countDocuments({ 'khaali.beatNumbers.verified': true });
-    const jaatiVerified = await Taal.countDocuments({ 'jaati.verified': true });
-    const allAboutAnswerVerified = await Taal.countDocuments({ 'allAboutData.answer.verified': true });
-    
-    const partiallyVerified = await Taal.countDocuments({
-      $or: [
-        { 'name.verified': true },
-        { 'numberOfBeats.verified': true },
-        { 'divisions.verified': true },
-        { 'taali.count.verified': true },
-        { 'taali.beatNumbers.verified': true },
-        { 'khaali.count.verified': true },
-        { 'khaali.beatNumbers.verified': true },
-        { 'jaati.verified': true },
-        { 'allAboutData.answer.verified': true }
-      ]
-    });
-    
-    const fullyVerified = await Taal.countDocuments({
-      'name.verified': true,
-      'numberOfBeats.verified': true,
-      'divisions.verified': true,
-      'taali.count.verified': true,
-      'taali.beatNumbers.verified': true,
-      'khaali.count.verified': true,
-      'khaali.beatNumbers.verified': true,
-      'jaati.verified': true,
-      'allAboutData.answer.verified': true
-    });
-    
-    const unverified = totalTaals - partiallyVerified;
-    
-    res.json({
-      total: totalTaals,
-      fullyVerified,
-      partiallyVerified,
-      unverified,
-      fieldStats: {
-        name: nameVerified,
-        numberOfBeats: numberOfBeatsVerified,
-        divisions: divisionsVerified,
-        taaliCount: taaliCountVerified,
-        taaliBeatNumbers: taaliBeatNumbersVerified,
-        khaaliCount: khaaliCountVerified,
-        khaaliBeatNumbers: khaaliBeatNumbersVerified,
-        jaati: jaatiVerified,
-        allAboutAnswer: allAboutAnswerVerified
-      },
-      percentages: {
-        fullyVerified: totalTaals > 0 ? ((fullyVerified / totalTaals) * 100).toFixed(2) : 0,
-        partiallyVerified: totalTaals > 0 ? ((partiallyVerified / totalTaals) * 100).toFixed(2) : 0,
-        unverified: totalTaals > 0 ? ((unverified / totalTaals) * 100).toFixed(2) : 0
+        // Ensure each field has the required structure
+        if (typeof data[field].value === 'undefined') data[field].value = '';
+        if (typeof data[field].reference === 'undefined') data[field].reference = 'Source reference not provided';
+        if (typeof data[field].verified === 'undefined') data[field].verified = false;
+        
+        // Convert verified to boolean if it's not already
+        data[field].verified = Boolean(data[field].verified);
+        
+        // Clean and format references
+        data[field].reference = this.cleanReference(data[field].reference);
       }
     });
-  } catch (error) {
-    console.error('Error in getVerificationStats:', error);
-    res.status(500).json({ message: 'Error fetching verification statistics' });
-  }
-};
-
-exports.deleteTaal = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid taal id' });
-    }
-    const taal = await Taal.findByIdAndDelete(id);
-    if (!taal) {
-      return res.status(404).json({ success: false, message: 'Taal not found' });
-    }
-    res.json({
-      success: true,
-      message: 'Taal deleted successfully',
-      data: { deletedId: id, deletedName: taal.name?.value || '' }
-    });
-  } catch (error) {
-    console.error('Error in deleteTaal:', error);
-    res.status(500).json({ success: false, message: 'Error deleting taal' });
-  }
-};
-
-exports.bulkDeleteTaals = async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, message: 'Taal IDs array is required' });
-    }
-    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
-    if (invalidIds.length > 0) {
-      return res.status(400).json({ success: false, message: `Invalid taal IDs: ${invalidIds.join(', ')}` });
-    }
-    const taalsToDelete = await Taal.find({ _id: { $in: ids } }).select('name.value');
-    const deletedNames = taalsToDelete.map(t => t.name.value);
-    const result = await Taal.deleteMany({ _id: { $in: ids } });
-    res.json({
-      success: true,
-      message: `${result.deletedCount} taals deleted successfully`,
-      data: { deletedCount: result.deletedCount, deletedIds: ids, deletedNames }
-    });
-  } catch (error) {
-    console.error('Error in bulkDeleteTaals:', error);
-    res.status(500).json({ success: false, message: 'Error deleting taals' });
-  }
-};
-
-exports.exportSingleTaal = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { format = 'json' } = req.query;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid taal id' });
-    }
-    const taal = await Taal.findById(id);
-    if (!taal) {
-      return res.status(404).json({ success: false, message: 'Taal not found' });
-    }
-    const exportData = formatTaalForExport(taal);
-    const taalName = taal.name?.value || 'Unknown Taal';
-    const shortId = taal._id.toString().slice(-8);
-    const filename = `${taalName} ${shortId}`;
     
-    switch (format.toLowerCase()) {
-      case 'markdown': {
-        const md = generateTaalMarkdown([exportData]);
-        res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
-        res.send(md);
+    // Handle optional fields
+    optionalFields.forEach(field => {
+      if (data[field]) {
+        if (typeof data[field].value === 'undefined') data[field].value = '';
+        if (typeof data[field].reference === 'undefined') data[field].reference = 'Information found but source not specified';
+        if (typeof data[field].verified === 'undefined') data[field].verified = false;
+        data[field].verified = Boolean(data[field].verified);
+        
+        // Clean and format references
+        data[field].reference = this.cleanReference(data[field].reference);
+      }
+    });
+
+    // Special handling for taal nested fields
+    if (data.taali) {
+      if (!data.taali.count) data.taali.count = { value: '', reference: 'Information not found', verified: false };
+      if (!data.taali.beatNumbers) data.taali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
+      
+      // Clean references for nested fields
+      data.taali.count.reference = this.cleanReference(data.taali.count.reference);
+      data.taali.beatNumbers.reference = this.cleanReference(data.taali.beatNumbers.reference);
+    }
+    
+    if (data.khaali) {
+      if (!data.khaali.count) data.khaali.count = { value: '', reference: 'Information not found', verified: false };
+      if (!data.khaali.beatNumbers) data.khaali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
+      
+      // Clean references for nested fields
+      data.khaali.count.reference = this.cleanReference(data.khaali.count.reference);
+      data.khaali.beatNumbers.reference = this.cleanReference(data.khaali.beatNumbers.reference);
+    }
+  }
+
+  cleanReference(reference) {
+    if (!reference) return 'No source provided';
+    
+    // Handle multiple URLs separated by various delimiters
+    const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
+    let cleanRef = reference;
+    
+    // Check if it contains multiple URLs
+    let hasMultipleUrls = false;
+    for (const separator of urlSeparators) {
+      if (cleanRef.includes(separator)) {
+        hasMultipleUrls = true;
         break;
       }
-      default:
-        res.json({ success: true, data: exportData });
     }
-  } catch (error) {
-    console.error('Error in exportSingleTaal:', error);
-    res.status(500).json({ success: false, message: 'Error exporting taal' });
-  }
-};
-
-exports.exportTaals = async (req, res) => {
-  try {
-    const { format = 'json', ids } = req.body || {};
-    let query = {};
-    if (ids && Array.isArray(ids) && ids.length > 0) {
-      const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
-      if (invalidIds.length > 0) {
-        return res.status(400).json({ success: false, message: `Invalid taal IDs: ${invalidIds.join(', ')}` });
-      }
-      query = { _id: { $in: ids } };
-    }
-    const taals = await Taal.find(query).sort({ 'name.value': 1 });
-    if (taals.length === 0) {
-      return res.status(404).json({ success: false, message: 'No taals found to export' });
-    }
-    const exportData = taals.map(t => formatTaalForExport(t));
     
-    let filename;
-    if (ids && ids.length > 0) {
-      if (ids.length === 1) {
-        // Single taal: use taal name with ID
-        const taal = taals[0];
-        const taalName = taal.name?.value || 'Unknown Taal';
-        const shortId = taal._id.toString().slice(-8);
-        filename = `${taalName} ${shortId}`;
-      } else {
-        // Multiple selected taals: use first taal name + count
-        const firstTaal = taals[0];
-        const firstName = firstTaal.name?.value || 'Unknown';
-        filename = `${firstName} And Other ${ids.length - 1}`;
+    if (hasMultipleUrls) {
+      // Split and clean multiple URLs
+      let urls = cleanRef;
+      for (const separator of urlSeparators) {
+        urls = urls.split(separator).join(' | ');
       }
+      
+      // Clean each URL
+      const urlList = urls.split(' | ').map(url => {
+        const trimmedUrl = url.trim();
+        
+        // Remove parenthetical descriptions
+        const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
+        
+        // Validate URL format
+        if (this.isValidUrl(cleanUrl)) {
+          return cleanUrl;
+        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
+          return `Invalid URL format: ${cleanUrl}`;
+        } else {
+          return `Non-URL reference: ${cleanUrl}`;
+        }
+      }).filter(url => url.length > 0);
+      
+      return urlList.join(' | ');
     } else {
-      // All taals
-      filename = `All Taals ${taals.length}`;
-    }
-    
-    switch (format.toLowerCase()) {
-      case 'markdown': {
-        const md = generateTaalMarkdown(exportData);
-        res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
-        res.send(md);
-        break;
+      // Single reference
+      const trimmedRef = cleanRef.trim();
+      
+      // Remove parenthetical descriptions
+      const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
+      
+      // Validate single URL
+      if (this.isValidUrl(cleanSingleRef)) {
+        return cleanSingleRef;
+      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
+        return `Invalid URL format: ${cleanSingleRef}`;
+      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
+        return cleanSingleRef; // Keep explanatory messages as-is
+      } else {
+        return `Non-URL reference: ${cleanSingleRef}`;
       }
-      default:
-        res.json({
-          success: true,
-          data: { taals: exportData, count: taals.length, exported: new Date().toISOString(), filename }
-        });
     }
-  } catch (error) {
-    console.error('Error in exportTaals:', error);
-    res.status(500).json({ success: false, message: 'Error exporting taals' });
   }
-};
-
-function formatTaalForExport(taal) {
-  return {
-    id: taal._id,
-    name: taal.name?.value || 'N/A',
-    numberOfBeats: taal.numberOfBeats?.value || 'N/A',
-    divisions: taal.divisions?.value || 'N/A',
-    taaliCount: taal.taali?.count?.value || 'N/A',
-    taaliBeatNumbers: taal.taali?.beatNumbers?.value || 'N/A',
-    khaaliCount: taal.khaali?.count?.value || 'N/A',
-    khaaliBeatNumbers: taal.khaali?.beatNumbers?.value || 'N/A',
-    jaati: taal.jaati?.value || 'N/A',
-    verification: {
-      name: taal.name?.verified || false,
-      numberOfBeats: taal.numberOfBeats?.verified || false,
-      divisions: taal.divisions?.verified || false,
-      taaliCount: taal.taali?.count?.verified || false,
-      taaliBeatNumbers: taal.taali?.beatNumbers?.verified || false,
-      khaaliCount: taal.khaali?.count?.verified || false,
-      khaaliBeatNumbers: taal.khaali?.beatNumbers?.verified || false,
-      jaati: taal.jaati?.verified || false
-    },
-    sources: {
-      name: taal.name?.reference || 'N/A',
-      numberOfBeats: taal.numberOfBeats?.reference || 'N/A',
-      divisions: taal.divisions?.reference || 'N/A',
-      taaliCount: taal.taali?.count?.reference || 'N/A',
-      taaliBeatNumbers: taal.taali?.beatNumbers?.reference || 'N/A',
-      khaaliCount: taal.khaali?.count?.reference || 'N/A',
-      khaaliBeatNumbers: taal.khaali?.beatNumbers?.reference || 'N/A',
-      jaati: taal.jaati?.reference || 'N/A'
-    },
-    metadata: {
-      createdAt: taal.createdAt,
-      updatedAt: taal.updatedAt,
-      verificationPercentage: calculateTaalVerificationPercentage(taal)
+  
+  isValidUrl(string) {
+    try {
+      const url = new URL(string);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+      return false;
     }
-  };
+  }
 }
 
-function calculateTaalVerificationPercentage(taal) {
-  const flags = [
-    taal.name?.verified,
-    taal.numberOfBeats?.verified,
-    taal.divisions?.verified,
-    taal.taali?.count?.verified,
-    taal.taali?.beatNumbers?.verified,
-    taal.khaali?.count?.verified,
-    taal.khaali?.beatNumbers?.verified,
-    taal.jaati?.verified,
-  ];
-  const valid = flags.filter(Boolean).length;
-  return Math.round((valid / flags.length) * 100);
-}
-
-function generateTaalMarkdown(taals) {
-  let markdown = '# Indian Classical Music Taals\n\n';
-  markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
-  markdown += `**Total Taals:** ${taals.length}\n\n`;
-  markdown += '---\n\n';
-  taals.forEach((t, index) => {
-    markdown += `## ${index + 1}. ${t.name}\n\n`;
-    markdown += '### Rhythmic Details\n\n';
-    if (t.numberOfBeats !== 'N/A') markdown += `**Beats:** ${t.numberOfBeats}\n\n`;
-    if (t.divisions !== 'N/A') markdown += `**Divisions:** ${t.divisions}\n\n`;
-    if (t.taaliCount !== 'N/A') markdown += `**Taali Count:** ${t.taaliCount}\n\n`;
-    if (t.taaliBeatNumbers !== 'N/A') markdown += `**Taali Beats:** ${t.taaliBeatNumbers}\n\n`;
-    if (t.khaaliCount !== 'N/A') markdown += `**Khaali Count:** ${t.khaaliCount}\n\n`;
-    if (t.khaaliBeatNumbers !== 'N/A') markdown += `**Khaali Beats:** ${t.khaaliBeatNumbers}\n\n`;
-    if (t.jaati !== 'N/A') markdown += `**Jaati:** ${t.jaati}\n\n`;
-
-    markdown += '### Verification Status\n\n';
-    markdown += `- **Verification Progress:** ${t.metadata.verificationPercentage}%\n`;
-    markdown += `- **Name:** ${t.verification.name ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Beats:** ${t.verification.numberOfBeats ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Divisions:** ${t.verification.divisions ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Taali Count:** ${t.verification.taaliCount ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Taali Beats:** ${t.verification.taaliBeatNumbers ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Khaali Count:** ${t.verification.khaaliCount ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Khaali Beats:** ${t.verification.khaaliBeatNumbers ? '✅ Verified' : '❌ Unverified'}\n`;
-    markdown += `- **Jaati:** ${t.verification.jaati ? '✅ Verified' : '❌ Unverified'}\n\n`;
-
-    markdown += '---\n\n';
-  });
-  return markdown;
-}
+module.exports = new PerplexityResearcher();
