@@ -25,112 +25,66 @@ class PerplexityResearcher {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Simplified, faster prompt for structured data extraction
-    const prompt = `Research the Indian Classical Music artist "${name}" and provide structured information in JSON format.
+    // Ultra-simplified prompt for fastest processing
+    const prompt = `Find basic information about Indian Classical Music artist "${name}":
 
-Find information about:
-- Full name and basic details
-- Primary guru/teacher
-- Gharana/musical tradition
-- Major awards and achievements
-- Notable disciples/students
-- Brief biographical summary
-
-Provide the information in this exact JSON format:
+Return JSON with: name, guru, gharana, achievements, disciples, summary.
 
 {
   "name": {
     "value": "${name}",
-    "reference": "Primary source URL",
+    "reference": "Source URL",
     "verified": false
   },
   "guru": {
-    "value": "Primary guru/teacher name with title (Ustad/Pandit)",
-    "reference": "Source URL for guru information",
+    "value": "Guru name with title",
+    "reference": "Source URL",
     "verified": false
   },
   "gharana": {
-    "value": "Gharana name (e.g., 'Patiala Gharana', 'Kirana Gharana')",
-    "reference": "Source URL for gharana information",
+    "value": "Gharana name",
+    "reference": "Source URL",
     "verified": false
   },
   "notableAchievements": {
-    "value": "Major awards and achievements with years",
-    "reference": "Source URL for achievements",
+    "value": "Awards and achievements",
+    "reference": "Source URL",
     "verified": false
   },
   "disciples": {
-    "value": "Notable disciples/students or 'No specific disciples documented'",
-    "reference": "Source URL for disciples information",
+    "value": "Notable disciples or 'None documented'",
+    "reference": "Source URL",
     "verified": false
   },
   "summary": {
-    "value": "Brief biographical summary (150-200 words)",
-    "reference": "Primary biographical source URL",
+    "value": "Brief summary (100-150 words)",
+    "reference": "Source URL",
     "verified": false
   }
-}
-
-- **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
-- **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
-`;
+}`;
 
     try {
       const response = await axios.post(this.baseURL, {
-        model: this.model,
+        model: 'sonar', // Use fastest model for Option 1
         messages: [
           {
             role: "system",
-            content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
-
-RESEARCH EXPERTISE:
-- Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
-- Advanced web research techniques for finding official artist information
-- Social media intelligence for extracting biographical details
-- Academic and institutional database navigation
-- Cross-referencing and fact-verification across multiple sources
-- Understanding of gharana systems, guru-shishya traditions, and musical lineages
-
-SEARCH METHODOLOGY:
-1. **Official Source Priority**: Always search for official websites, verified social media, artist biographies first
-2. **Social Media Mining**: Extract valuable biographical information from Facebook, Instagram, Twitter, YouTube profiles and posts
-3. **Institutional Deep Dive**: Thoroughly search music institutions, academies, universities, and cultural organizations
-4. **Academic Cross-Reference**: Use scholarly articles, research papers, and academic publications for verification
-5. **Contemporary Sources**: Include recent interviews, articles, and current biographical content
-6. **Lineage Tracking**: Pay special attention to guru-shishya relationships and gharana affiliations
-7. **Legacy Documentation**: Focus on finding information about disciples and teaching contributions
-
-CRITICAL SUCCESS FACTORS:
-- Conduct multi-step, systematic research as outlined in the user prompt
-- Never skip the specific searches for gharana, guru, disciples, and achievements
-- Use official websites and verified social media as primary sources when available
-- Cross-verify information from multiple independent sources
-- Return comprehensive, accurate information with working URLs
-- If information is genuinely not available, clearly state this in the reference field
-
-RESPONSE REQUIREMENTS:
-- Return ONLY valid JSON without any additional text
-- Use real, accessible URLs that can be verified
-- Be precise with Indian music terminology and proper names
-- Include titles (Ustad, Pandit) when mentioned in sources
-- Focus on factual, verifiable biographical and musical information`
+            content: "You are an expert Indian Classical Music researcher. Find basic information about artists quickly and return only valid JSON."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.02, // Extremely low temperature for maximum factual accuracy
-        max_tokens: 2000, // Reduced tokens for faster response
-        top_p: 0.9, // Slightly higher for better source diversity
-        // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
-        frequency_penalty: 0.1 // Reduce repetition only
+        temperature: 0.1,
+        max_tokens: 1500, // Reduced for faster processing
+        top_p: 0.9
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 60000 // 60 second timeout for comprehensive research
+        timeout: 90000 // 90 second timeout
       });
 
       console.log('Perplexity API response received');
