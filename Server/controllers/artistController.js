@@ -829,10 +829,10 @@ function cleanAllAboutDataForSave(allAboutData, name, provider, model) {
   
   return {
     answer: safeData.answer || { value: '', reference: '', verified: false },
-    images: safeData.images || [],
-    sources: safeData.sources || [],
-    citations: safeData.citations || [],
-    relatedQuestions: safeData.relatedQuestions || [],
+    images: Array.isArray(safeData.images) ? safeData.images : [],
+    sources: Array.isArray(safeData.sources) ? safeData.sources : [],
+    citations: Array.isArray(safeData.citations) ? safeData.citations : [],
+    relatedQuestions: Array.isArray(safeData.relatedQuestions) ? safeData.relatedQuestions : [],
     searchQuery: name,
     aiProvider: provider,
     aiModel: model
