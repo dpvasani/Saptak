@@ -428,12 +428,7 @@ REQUIREMENTS:
     const prompt = `Please provide comprehensive information about the Indian Classical Music artist "${name}". Include biographical details, musical background, training, achievements, and contributions to Indian classical music.`;
     
     try {
-      const result = await model.generateContent([
-        {
-          role: "user",
-          parts: [{ text: prompt }]
-        }
-      ]);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
@@ -472,12 +467,7 @@ REQUIREMENTS:
     const prompt = `Please provide comprehensive information about the Indian Classical Music raag "${name}". Include details about its structure, characteristics, performance guidelines, and musical significance.`;
     
     try {
-      const result = await model.generateContent([
-        {
-          role: "user", 
-          parts: [{ text: prompt }]
-        }
-      ]);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
@@ -515,12 +505,7 @@ REQUIREMENTS:
     const prompt = `Please provide comprehensive information about the Indian Classical Music taal "${name}". Include details about its rhythmic structure, beat patterns, and performance characteristics.`;
     
     try {
-      const result = await model.generateContent([
-        {
-          role: "user",
-          parts: [{ text: prompt }]
-        }
-      ]);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
