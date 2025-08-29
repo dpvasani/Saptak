@@ -25,115 +25,52 @@ class PerplexityResearcher {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Multi-step enhanced prompt for comprehensive artist research
-    const prompt = `I need you to conduct a comprehensive, multi-step research about the Indian Classical Music artist "${name}". Please search systematically through these sources in order:
+    // Simplified, faster prompt for structured data extraction
+    const prompt = `Research the Indian Classical Music artist "${name}" and provide structured information in JSON format.
 
-**STEP 1: Official Artist Presence**
-- Search for "${name}" official website, biography page, or artist profile
-- Look for "${name}" social media profiles (Facebook, Instagram, Twitter, YouTube)
-- Check "${name}" artist pages on music platforms and streaming services
-- Find "${name}" profiles on concert hall and festival websites
-- Search for "${name}" comprehensive biography or detailed artist profile
-- Look for "${name}" birth details, full name, and personal background
+Find information about:
+- Full name and basic details
+- Primary guru/teacher
+- Gharana/musical tradition
+- Major awards and achievements
+- Notable disciples/students
+- Brief biographical summary
 
-**STEP 2: Institutional and Academic Sources**
-- Search Wikipedia for "${name}" detailed biography
-- Check Sangeet Natak Akademi, ITC Sangeet Research Academy databases
-- Look for "${name}" in university music department faculty/alumni pages
-- Search academic papers, journals, and musicology publications mentioning "${name}"
-- Check cultural institution archives and music organization websites
-- Find detailed biographical articles and interviews about "${name}"
-- Search for "${name}" career timeline and major milestones
-
-**STEP 3: Specific Information Hunting**
-For GHARANA: Search specifically for:
-- "${name} gharana tradition"
-- "${name} musical lineage"
-- "${name} school of music"
-- "${name} musical heritage"
-
-For GURU/TEACHER: Search for:
-- "${name} guru teacher"
-- "${name} trained under"
-- "${name} student of"
-- "${name} learned from"
-- "${name} musical education"
-
-For DISCIPLES/STUDENTS: Search for:
-- "${name} disciples students"
-- "${name} taught"
-- "students of ${name}"
-- "${name} musical legacy"
-- "${name} proteges"
-
-For ACHIEVEMENTS: Search for:
-- "${name} awards honors"
-- "${name} Padma Shri Padma Bhushan"
-- "${name} Sangeet Natak Akademi award"
-- "${name} Grammy recognition"
-- "${name} national international awards"
-- "${name} major performances collaborations"
-- "${name} concert tours festivals"
-- "${name} recordings albums discography"
-
-For COMPREHENSIVE BIOGRAPHY: Search for:
-- "${name} full biography life story"
-- "${name} birth date birthplace family background"
-- "${name} career timeline major milestones"
-- "${name} contributions to Indian classical music"
-- "${name} cultural significance global impact"
-- "${name} detailed artist profile comprehensive overview"
-
-**STEP 4: Cross-Reference and Verify**
-- Cross-check information from multiple sources
-- Prioritize official websites and verified social media accounts
-- Use academic and institutional sources for verification
-- Include recent interviews, articles, and biographical content
-
-After conducting this comprehensive research, provide the information in this exact JSON format:
+Provide the information in this exact JSON format:
 
 {
   "name": {
     "value": "${name}",
-    "reference": "Primary source URL - verify this link works and is accessible",
+    "reference": "Primary source URL",
     "verified": false
   },
   "guru": {
-    "value": "Complete name of primary guru/teacher with titles (Ustad/Pandit if applicable) - if multiple gurus, list primary one",
-    "reference": "Primary source URL | Secondary source URL (if multiple sources found) - ensure URLs are working and accessible",
+    "value": "Primary guru/teacher name with title (Ustad/Pandit)",
+    "reference": "Source URL for guru information",
     "verified": false
   },
   "gharana": {
-    "value": "Complete gharana name with proper suffix (e.g., 'Punjab Gharana', 'Kirana Gharana', 'Gwalior Gharana') - be specific about the tradition",
-    "reference": "Primary source URL | Secondary source URL (if multiple sources confirm) - verify links work",
+    "value": "Gharana name (e.g., 'Patiala Gharana', 'Kirana Gharana')",
+    "reference": "Source URL for gharana information",
     "verified": false
   },
   "notableAchievements": {
-    "value": "Comprehensive list of major awards with years: Padma Shri (year), Padma Bhushan (year), Grammy Awards (years), Sangeet Natak Akademi (year), etc.",
-    "reference": "Awards source URL | Official recognition URL | Wikipedia URL (if multiple sources list different awards) - ensure all links are accessible",
+    "value": "Major awards and achievements with years",
+    "reference": "Source URL for achievements",
     "verified": false
   },
   "disciples": {
-    "value": "Names of notable disciples/students with instruments: Name 1 (tabla), Name 2 (percussion), etc. - if no specific disciples found, state 'No specific disciples documented in available sources'",
-    "reference": "Teaching source URL | Student mention URL | Interview URL (if multiple sources mention students) - if no disciples found, state 'No authoritative sources found listing specific disciples'",
+    "value": "Notable disciples/students or 'No specific disciples documented'",
+    "reference": "Source URL for disciples information",
     "verified": false
   },
   "summary": {
-    "value": "Comprehensive biographical summary (200-300 words) covering: Full name & birth details, primary profession/role, guru/teacher lineage, gharana/style/school, notable achievements & awards, major performances/collaborations, disciples/students, and cultural significance. Include background, lineage details, achievements, contributions to the art form, and global impact.",
-    "reference": "Primary biographical source URL | Official website URL | Major interview/article URL",
+    "value": "Brief biographical summary (150-200 words)",
+    "reference": "Primary biographical source URL",
     "verified": false
   }
 }
 
-CRITICAL REQUIREMENTS:
-- **URL VALIDATION**: Test each URL before including - ensure they are accessible and working
-- **REFERENCE FORMATTING**: Use format "Primary URL | Secondary URL | Third URL" for multiple sources
-- **LINK VERIFICATION**: Only include URLs that actually contain the mentioned information
-- **SOURCE QUALITY**: Prioritize official websites, verified social media, Wikipedia, academic institutions
-- **BROKEN LINK HANDLING**: If a source seems relevant but link is broken, note as "Source found but link inaccessible: [description]"
-- **NO FABRICATION**: If information is not found in accessible sources, clearly state this in the reference
-- Conduct thorough multi-step research as outlined above
-- **MULTIPLE SOURCE VERIFICATION**: When multiple sources confirm the same information, list them separated by " | "
 - **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
 - **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
 `;
