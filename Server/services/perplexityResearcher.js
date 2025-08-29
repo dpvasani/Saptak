@@ -583,14 +583,14 @@ Always provide accurate information with verifiable sources. Return only valid J
             }
           ],
           temperature: 0.02,
-          max_tokens: 3000,
+          max_tokens: 2000,
           top_p: 0.9
         }, {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 45000
+          timeout: 60000
         });
 
         console.log(`Fallback model ${model} worked!`);

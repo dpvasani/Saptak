@@ -142,7 +142,7 @@ class PerplexityAllAboutService {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 60000
+        timeout: 90000
       });
 
       const result = response.data;
