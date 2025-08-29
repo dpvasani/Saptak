@@ -443,8 +443,8 @@ REQUIREMENTS:
           reference: 'Google Gemini Response',
           verified: false
         },
-        images: [], // Gemini text model doesn't provide images
-        sources: this.extractSourcesFromText(text),
+        images: [],
+        sources: this.extractSourcesFromText(text) || [],
         citations: [],
         relatedQuestions: [],
         metadata: {
@@ -540,18 +540,25 @@ REQUIREMENTS:
 
   extractSourcesFromText(text) {
     const sources = [];
+    
+    if (!text || typeof text !== 'string') {
+      return sources;
+    }
+    
     const urlMatches = text.match(/https?:\/\/[^\s\)]+/g);
     
     if (urlMatches) {
       urlMatches.forEach((url, index) => {
-        sources.push({
-          title: `Reference ${index + 1}`,
-          url: url,
-          snippet: '',
-          domain: this.extractDomain(url),
-          type: 'reference',
-          verified: false
-        });
+        if (this.isValidUrl(url)) {
+          sources.push({
+            title: `Reference ${index + 1}`,
+            url: url,
+            snippet: '',
+            domain: this.extractDomain(url),
+            type: 'reference',
+            verified: false
+          });
+        }
       });
     }
     
@@ -559,6 +566,10 @@ REQUIREMENTS:
   }
 
   extractDomain(url) {
+    if (!url || typeof url !== 'string') {
+      return 'Unknown Domain';
+    }
+    
     try {
       const urlObj = new URL(url);
       return urlObj.hostname;
@@ -736,6 +747,16 @@ REQUIREMENTS:
   isValidUrl(string) {
     try {
       const url = new URL(string);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  isValidUrl(string) {
+    if (!string || typeof string !== 'string') return false;
+    try {
+      const url = new URL(string.trim());
       return url.protocol === 'http:' || url.protocol === 'https:';
     } catch (_) {
       return false;

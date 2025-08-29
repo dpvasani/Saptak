@@ -197,7 +197,7 @@ const DualModeSearchForm = ({
                     🎯 Choose from multiple AI modes below
                   </p>
                 </div>
-              </label>
+              {searchMethod === 'web' ? 'Web Scraping...' : 'AI Researching... (This may take up to 2 minutes)'}
             </div>
             
             {/* AI Mode Options - Only shown when AI Search is selected */}
