@@ -56,23 +56,60 @@ exports.searchTaal = async (req, res) => {
       data = await scraperService.scrapeTaal(name);
     }
 
-    // Create new taal with the researched data
-    const taal = new Taal({
-      ...data,
-      createdBy: userId,
-      modifiedBy: userId,
-      searchMetadata: {
-        searchMethod: useAI === 'true' ? 'ai' : 'web',
-        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
-        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
-        searchQuery: name,
-        searchTimestamp: new Date()
+    // Find existing taal or create new one (same logic as getAllAboutTaal)
+    let savedTaal = null;
+    try {
+      console.log('Looking for existing taal for structured data:', name);
+      
+      let existingTaal = await Taal.findOne({ 
+        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      });
+      
+      if (!existingTaal) {
+        existingTaal = await Taal.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
       }
-    });
-    await taal.save();
-    console.log('Saved taal to database:', taal);
+      
+      if (existingTaal) {
+        console.log('Found existing taal for structured data:', existingTaal._id);
+        
+        // Update existing taal with structured data
+        Object.keys(data).forEach(field => {
+          if (data[field] && typeof data[field] === 'object' && data[field].value !== undefined) {
+            existingTaal[field] = data[field];
+          }
+        });
+        
+        existingTaal.modifiedBy = userId;
+        existingTaal.updatedAt = new Date();
+        
+        savedTaal = await existingTaal.save();
+        console.log('Successfully updated existing taal with structured data:', savedTaal._id);
+      } else {
+        console.log('No existing taal found, creating new taal with structured data...');
+        
+        const newTaal = new Taal({
+          ...data,
+          createdBy: userId,
+          modifiedBy: userId,
+          searchMetadata: {
+            searchMethod: useAI === 'true' ? 'ai' : 'web',
+            aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+            aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        });
+        savedTaal = await newTaal.save();
+        console.log('Successfully created new taal with structured data:', savedTaal._id);
+      }
+    } catch (saveError) {
+      console.error('Error saving structured data to taal:', saveError);
+      return res.status(500).json({ message: 'Failed to save structured data: ' + saveError.message });
+    }
 
-    res.json(taal);
+    res.json(savedTaal);
   } catch (error) {
     console.error('Error in searchTaal:', error);
     res.status(500).json({ message: error.message || 'Error searching for taal' });

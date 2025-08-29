@@ -56,23 +56,60 @@ exports.searchRaag = async (req, res) => {
       data = await scraperService.scrapeRaag(name);
     }
 
-    // Create new raag with the researched data
-    const raag = new Raag({
-      ...data,
-      createdBy: userId,
-      modifiedBy: userId,
-      searchMetadata: {
-        searchMethod: useAI === 'true' ? 'ai' : 'web',
-        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
-        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
-        searchQuery: name,
-        searchTimestamp: new Date()
+    // Find existing raag or create new one (same logic as getAllAboutRaag)
+    let savedRaag = null;
+    try {
+      console.log('Looking for existing raag for structured data:', name);
+      
+      let existingRaag = await Raag.findOne({ 
+        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      });
+      
+      if (!existingRaag) {
+        existingRaag = await Raag.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
       }
-    });
-    await raag.save();
-    console.log('Saved raag to database:', raag);
+      
+      if (existingRaag) {
+        console.log('Found existing raag for structured data:', existingRaag._id);
+        
+        // Update existing raag with structured data
+        Object.keys(data).forEach(field => {
+          if (data[field] && typeof data[field] === 'object' && data[field].value !== undefined) {
+            existingRaag[field] = data[field];
+          }
+        });
+        
+        existingRaag.modifiedBy = userId;
+        existingRaag.updatedAt = new Date();
+        
+        savedRaag = await existingRaag.save();
+        console.log('Successfully updated existing raag with structured data:', savedRaag._id);
+      } else {
+        console.log('No existing raag found, creating new raag with structured data...');
+        
+        const newRaag = new Raag({
+          ...data,
+          createdBy: userId,
+          modifiedBy: userId,
+          searchMetadata: {
+            searchMethod: useAI === 'true' ? 'ai' : 'web',
+            aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+            aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        });
+        savedRaag = await newRaag.save();
+        console.log('Successfully created new raag with structured data:', savedRaag._id);
+      }
+    } catch (saveError) {
+      console.error('Error saving structured data to raag:', saveError);
+      return res.status(500).json({ message: 'Failed to save structured data: ' + saveError.message });
+    }
 
-    res.json(raag);
+    res.json(savedRaag);
   } catch (error) {
     console.error('Error in searchRaag:', error);
     res.status(500).json({ message: error.message || 'Error searching for raag' });

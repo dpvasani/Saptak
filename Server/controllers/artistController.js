@@ -66,24 +66,83 @@ exports.searchArtist = async (req, res) => {
       data = await scraperService.scrapeArtist(name);
     }
 
-    // Create new artist with the researched data and user tracking
-    const artist = new Artist({
-      ...data,
-      createdBy: userId,
-      modifiedBy: userId,
-      searchMetadata: {
-        searchMethod: useAI === 'true' ? 'ai' : 'web',
-        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
-        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
-        searchQuery: name,
-        searchTimestamp: new Date(),
-        responseTime: Date.now() - Date.now() // Will be calculated properly
+    // CRITICAL FIX: Find existing artist or create new one (same logic as getAllAboutArtist)
+    let savedArtist = null;
+    try {
+      console.log('Looking for existing artist for structured data:', name);
+      
+      // Strategy 1: Find existing artist by exact name match
+      let existingArtist = await Artist.findOne({ 
+        'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      });
+      
+      if (!existingArtist) {
+        // Strategy 2: Partial name match
+        existingArtist = await Artist.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
       }
-    });
-    await artist.save();
-    console.log('Saved artist to database:', artist);
+      
+      if (!existingArtist) {
+        // Strategy 3: Clean name match (remove prefixes)
+        const cleanName = name.replace(/^(pandit|ustad|pt\.?|sri|shri|vidushi)\s+/i, '').trim();
+        existingArtist = await Artist.findOne({ 
+          'name.value': { $regex: new RegExp(cleanName, 'i') } 
+        });
+      }
+      
+      if (existingArtist) {
+        console.log('Found existing artist for structured data:', existingArtist._id, 'Name:', existingArtist.name.value);
+        
+        // Update existing artist with structured data (Option 1)
+        Object.keys(data).forEach(field => {
+          if (data[field] && typeof data[field] === 'object' && data[field].value !== undefined) {
+            existingArtist[field] = data[field];
+          }
+        });
+        
+        existingArtist.modifiedBy = userId;
+        existingArtist.updatedAt = new Date();
+        
+        // Update search metadata for structured search
+        existingArtist.searchMetadata = {
+          ...existingArtist.searchMetadata,
+          lastStructuredSearch: {
+            searchMethod: useAI === 'true' ? 'ai' : 'web',
+            aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+            aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        };
+        
+        savedArtist = await existingArtist.save();
+        console.log('Successfully updated existing artist with structured data:', savedArtist._id);
+      } else {
+        console.log('No existing artist found, creating new artist with structured data...');
+        
+        // Create new artist with the researched data and user tracking
+        const newArtist = new Artist({
+          ...data,
+          createdBy: userId,
+          modifiedBy: userId,
+          searchMetadata: {
+            searchMethod: useAI === 'true' ? 'ai' : 'web',
+            aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+            aiModel: useAI === 'true' ? (aiModel || 'default') : null,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        });
+        savedArtist = await newArtist.save();
+        console.log('Successfully created new artist with structured data:', savedArtist._id);
+      }
+    } catch (saveError) {
+      console.error('Error saving structured data to artist:', saveError);
+      return res.status(500).json({ message: 'Failed to save structured data: ' + saveError.message });
+    }
 
-    res.json(artist);
+    res.json(savedArtist);
   } catch (error) {
     console.error('Error in searchArtist:', error);
     res.status(500).json({ message: error.message || 'Error searching for artist' });
@@ -174,7 +233,7 @@ exports.getAllAboutArtist = async (req, res) => {
       
       if (!existingArtist) {
         // Strategy 3: Clean name match (remove prefixes)
-        const cleanName = name.replace(/^(pandit|ustad|pt\.?|sri|shri)\s+/i, '').trim();
+        const cleanName = name.replace(/^(pandit|ustad|pt\.?|sri|shri|vidushi)\s+/i, '').trim();
         existingArtist = await Artist.findOne({ 
           'name.value': { $regex: new RegExp(cleanName, 'i') } 
         });
@@ -182,6 +241,17 @@ exports.getAllAboutArtist = async (req, res) => {
       
       if (existingArtist) {
         console.log('Found existing artist:', existingArtist._id, 'Name:', existingArtist.name.value);
+        
+        // Preserve existing structured data when adding All About data
+        const preservedFields = ['name', 'guru', 'gharana', 'notableAchievements', 'disciples', 'summary'];
+        const hasStructuredData = preservedFields.some(field => 
+          existingArtist[field] && existingArtist[field].value && existingArtist[field].value.trim() !== ''
+        );
+        
+        if (hasStructuredData) {
+          console.log('Existing artist has structured data, preserving it while adding All About data');
+        }
+        
         
         // Update All About data in existing artist
         const cleanAllAboutData = {
@@ -199,6 +269,19 @@ exports.getAllAboutArtist = async (req, res) => {
         
         existingArtist.modifiedBy = userId;
         existingArtist.updatedAt = new Date();
+        
+        // Update search metadata for All About search
+        existingArtist.searchMetadata = {
+          ...existingArtist.searchMetadata,
+          lastAllAboutSearch: {
+            searchMethod: 'ai',
+            aiProvider: provider,
+            aiModel: model,
+            searchQuery: name,
+            searchTimestamp: new Date()
+          }
+        };
+        
         
         savedArtist = await existingArtist.save();
         console.log('Successfully saved All About data to existing artist:', savedArtist._id);
