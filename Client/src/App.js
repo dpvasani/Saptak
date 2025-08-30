@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Import components
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -27,15 +26,13 @@ function App() {
     
     if (token && userData) {
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+        setUser(JSON.parse(userData));
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
     }
-    
     setLoading(false);
   }, []);
 
@@ -49,13 +46,29 @@ function App() {
     setUser(null);
   };
 
-  const handleUserUpdate = (updatedUser) => {
-    setUser(updatedUser);
+  // Protected Route Component
+  const ProtectedRoute = ({ children }) => {
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-emerald-900 to-green-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto"></div>
+            <p className="mt-4 text-gray-300">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!user) {
+      return <Navigate to="/" replace />;
+    }
+
+    return children;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-emerald-900 to-green-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto"></div>
           <p className="mt-4 text-gray-300">Loading...</p>
@@ -66,59 +79,92 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-emerald-900 to-green-900">
         <Navbar user={user} onLogin={handleLogin} onLogout={handleLogout} />
-        
-        <main className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8">
           <Routes>
             <Route 
               path="/" 
-              element={<Home onLogin={handleLogin} />} 
+              element={
+                user ? <Navigate to="/dashboard" replace /> : 
+                <Home onLogin={handleLogin} />
+              } 
             />
-            
-            {/* Protected Routes */}
             <Route 
               path="/dashboard" 
-              element={user ? <Dashboard user={user} /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <Dashboard user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/artists" 
-              element={user ? <ArtistSearch user={user} /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <ArtistSearch user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/raags" 
-              element={user ? <RaagSearch user={user} /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <RaagSearch user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/taals" 
-              element={user ? <TaalSearch user={user} /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <TaalSearch user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/verification/:category" 
-              element={user ? <VerificationPage /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <VerificationPage user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/verification/:category/:id" 
-              element={user ? <VerificationDetail /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <VerificationDetail user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/view/:category/:id" 
-              element={user ? <ArtistMarkdownView /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <ArtistMarkdownView user={user} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/profile" 
-              element={user ? <UserProfile user={user} onUserUpdate={handleUserUpdate} /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <UserProfile user={user} onUserUpdate={setUser} />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/activity" 
-              element={user ? <UserActivity user={user} /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <UserActivity user={user} />
+                </ProtectedRoute>
+              } 
             />
-            
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-        </main>
-
+        </div>
+        
         <ToastContainer
           position="top-right"
           autoClose={5000}
@@ -131,9 +177,10 @@ function App() {
           pauseOnHover
           theme="dark"
           toastStyle={{
-            backgroundColor: 'rgba(17, 24, 39, 0.95)',
-            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+            backdropFilter: 'blur(16px)',
             border: '1px solid rgba(75, 85, 99, 0.3)',
+            color: '#f3f4f6'
           }}
         />
       </div>

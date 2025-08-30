@@ -4,258 +4,170 @@ const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
 const perplexityAllAboutService = require('../services/perplexityAllAboutService');
+const { webScrapingLimiter } = require('../middleware/rateLimiter');
+const mongoose = require('mongoose');
 
-// Search for a taal
 exports.searchTaal = async (req, res) => {
   try {
     const { name, useAI, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-
     console.log('Search request received:', { name, useAI, aiProvider, aiModel });
-
+    
     if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Taal name is required'
-      });
+      return res.status(400).json({ message: 'Taal name is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required for search operations' });
     }
 
     let data;
-    const provider = aiProvider || 'openai';
-    const model = aiModel || 'default';
-
     if (useAI === 'true') {
-      console.log(`Using ${provider} AI research (${model}) for taal: ${name}`);
-      
+      // Use AI research - always get fresh data
+      const provider = aiProvider || 'openai'; // Default to OpenAI
+      const model = aiModel || 'default';
+      console.log(`Using ${provider} AI research (${model}) for taal:`, name);
       try {
         if (provider === 'perplexity') {
           data = await perplexityResearcher.researchTaal(name, model);
+          console.log('Perplexity AI research successful, data received:', data);
         } else if (provider === 'gemini') {
           data = await geminiResearcher.researchTaal(name, model);
+          console.log('Gemini AI research successful, data received:', data);
         } else {
           data = await aiResearcher.researchTaal(name, model);
+          console.log('OpenAI research successful, data received:', data);
         }
-        console.log(`${provider} AI research successful, data received:`, Object.keys(data));
       } catch (aiError) {
-        console.error(`${provider} AI research failed:`, aiError.message);
-        throw new Error(`${provider} AI research failed: ${aiError.message}`);
+        console.error(`${provider} AI research failed:`, aiError);
+        return res.status(500).json({ message: `${provider} AI research (${model}) failed: ` + aiError.message });
       }
     } else {
-      console.log(`Using web scraping for taal: ${name}`);
+      // Use traditional scraping
+      // Apply web scraping rate limiting
+      await new Promise((resolve, reject) => {
+        webScrapingLimiter(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      console.log('Using traditional scraping for taal:', name);
       data = await scraperService.scrapeTaal(name);
     }
 
-    // Check if taal already exists
-    let existingTaal = await Taal.findOne({ 
-      'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-    });
-
-    let savedTaal;
-    if (existingTaal) {
-      // Update existing taal with new data
-      Object.keys(data).forEach(field => {
-        if (data[field] && typeof data[field] === 'object' && data[field].value !== undefined) {
-          existingTaal[field] = data[field];
-        }
-      });
-      
-      existingTaal.modifiedBy = userId;
-      existingTaal.updatedAt = new Date();
-      
-      // Update search metadata
-      existingTaal.searchMetadata = {
+    // Create new taal with the researched data
+    const taal = new Taal({
+      ...data,
+      createdBy: userId,
+      modifiedBy: userId,
+      searchMetadata: {
         searchMethod: useAI === 'true' ? 'ai' : 'web',
-        aiProvider: useAI === 'true' ? provider : null,
-        aiModel: useAI === 'true' ? model : null,
+        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
         searchQuery: name,
         searchTimestamp: new Date()
-      };
-      
-      savedTaal = await existingTaal.save();
-      console.log('Updated existing taal:', savedTaal._id);
-    } else {
-      // Create new taal
-      const taal = new Taal({
-        ...data,
-        createdBy: userId,
-        modifiedBy: userId,
-        searchMetadata: {
-          searchMethod: useAI === 'true' ? 'ai' : 'web',
-          aiProvider: useAI === 'true' ? provider : null,
-          aiModel: useAI === 'true' ? model : null,
-          searchQuery: name,
-          searchTimestamp: new Date()
-        }
-      });
-      
-      savedTaal = await taal.save();
-      console.log('Created new taal:', savedTaal._id);
-    }
-
-    res.json(savedTaal);
-  } catch (error) {
-    console.error('Error in taal search:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error searching for taal'
+      }
     });
+    await taal.save();
+    console.log('Saved taal to database:', taal);
+
+    res.json(taal);
+  } catch (error) {
+    console.error('Error in searchTaal:', error);
+    res.status(500).json({ message: error.message || 'Error searching for taal' });
   }
 };
 
-// Get all about taal (Summary Mode)
 exports.getAllAboutTaal = async (req, res) => {
   try {
-    const { name, aiProvider, aiModel, entityId } = req.query;
+    const { name, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-
-    console.log('🔍 All About search request received for taal:', name, 'Provider:', aiProvider, 'Model:', aiModel, 'Entity ID:', entityId);
-
+    console.log('Summary search request received for taal:', name);
+    
     if (!name) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
-        message: 'Taal name is required'
+        message: 'Taal name is required' 
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required for AI search operations' 
       });
     }
 
     const provider = aiProvider || 'perplexity';
     const model = aiModel || 'sonar-pro';
+    console.log(`Using ${provider} Summary mode (${model}) for taal:`, name);
     
-    console.log(`Using ${provider} All About mode (${model}) for taal: ${name}`);
-    console.log('About to call AI service...');
-
     let allAboutData;
+    if (provider === 'perplexity') {
+      allAboutData = await perplexityAllAboutService.getAllAboutTaal(name, model);
+    } else if (provider === 'openai') {
+      allAboutData = await aiResearcher.getAllAboutTaal(name, model);
+    } else if (provider === 'gemini') {
+      allAboutData = await geminiResearcher.getAllAboutTaal(name, model);
+    } else {
+      throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+    
+    // Try to find existing taal by name to save the All About data
+    let savedTaal = null;
     try {
-      if (provider === 'perplexity') {
-        console.log('Calling Perplexity All About service...');
-        allAboutData = await perplexityAllAboutService.getAllAboutTaal(name, model);
-      } else if (provider === 'openai') {
-        console.log('Calling OpenAI All About service...');
-        allAboutData = await aiResearcher.getAllAboutTaal(name, model);
-      } else if (provider === 'gemini') {
-        console.log('Calling Gemini All About service...');
-        allAboutData = await geminiResearcher.getAllAboutTaal(name, model);
-      } else {
-        throw new Error(`Unsupported AI provider: ${provider}`);
-      }
-
-      console.log('All About data received:', {
-        hasAnswer: !!allAboutData.answer?.value,
-        answerLength: allAboutData.answer?.value?.length || 0,
-        imageCount: allAboutData.images?.length || 0,
-        sourceCount: allAboutData.sources?.length || 0,
-        hasMetadata: !!allAboutData.metadata
-      });
-    } catch (aiError) {
-      console.error(`${provider} All About search failed:`, aiError.message);
-      throw new Error(`${provider} All About search failed: ${aiError.message}`);
-    }
-
-    console.log('Attempting to save All About data for taal:', name);
-    console.log('All About data structure before saving:', {
-      hasAnswer: !!allAboutData.answer?.value,
-      imagesType: typeof allAboutData.images,
-      imagesLength: allAboutData.images?.length || 0,
-      sourcesType: typeof allAboutData.sources,
-      sourcesLength: allAboutData.sources?.length || 0,
-      citationsType: typeof allAboutData.citations,
-      citationsLength: allAboutData.citations?.length || 0
-    });
-
-    let savedTaal;
-
-    // 🎯 SEQUENTIAL PROCESSING: If entityId is provided, use it directly
-    if (entityId) {
-      console.log('🔗 Sequential processing: Using provided entity ID:', entityId);
-      
-      try {
-        const existingTaal = await Taal.findById(entityId);
-        if (existingTaal) {
-          console.log('✅ Found existing taal by ID:', entityId);
-          
-          // Update existing taal with All About data
-          existingTaal.allAboutData = {
-            answer: allAboutData.answer || { value: '', reference: 'No answer provided', verified: false },
-            images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
-            sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
-            citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
-            relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
-          };
-          
-          existingTaal.modifiedBy = userId;
-          existingTaal.updatedAt = new Date();
-          
-          savedTaal = await existingTaal.save();
-          console.log('✅ Successfully updated existing taal with All About data:', savedTaal._id);
-        } else {
-          console.log('❌ Entity ID provided but taal not found, falling back to name search');
-          throw new Error('Entity not found');
-        }
-      } catch (idError) {
-        console.log('❌ Failed to find taal by ID, falling back to name search:', idError.message);
-        // Fall back to name-based search
-      }
-    }
-
-    // If no entityId or ID lookup failed, use name-based search
-    if (!savedTaal) {
-      console.log('🔍 Searching for existing taal by name:', name);
-      
       let existingTaal = await Taal.findOne({ 
         'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
       });
-
+      
+      if (!existingTaal) {
+        existingTaal = await Taal.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
+      }
+      
       if (existingTaal) {
-        console.log('Found existing taal:', existingTaal._id, 'Name:', existingTaal.name.value);
-        
-        // Update existing taal with All About data
+        console.log('Found existing taal, updating with All About data...');
         existingTaal.allAboutData = {
-          answer: allAboutData.answer || { value: '', reference: 'No answer provided', verified: false },
-          images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
-          sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
-          citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
-          relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
-          searchQuery: allAboutData.metadata?.searchQuery || name,
-          aiProvider: allAboutData.metadata?.aiProvider || provider,
-          aiModel: allAboutData.metadata?.aiModel || model
+          answer: allAboutData.answer,
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: allAboutData.metadata?.searchQuery,
+          aiProvider: allAboutData.metadata?.aiProvider,
+          aiModel: allAboutData.metadata?.aiModel
         };
-        
         existingTaal.modifiedBy = userId;
         existingTaal.updatedAt = new Date();
-        
         savedTaal = await existingTaal.save();
         console.log('Successfully saved All About data to existing taal:', savedTaal._id);
       } else {
-        console.log('No existing taal found for name:', name, 'Creating new taal with All About data...');
-        
-        // Create new taal with All About data and empty structured fields
+        console.log('No existing taal found, creating new taal with All About data...');
         const newTaal = new Taal({
-          name: { value: name, reference: 'All About Mode Search', verified: false },
-          numberOfBeats: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          divisions: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
+          name: { value: name, reference: 'All About Search', verified: false },
+          numberOfBeats: { value: '', reference: 'Not searched in All About mode', verified: false },
+          divisions: { value: '', reference: 'Not searched in All About mode', verified: false },
           taali: {
-            count: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-            beatNumbers: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false }
+            count: { value: '', reference: 'Not searched in All About mode', verified: false },
+            beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
           },
           khaali: {
-            count: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-            beatNumbers: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false }
+            count: { value: '', reference: 'Not searched in All About mode', verified: false },
+            beatNumbers: { value: '', reference: 'Not searched in All About mode', verified: false }
           },
-          jaati: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          
+          jaati: { value: '', reference: 'Not searched in All About mode', verified: false },
           allAboutData: {
-            answer: allAboutData.answer || { value: '', reference: 'No answer provided', verified: false },
-            images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
-            sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
-            citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
-            relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
+            answer: allAboutData.answer,
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
+            searchQuery: allAboutData.metadata?.searchQuery,
+            aiProvider: allAboutData.metadata?.aiProvider,
+            aiModel: allAboutData.metadata?.aiModel
           },
-          
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -266,175 +178,114 @@ exports.getAllAboutTaal = async (req, res) => {
             searchTimestamp: new Date()
           }
         });
-        
         savedTaal = await newTaal.save();
         console.log('Successfully created new taal with All About data:', savedTaal._id);
       }
+    } catch (saveError) {
+      console.error('Error saving All About data to taal:', saveError);
     }
-
+    
     res.json({
       success: true,
-      data: allAboutData,
+      data: {
+        ...allAboutData,
+        _id: savedTaal?._id,
+        itemId: savedTaal?._id,
+        taalId: savedTaal?._id
+      },
       mode: 'summary',
       searchQuery: name,
       provider: provider,
-      model: model,
-      entityId: savedTaal._id // Return the MongoDB ID for sequential processing
+      model: model
     });
   } catch (error) {
-    console.error('Error in All About taal search:', error);
-    res.status(500).json({
+    console.error('Error in getAllAboutTaal:', error);
+    res.status(500).json({ 
       success: false,
-      message: error.message || 'Error in All About taal search'
+      message: error.message || 'Error in Summary search for taal' 
     });
   }
 };
 
-// Get all taals
-exports.getAllTaals = async (req, res) => {
-  try {
-    const taals = await Taal.find().sort({ createdAt: -1 });
-    res.json(taals);
-  } catch (error) {
-    console.error('Error fetching taals:', error);
-    res.status(500).json({ message: 'Error fetching taals' });
-  }
-};
-
-// Get taal by ID
-exports.getTaalById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const taal = await Taal.findById(id);
-    
-    if (!taal) {
-      return res.status(404).json({
-        success: false,
-        message: 'Taal not found'
-      });
-    }
-    
-    res.json(taal);
-  } catch (error) {
-    console.error('Error fetching taal:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching taal'
-    });
-  }
-};
-
-// Update taal
 exports.updateTaal = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
     const userId = req.user?.userId;
-    
+
     const taal = await Taal.findById(id);
     if (!taal) {
-      return res.status(404).json({
-        success: false,
-        message: 'Taal not found'
-      });
+      return res.status(404).json({ message: 'Taal not found' });
     }
-    
-    // Update fields
+
+    // Update all provided fields (including allAboutData)
     Object.keys(updates).forEach(field => {
-      if (taal[field] && typeof updates[field] === 'object') {
-        taal[field] = {
-          ...taal[field],
-          ...updates[field]
-        };
-      } else if (field === 'allAboutData' && updates[field]) {
-        taal[field] = {
-          ...taal[field],
-          ...updates[field]
-        };
+      if (updates[field] !== undefined) {
+        taal[field] = updates[field];
       }
     });
-    
-    taal.modifiedBy = userId;
-    taal.updatedAt = new Date();
+
+    if (userId) {
+      taal.modifiedBy = userId;
+    }
+    taal.updatedAt = Date.now();
     await taal.save();
-    
+
     res.json({
       success: true,
       data: taal,
       message: 'Taal updated successfully'
     });
   } catch (error) {
-    console.error('Error updating taal:', error);
-    res.status(500).json({
+    console.error('Error in updateTaal:', error);
+    res.status(500).json({ 
       success: false,
-      message: 'Error updating taal'
+      message: 'Error updating taal' 
     });
   }
 };
 
-// Delete taal
-exports.deleteTaal = async (req, res) => {
+exports.getAllTaals = async (req, res) => {
+  try {
+    const taals = await Taal.find();
+    res.json(taals);
+  } catch (error) {
+    console.error('Error in getAllTaals:', error);
+    res.status(500).json({ message: 'Error fetching taals' });
+  }
+};
+
+exports.getTaalById = async (req, res) => {
   try {
     const { id } = req.params;
-    const taal = await Taal.findByIdAndDelete(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid taal id' });
+    }
+    const taal = await Taal.findById(id);
     
     if (!taal) {
-      return res.status(404).json({
-        success: false,
-        message: 'Taal not found'
-      });
+      return res.status(404).json({ message: 'Taal not found' });
     }
-    
-    res.json({
-      success: true,
-      message: 'Taal deleted successfully',
-      data: { deletedId: id, deletedName: taal.name.value }
-    });
+
+    res.json(taal);
   } catch (error) {
-    console.error('Error deleting taal:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting taal'
-    });
+    console.error('Error in getTaalById:', error);
+    res.status(500).json({ message: 'Error fetching taal' });
   }
 };
 
-// Bulk delete taals
-exports.bulkDeleteTaals = async (req, res) => {
-  try {
-    const { ids } = req.body;
-    
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide an array of taal IDs to delete'
-      });
-    }
-    
-    const result = await Taal.deleteMany({ _id: { $in: ids } });
-    
-    res.json({
-      success: true,
-      message: `${result.deletedCount} taals deleted successfully`,
-      data: { deletedCount: result.deletedCount }
-    });
-  } catch (error) {
-    console.error('Error in bulk delete:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting taals'
-    });
-  }
-};
-
-// Get verified taals
 exports.getVerifiedTaals = async (req, res) => {
   try {
     const { field } = req.query;
-    
     let query = {};
+    
     if (field) {
-      query[`${field}.verified`] = true;
+      if (field.includes('.')) {
+        // Handle nested fields like taali.count, khaali.beatNumbers
+        query[`${field}.verified`] = true;
+      } else {
+        query[`${field}.verified`] = true;
+      }
     } else {
       query = {
         $or: [
@@ -445,82 +296,70 @@ exports.getVerifiedTaals = async (req, res) => {
           { 'taali.beatNumbers.verified': true },
           { 'khaali.count.verified': true },
           { 'khaali.beatNumbers.verified': true },
-          { 'jaati.verified': true },
-          { 'allAboutData.answer.verified': true }
+          { 'jaati.verified': true }
         ]
       };
     }
     
-    const taals = await Taal.find(query).sort({ createdAt: -1 });
-    
+    const taals = await Taal.find(query).sort({ updatedAt: -1 });
     res.json({
-      success: true,
+      count: taals.length,
       data: taals
     });
   } catch (error) {
-    console.error('Error fetching verified taals:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching verified taals'
-    });
+    console.error('Error in getVerifiedTaals:', error);
+    res.status(500).json({ message: 'Error fetching verified taals' });
   }
 };
 
-// Get unverified taals
 exports.getUnverifiedTaals = async (req, res) => {
   try {
     const { field } = req.query;
-    
     let query = {};
+    
     if (field) {
-      query[`${field}.verified`] = false;
+      if (field.includes('.')) {
+        query[`${field}.verified`] = false;
+      } else {
+        query[`${field}.verified`] = false;
+      }
     } else {
       query = {
-        $and: [
-          { 'name.verified': false },
-          { 'numberOfBeats.verified': false },
-          { 'divisions.verified': false },
-          { 'taali.count.verified': false },
-          { 'taali.beatNumbers.verified': false },
-          { 'khaali.count.verified': false },
-          { 'khaali.beatNumbers.verified': false },
-          { 'jaati.verified': false },
-          { 'allAboutData.answer.verified': false }
-        ]
+        'name.verified': false,
+        'numberOfBeats.verified': false,
+        'divisions.verified': false,
+        'taali.count.verified': false,
+        'taali.beatNumbers.verified': false,
+        'khaali.count.verified': false,
+        'khaali.beatNumbers.verified': false,
+        'jaati.verified': false
       };
     }
     
     const taals = await Taal.find(query).sort({ createdAt: -1 });
-    
     res.json({
-      success: true,
+      count: taals.length,
       data: taals
     });
   } catch (error) {
-    console.error('Error fetching unverified taals:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching unverified taals'
-    });
+    console.error('Error in getUnverifiedTaals:', error);
+    res.status(500).json({ message: 'Error fetching unverified taals' });
   }
 };
 
-// Get verification statistics
 exports.getVerificationStats = async (req, res) => {
   try {
-    const total = await Taal.countDocuments();
+    const totalTaals = await Taal.countDocuments();
     
-    const fullyVerified = await Taal.countDocuments({
-      'name.verified': true,
-      'numberOfBeats.verified': true,
-      'divisions.verified': true,
-      'taali.count.verified': true,
-      'taali.beatNumbers.verified': true,
-      'khaali.count.verified': true,
-      'khaali.beatNumbers.verified': true,
-      'jaati.verified': true,
-      'allAboutData.answer.verified': true
-    });
+    const nameVerified = await Taal.countDocuments({ 'name.verified': true });
+    const numberOfBeatsVerified = await Taal.countDocuments({ 'numberOfBeats.verified': true });
+    const divisionsVerified = await Taal.countDocuments({ 'divisions.verified': true });
+    const taaliCountVerified = await Taal.countDocuments({ 'taali.count.verified': true });
+    const taaliBeatNumbersVerified = await Taal.countDocuments({ 'taali.beatNumbers.verified': true });
+    const khaaliCountVerified = await Taal.countDocuments({ 'khaali.count.verified': true });
+    const khaaliBeatNumbersVerified = await Taal.countDocuments({ 'khaali.beatNumbers.verified': true });
+    const jaatiVerified = await Taal.countDocuments({ 'jaati.verified': true });
+    const allAboutAnswerVerified = await Taal.countDocuments({ 'allAboutData.answer.verified': true });
     
     const partiallyVerified = await Taal.countDocuments({
       $or: [
@@ -536,140 +375,264 @@ exports.getVerificationStats = async (req, res) => {
       ]
     });
     
-    const unverified = total - partiallyVerified;
+    const fullyVerified = await Taal.countDocuments({
+      'name.verified': true,
+      'numberOfBeats.verified': true,
+      'divisions.verified': true,
+      'taali.count.verified': true,
+      'taali.beatNumbers.verified': true,
+      'khaali.count.verified': true,
+      'khaali.beatNumbers.verified': true,
+      'jaati.verified': true,
+      'allAboutData.answer.verified': true
+    });
     
-    const fieldStats = {};
-    const fields = ['name', 'numberOfBeats', 'divisions', 'jaati'];
-    
-    for (const field of fields) {
-      fieldStats[field] = await Taal.countDocuments({ [`${field}.verified`]: true });
-    }
-    
-    // Add nested field stats
-    fieldStats['taali.count'] = await Taal.countDocuments({ 'taali.count.verified': true });
-    fieldStats['taali.beatNumbers'] = await Taal.countDocuments({ 'taali.beatNumbers.verified': true });
-    fieldStats['khaali.count'] = await Taal.countDocuments({ 'khaali.count.verified': true });
-    fieldStats['khaali.beatNumbers'] = await Taal.countDocuments({ 'khaali.beatNumbers.verified': true });
+    const unverified = totalTaals - partiallyVerified;
     
     res.json({
-      total,
+      total: totalTaals,
       fullyVerified,
       partiallyVerified,
       unverified,
-      fieldStats,
+      fieldStats: {
+        name: nameVerified,
+        numberOfBeats: numberOfBeatsVerified,
+        divisions: divisionsVerified,
+        taaliCount: taaliCountVerified,
+        taaliBeatNumbers: taaliBeatNumbersVerified,
+        khaaliCount: khaaliCountVerified,
+        khaaliBeatNumbers: khaaliBeatNumbersVerified,
+        jaati: jaatiVerified,
+        allAboutAnswer: allAboutAnswerVerified
+      },
       percentages: {
-        fullyVerified: total > 0 ? ((fullyVerified / total) * 100).toFixed(2) : '0.00',
-        partiallyVerified: total > 0 ? ((partiallyVerified / total) * 100).toFixed(2) : '0.00',
-        unverified: total > 0 ? ((unverified / total) * 100).toFixed(2) : '0.00'
+        fullyVerified: totalTaals > 0 ? ((fullyVerified / totalTaals) * 100).toFixed(2) : 0,
+        partiallyVerified: totalTaals > 0 ? ((partiallyVerified / totalTaals) * 100).toFixed(2) : 0,
+        unverified: totalTaals > 0 ? ((unverified / totalTaals) * 100).toFixed(2) : 0
       }
     });
   } catch (error) {
-    console.error('Error in verification stats:', error);
+    console.error('Error in getVerificationStats:', error);
     res.status(500).json({ message: 'Error fetching verification statistics' });
   }
 };
 
-// Export single taal
+exports.deleteTaal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid taal id' });
+    }
+    const taal = await Taal.findByIdAndDelete(id);
+    if (!taal) {
+      return res.status(404).json({ success: false, message: 'Taal not found' });
+    }
+    res.json({
+      success: true,
+      message: 'Taal deleted successfully',
+      data: { deletedId: id, deletedName: taal.name?.value || '' }
+    });
+  } catch (error) {
+    console.error('Error in deleteTaal:', error);
+    res.status(500).json({ success: false, message: 'Error deleting taal' });
+  }
+};
+
+exports.bulkDeleteTaals = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Taal IDs array is required' });
+    }
+    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({ success: false, message: `Invalid taal IDs: ${invalidIds.join(', ')}` });
+    }
+    const taalsToDelete = await Taal.find({ _id: { $in: ids } }).select('name.value');
+    const deletedNames = taalsToDelete.map(t => t.name.value);
+    const result = await Taal.deleteMany({ _id: { $in: ids } });
+    res.json({
+      success: true,
+      message: `${result.deletedCount} taals deleted successfully`,
+      data: { deletedCount: result.deletedCount, deletedIds: ids, deletedNames }
+    });
+  } catch (error) {
+    console.error('Error in bulkDeleteTaals:', error);
+    res.status(500).json({ success: false, message: 'Error deleting taals' });
+  }
+};
+
 exports.exportSingleTaal = async (req, res) => {
   try {
     const { id } = req.params;
-    const { format = 'markdown' } = req.query;
-    
+    const { format = 'json' } = req.query;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid taal id' });
+    }
     const taal = await Taal.findById(id);
     if (!taal) {
-      return res.status(404).json({
-        success: false,
-        message: 'Taal not found'
-      });
+      return res.status(404).json({ success: false, message: 'Taal not found' });
     }
+    const exportData = formatTaalForExport(taal);
+    const taalName = taal.name?.value || 'Unknown Taal';
+    const shortId = taal._id.toString().slice(-8);
+    const filename = `${taalName} ${shortId}`;
     
-    if (format === 'markdown') {
-      const markdown = this.generateTaalMarkdown(taal);
-      res.setHeader('Content-Type', 'text/markdown');
-      res.send(markdown);
-    } else {
-      res.json({
-        success: true,
-        data: taal
-      });
+    switch (format.toLowerCase()) {
+      case 'markdown': {
+        const md = generateTaalMarkdown([exportData]);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
+        res.send(md);
+        break;
+      }
+      default:
+        res.json({ success: true, data: exportData });
     }
   } catch (error) {
-    console.error('Error exporting taal:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error exporting taal'
-    });
+    console.error('Error in exportSingleTaal:', error);
+    res.status(500).json({ success: false, message: 'Error exporting taal' });
   }
 };
 
-// Export taals
 exports.exportTaals = async (req, res) => {
   try {
-    const { format = 'markdown', ids } = req.body;
-    
+    const { format = 'json', ids } = req.body || {};
     let query = {};
     if (ids && Array.isArray(ids) && ids.length > 0) {
-      query._id = { $in: ids };
+      const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+      if (invalidIds.length > 0) {
+        return res.status(400).json({ success: false, message: `Invalid taal IDs: ${invalidIds.join(', ')}` });
+      }
+      query = { _id: { $in: ids } };
+    }
+    const taals = await Taal.find(query).sort({ 'name.value': 1 });
+    if (taals.length === 0) {
+      return res.status(404).json({ success: false, message: 'No taals found to export' });
+    }
+    const exportData = taals.map(t => formatTaalForExport(t));
+    
+    let filename;
+    if (ids && ids.length > 0) {
+      if (ids.length === 1) {
+        // Single taal: use taal name with ID
+        const taal = taals[0];
+        const taalName = taal.name?.value || 'Unknown Taal';
+        const shortId = taal._id.toString().slice(-8);
+        filename = `${taalName} ${shortId}`;
+      } else {
+        // Multiple selected taals: use first taal name + count
+        const firstTaal = taals[0];
+        const firstName = firstTaal.name?.value || 'Unknown';
+        filename = `${firstName} And Other ${ids.length - 1}`;
+      }
+    } else {
+      // All taals
+      filename = `All Taals ${taals.length}`;
     }
     
-    const taals = await Taal.find(query).sort({ 'name.value': 1 });
-    
-    if (format === 'markdown') {
-      const markdown = taals.map(taal => this.generateTaalMarkdown(taal)).join('\n\n---\n\n');
-      res.setHeader('Content-Type', 'text/markdown');
-      res.send(markdown);
-    } else {
-      res.json({
-        success: true,
-        data: taals
-      });
+    switch (format.toLowerCase()) {
+      case 'markdown': {
+        const md = generateTaalMarkdown(exportData);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
+        res.send(md);
+        break;
+      }
+      default:
+        res.json({
+          success: true,
+          data: { taals: exportData, count: taals.length, exported: new Date().toISOString(), filename }
+        });
     }
   } catch (error) {
-    console.error('Error exporting taals:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error exporting taals'
-    });
+    console.error('Error in exportTaals:', error);
+    res.status(500).json({ success: false, message: 'Error exporting taals' });
   }
 };
 
-// Helper function to generate markdown
-exports.generateTaalMarkdown = (taal) => {
-  const fields = [
-    { key: 'name', label: 'Name' },
-    { key: 'numberOfBeats', label: 'Number of Beats' },
-    { key: 'divisions', label: 'Divisions' },
-    { key: 'taali.count', label: 'Taali Count' },
-    { key: 'taali.beatNumbers', label: 'Taali Beat Numbers' },
-    { key: 'khaali.count', label: 'Khaali Count' },
-    { key: 'khaali.beatNumbers', label: 'Khaali Beat Numbers' },
-    { key: 'jaati', label: 'Jaati' }
-  ];
-
-  let markdown = `# ${taal.name.value}\n\n`;
-  
-  fields.forEach(field => {
-    if (field.key !== 'name') {
-      let value;
-      if (field.key.includes('.')) {
-        const [parent, child] = field.key.split('.');
-        value = taal[parent]?.[child]?.value;
-      } else {
-        value = taal[field.key]?.value;
-      }
-      
-      if (value) {
-        markdown += `## ${field.label}\n${value}\n\n`;
-      }
+function formatTaalForExport(taal) {
+  return {
+    id: taal._id,
+    name: taal.name?.value || 'N/A',
+    numberOfBeats: taal.numberOfBeats?.value || 'N/A',
+    divisions: taal.divisions?.value || 'N/A',
+    taaliCount: taal.taali?.count?.value || 'N/A',
+    taaliBeatNumbers: taal.taali?.beatNumbers?.value || 'N/A',
+    khaaliCount: taal.khaali?.count?.value || 'N/A',
+    khaaliBeatNumbers: taal.khaali?.beatNumbers?.value || 'N/A',
+    jaati: taal.jaati?.value || 'N/A',
+    verification: {
+      name: taal.name?.verified || false,
+      numberOfBeats: taal.numberOfBeats?.verified || false,
+      divisions: taal.divisions?.verified || false,
+      taaliCount: taal.taali?.count?.verified || false,
+      taaliBeatNumbers: taal.taali?.beatNumbers?.verified || false,
+      khaaliCount: taal.khaali?.count?.verified || false,
+      khaaliBeatNumbers: taal.khaali?.beatNumbers?.verified || false,
+      jaati: taal.jaati?.verified || false
+    },
+    sources: {
+      name: taal.name?.reference || 'N/A',
+      numberOfBeats: taal.numberOfBeats?.reference || 'N/A',
+      divisions: taal.divisions?.reference || 'N/A',
+      taaliCount: taal.taali?.count?.reference || 'N/A',
+      taaliBeatNumbers: taal.taali?.beatNumbers?.reference || 'N/A',
+      khaaliCount: taal.khaali?.count?.reference || 'N/A',
+      khaaliBeatNumbers: taal.khaali?.beatNumbers?.reference || 'N/A',
+      jaati: taal.jaati?.reference || 'N/A'
+    },
+    metadata: {
+      createdAt: taal.createdAt,
+      updatedAt: taal.updatedAt,
+      verificationPercentage: calculateTaalVerificationPercentage(taal)
     }
+  };
+}
+
+function calculateTaalVerificationPercentage(taal) {
+  const flags = [
+    taal.name?.verified,
+    taal.numberOfBeats?.verified,
+    taal.divisions?.verified,
+    taal.taali?.count?.verified,
+    taal.taali?.beatNumbers?.verified,
+    taal.khaali?.count?.verified,
+    taal.khaali?.beatNumbers?.verified,
+    taal.jaati?.verified,
+  ];
+  const valid = flags.filter(Boolean).length;
+  return Math.round((valid / flags.length) * 100);
+}
+
+function generateTaalMarkdown(taals) {
+  let markdown = '# Indian Classical Music Taals\n\n';
+  markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
+  markdown += `**Total Taals:** ${taals.length}\n\n`;
+  markdown += '---\n\n';
+  taals.forEach((t, index) => {
+    markdown += `## ${index + 1}. ${t.name}\n\n`;
+    markdown += '### Rhythmic Details\n\n';
+    if (t.numberOfBeats !== 'N/A') markdown += `**Beats:** ${t.numberOfBeats}\n\n`;
+    if (t.divisions !== 'N/A') markdown += `**Divisions:** ${t.divisions}\n\n`;
+    if (t.taaliCount !== 'N/A') markdown += `**Taali Count:** ${t.taaliCount}\n\n`;
+    if (t.taaliBeatNumbers !== 'N/A') markdown += `**Taali Beats:** ${t.taaliBeatNumbers}\n\n`;
+    if (t.khaaliCount !== 'N/A') markdown += `**Khaali Count:** ${t.khaaliCount}\n\n`;
+    if (t.khaaliBeatNumbers !== 'N/A') markdown += `**Khaali Beats:** ${t.khaaliBeatNumbers}\n\n`;
+    if (t.jaati !== 'N/A') markdown += `**Jaati:** ${t.jaati}\n\n`;
+
+    markdown += '### Verification Status\n\n';
+    markdown += `- **Verification Progress:** ${t.metadata.verificationPercentage}%\n`;
+    markdown += `- **Name:** ${t.verification.name ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Beats:** ${t.verification.numberOfBeats ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Divisions:** ${t.verification.divisions ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Taali Count:** ${t.verification.taaliCount ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Taali Beats:** ${t.verification.taaliBeatNumbers ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Khaali Count:** ${t.verification.khaaliCount ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Khaali Beats:** ${t.verification.khaaliBeatNumbers ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Jaati:** ${t.verification.jaati ? '✅ Verified' : '❌ Unverified'}\n\n`;
+
+    markdown += '---\n\n';
   });
-  
-  if (taal.allAboutData?.answer?.value) {
-    markdown += `## Summary\n${taal.allAboutData.answer.value}\n\n`;
-  }
-  
-  markdown += `**Created:** ${taal.createdAt}\n`;
-  markdown += `**Last Updated:** ${taal.updatedAt}\n`;
-  
   return markdown;
-};
+}

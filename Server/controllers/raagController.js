@@ -4,256 +4,168 @@ const aiResearcher = require('../services/aiResearcher');
 const geminiResearcher = require('../services/geminiResearcher');
 const perplexityResearcher = require('../services/perplexityResearcher');
 const perplexityAllAboutService = require('../services/perplexityAllAboutService');
+const { webScrapingLimiter } = require('../middleware/rateLimiter');
+const mongoose = require('mongoose');
 
-// Search for a raag
 exports.searchRaag = async (req, res) => {
   try {
     const { name, useAI, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-
     console.log('Search request received:', { name, useAI, aiProvider, aiModel });
-
+    
     if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Raag name is required'
-      });
+      return res.status(400).json({ message: 'Raag name is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required for search operations' });
     }
 
     let data;
-    const provider = aiProvider || 'openai';
-    const model = aiModel || 'default';
-
     if (useAI === 'true') {
-      console.log(`Using ${provider} AI research (${model}) for raag: ${name}`);
-      
+      // Use AI research - always get fresh data
+      const provider = aiProvider || 'openai'; // Default to OpenAI
+      const model = aiModel || 'default';
+      console.log(`Using ${provider} AI research (${model}) for raag:`, name);
       try {
         if (provider === 'perplexity') {
           data = await perplexityResearcher.researchRaag(name, model);
+          console.log('Perplexity AI research successful, data received:', data);
         } else if (provider === 'gemini') {
           data = await geminiResearcher.researchRaag(name, model);
+          console.log('Gemini AI research successful, data received:', data);
         } else {
           data = await aiResearcher.researchRaag(name, model);
+          console.log('OpenAI research successful, data received:', data);
         }
-        console.log(`${provider} AI research successful, data received:`, Object.keys(data));
       } catch (aiError) {
-        console.error(`${provider} AI research failed:`, aiError.message);
-        throw new Error(`${provider} AI research failed: ${aiError.message}`);
+        console.error(`${provider} AI research failed:`, aiError);
+        return res.status(500).json({ message: `${provider} AI research (${model}) failed: ` + aiError.message });
       }
     } else {
-      console.log(`Using web scraping for raag: ${name}`);
+      // Use traditional scraping
+      // Apply web scraping rate limiting
+      await new Promise((resolve, reject) => {
+        webScrapingLimiter(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      console.log('Using traditional scraping for raag:', name);
       data = await scraperService.scrapeRaag(name);
     }
 
-    // Check if raag already exists
-    let existingRaag = await Raag.findOne({ 
-      'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
-    });
-
-    let savedRaag;
-    if (existingRaag) {
-      // Update existing raag with new data
-      Object.keys(data).forEach(field => {
-        if (data[field] && typeof data[field] === 'object' && data[field].value !== undefined) {
-          existingRaag[field] = data[field];
-        }
-      });
-      
-      existingRaag.modifiedBy = userId;
-      existingRaag.updatedAt = new Date();
-      
-      // Update search metadata
-      existingRaag.searchMetadata = {
+    // Create new raag with the researched data
+    const raag = new Raag({
+      ...data,
+      createdBy: userId,
+      modifiedBy: userId,
+      searchMetadata: {
         searchMethod: useAI === 'true' ? 'ai' : 'web',
-        aiProvider: useAI === 'true' ? provider : null,
-        aiModel: useAI === 'true' ? model : null,
+        aiProvider: useAI === 'true' ? (aiProvider || 'openai') : null,
+        aiModel: useAI === 'true' ? (aiModel || 'default') : null,
         searchQuery: name,
         searchTimestamp: new Date()
-      };
-      
-      savedRaag = await existingRaag.save();
-      console.log('Updated existing raag:', savedRaag._id);
-    } else {
-      // Create new raag
-      const raag = new Raag({
-        ...data,
-        createdBy: userId,
-        modifiedBy: userId,
-        searchMetadata: {
-          searchMethod: useAI === 'true' ? 'ai' : 'web',
-          aiProvider: useAI === 'true' ? provider : null,
-          aiModel: useAI === 'true' ? model : null,
-          searchQuery: name,
-          searchTimestamp: new Date()
-        }
-      });
-      
-      savedRaag = await raag.save();
-      console.log('Created new raag:', savedRaag._id);
-    }
-
-    res.json(savedRaag);
-  } catch (error) {
-    console.error('Error in raag search:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error searching for raag'
+      }
     });
+    await raag.save();
+    console.log('Saved raag to database:', raag);
+
+    res.json(raag);
+  } catch (error) {
+    console.error('Error in searchRaag:', error);
+    res.status(500).json({ message: error.message || 'Error searching for raag' });
   }
 };
 
-// Get all about raag (Summary Mode)
 exports.getAllAboutRaag = async (req, res) => {
   try {
-    const { name, aiProvider, aiModel, entityId } = req.query;
+    const { name, aiProvider, aiModel } = req.query;
     const userId = req.user?.userId;
-
-    console.log('🔍 All About search request received for raag:', name, 'Provider:', aiProvider, 'Model:', aiModel, 'Entity ID:', entityId);
-
+    console.log('Summary search request received for raag:', name);
+    
     if (!name) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
-        message: 'Raag name is required'
+        message: 'Raag name is required' 
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required for AI search operations' 
       });
     }
 
     const provider = aiProvider || 'perplexity';
     const model = aiModel || 'sonar-pro';
+    console.log(`Using ${provider} Summary mode (${model}) for raag:`, name);
     
-    console.log(`Using ${provider} All About mode (${model}) for raag: ${name}`);
-    console.log('About to call AI service...');
-
     let allAboutData;
+    if (provider === 'perplexity') {
+      allAboutData = await perplexityAllAboutService.getAllAboutRaag(name, model);
+    } else if (provider === 'openai') {
+      allAboutData = await aiResearcher.getAllAboutRaag(name, model);
+    } else if (provider === 'gemini') {
+      allAboutData = await geminiResearcher.getAllAboutRaag(name, model);
+    } else {
+      throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+    
+    // Try to find existing raag by name to save the All About data
+    let savedRaag = null;
     try {
-      if (provider === 'perplexity') {
-        console.log('Calling Perplexity All About service...');
-        allAboutData = await perplexityAllAboutService.getAllAboutRaag(name, model);
-      } else if (provider === 'openai') {
-        console.log('Calling OpenAI All About service...');
-        allAboutData = await aiResearcher.getAllAboutRaag(name, model);
-      } else if (provider === 'gemini') {
-        console.log('Calling Gemini All About service...');
-        allAboutData = await geminiResearcher.getAllAboutRaag(name, model);
-      } else {
-        throw new Error(`Unsupported AI provider: ${provider}`);
-      }
-
-      console.log('All About data received:', {
-        hasAnswer: !!allAboutData.answer?.value,
-        answerLength: allAboutData.answer?.value?.length || 0,
-        imageCount: allAboutData.images?.length || 0,
-        sourceCount: allAboutData.sources?.length || 0,
-        hasMetadata: !!allAboutData.metadata
-      });
-    } catch (aiError) {
-      console.error(`${provider} All About search failed:`, aiError.message);
-      throw new Error(`${provider} All About search failed: ${aiError.message}`);
-    }
-
-    console.log('Attempting to save All About data for raag:', name);
-    console.log('All About data structure before saving:', {
-      hasAnswer: !!allAboutData.answer?.value,
-      imagesType: typeof allAboutData.images,
-      imagesLength: allAboutData.images?.length || 0,
-      sourcesType: typeof allAboutData.sources,
-      sourcesLength: allAboutData.sources?.length || 0,
-      citationsType: typeof allAboutData.citations,
-      citationsLength: allAboutData.citations?.length || 0
-    });
-
-    let savedRaag;
-
-    // 🎯 SEQUENTIAL PROCESSING: If entityId is provided, use it directly
-    if (entityId) {
-      console.log('🔗 Sequential processing: Using provided entity ID:', entityId);
-      
-      try {
-        const existingRaag = await Raag.findById(entityId);
-        if (existingRaag) {
-          console.log('✅ Found existing raag by ID:', entityId);
-          
-          // Update existing raag with All About data
-          existingRaag.allAboutData = {
-            answer: allAboutData.answer || { value: '', reference: 'No answer provided', verified: false },
-            images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
-            sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
-            citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
-            relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
-          };
-          
-          existingRaag.modifiedBy = userId;
-          existingRaag.updatedAt = new Date();
-          
-          savedRaag = await existingRaag.save();
-          console.log('✅ Successfully updated existing raag with All About data:', savedRaag._id);
-        } else {
-          console.log('❌ Entity ID provided but raag not found, falling back to name search');
-          throw new Error('Entity not found');
-        }
-      } catch (idError) {
-        console.log('❌ Failed to find raag by ID, falling back to name search:', idError.message);
-        // Fall back to name-based search
-      }
-    }
-
-    // If no entityId or ID lookup failed, use name-based search
-    if (!savedRaag) {
-      console.log('🔍 Searching for existing raag by name:', name);
-      
       let existingRaag = await Raag.findOne({ 
         'name.value': { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
       });
-
+      
+      if (!existingRaag) {
+        existingRaag = await Raag.findOne({ 
+          'name.value': { $regex: new RegExp(name.trim(), 'i') } 
+        });
+      }
+      
       if (existingRaag) {
-        console.log('Found existing raag:', existingRaag._id, 'Name:', existingRaag.name.value);
-        
-        // Update existing raag with All About data
+        console.log('Found existing raag, updating with All About data...');
         existingRaag.allAboutData = {
-          answer: allAboutData.answer || { value: '', reference: 'No answer provided', verified: false },
-          images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
-          sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
-          citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
-          relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
-          searchQuery: allAboutData.metadata?.searchQuery || name,
-          aiProvider: allAboutData.metadata?.aiProvider || provider,
-          aiModel: allAboutData.metadata?.aiModel || model
+          answer: allAboutData.answer,
+          images: allAboutData.images || [],
+          sources: allAboutData.sources || [],
+          citations: allAboutData.citations || [],
+          relatedQuestions: allAboutData.relatedQuestions || [],
+          searchQuery: allAboutData.metadata?.searchQuery,
+          aiProvider: allAboutData.metadata?.aiProvider,
+          aiModel: allAboutData.metadata?.aiModel
         };
-        
         existingRaag.modifiedBy = userId;
         existingRaag.updatedAt = new Date();
-        
         savedRaag = await existingRaag.save();
         console.log('Successfully saved All About data to existing raag:', savedRaag._id);
       } else {
-        console.log('No existing raag found for name:', name, 'Creating new raag with All About data...');
-        
-        // Create new raag with All About data and empty structured fields
+        console.log('No existing raag found, creating new raag with All About data...');
         const newRaag = new Raag({
-          name: { value: name, reference: 'All About Mode Search', verified: false },
-          aroha: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          avroha: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          chalan: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          vadi: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          samvadi: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          thaat: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          rasBhaav: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          tanpuraTuning: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          timeOfRendition: { value: '', reference: 'Use Structured Mode to get detailed field data', verified: false },
-          
+          name: { value: name, reference: 'All About Search', verified: false },
+          aroha: { value: '', reference: 'Not searched in All About mode', verified: false },
+          avroha: { value: '', reference: 'Not searched in All About mode', verified: false },
+          chalan: { value: '', reference: 'Not searched in All About mode', verified: false },
+          vadi: { value: '', reference: 'Not searched in All About mode', verified: false },
+          samvadi: { value: '', reference: 'Not searched in All About mode', verified: false },
+          thaat: { value: '', reference: 'Not searched in All About mode', verified: false },
+          rasBhaav: { value: '', reference: 'Not searched in All About mode', verified: false },
+          tanpuraTuning: { value: '', reference: 'Not searched in All About mode', verified: false },
+          timeOfRendition: { value: '', reference: 'Not searched in All About mode', verified: false },
           allAboutData: {
-            answer: allAboutData.answer || { value: '', reference: 'No answer provided', verified: false },
-            images: Array.isArray(allAboutData.images) ? allAboutData.images : [],
-            sources: Array.isArray(allAboutData.sources) ? allAboutData.sources : [],
-            citations: Array.isArray(allAboutData.citations) ? allAboutData.citations : [],
-            relatedQuestions: Array.isArray(allAboutData.relatedQuestions) ? allAboutData.relatedQuestions : [],
-            searchQuery: allAboutData.metadata?.searchQuery || name,
-            aiProvider: allAboutData.metadata?.aiProvider || provider,
-            aiModel: allAboutData.metadata?.aiModel || model
+            answer: allAboutData.answer,
+            images: allAboutData.images || [],
+            sources: allAboutData.sources || [],
+            citations: allAboutData.citations || [],
+            relatedQuestions: allAboutData.relatedQuestions || [],
+            searchQuery: allAboutData.metadata?.searchQuery,
+            aiProvider: allAboutData.metadata?.aiProvider,
+            aiModel: allAboutData.metadata?.aiModel
           },
-          
           createdBy: userId,
           modifiedBy: userId,
           searchMetadata: {
@@ -264,173 +176,107 @@ exports.getAllAboutRaag = async (req, res) => {
             searchTimestamp: new Date()
           }
         });
-        
         savedRaag = await newRaag.save();
         console.log('Successfully created new raag with All About data:', savedRaag._id);
       }
+    } catch (saveError) {
+      console.error('Error saving All About data to raag:', saveError);
     }
-
+    
     res.json({
       success: true,
-      data: allAboutData,
+      data: {
+        ...allAboutData,
+        _id: savedRaag?._id,
+        itemId: savedRaag?._id,
+        raagId: savedRaag?._id
+      },
       mode: 'summary',
       searchQuery: name,
       provider: provider,
-      model: model,
-      entityId: savedRaag._id // Return the MongoDB ID for sequential processing
+      model: model
     });
   } catch (error) {
-    console.error('Error in All About raag search:', error);
-    res.status(500).json({
+    console.error('Error in getAllAboutRaag:', error);
+    res.status(500).json({ 
       success: false,
-      message: error.message || 'Error in All About raag search'
+      message: error.message || 'Error in Summary search for raag' 
     });
   }
 };
 
-// Get all raags
-exports.getAllRaags = async (req, res) => {
-  try {
-    const raags = await Raag.find().sort({ createdAt: -1 });
-    res.json(raags);
-  } catch (error) {
-    console.error('Error fetching raags:', error);
-    res.status(500).json({ message: 'Error fetching raags' });
-  }
-};
-
-// Get raag by ID
-exports.getRaagById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const raag = await Raag.findById(id);
-    
-    if (!raag) {
-      return res.status(404).json({
-        success: false,
-        message: 'Raag not found'
-      });
-    }
-    
-    res.json(raag);
-  } catch (error) {
-    console.error('Error fetching raag:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching raag'
-    });
-  }
-};
-
-// Update raag
 exports.updateRaag = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
     const userId = req.user?.userId;
-    
+
     const raag = await Raag.findById(id);
     if (!raag) {
-      return res.status(404).json({
-        success: false,
-        message: 'Raag not found'
-      });
+      return res.status(404).json({ message: 'Raag not found' });
     }
-    
-    // Update fields
+
+    // Update all provided fields (including allAboutData)
     Object.keys(updates).forEach(field => {
-      if (raag[field] && typeof updates[field] === 'object') {
-        raag[field] = {
-          ...raag[field],
-          ...updates[field]
-        };
-      } else if (field === 'allAboutData' && updates[field]) {
-        raag[field] = {
-          ...raag[field],
-          ...updates[field]
-        };
+      if (updates[field] !== undefined) {
+        raag[field] = updates[field];
       }
     });
-    
-    raag.modifiedBy = userId;
-    raag.updatedAt = new Date();
+
+    if (userId) {
+      raag.modifiedBy = userId;
+    }
+    raag.updatedAt = Date.now();
     await raag.save();
-    
+
     res.json({
       success: true,
       data: raag,
       message: 'Raag updated successfully'
     });
   } catch (error) {
-    console.error('Error updating raag:', error);
-    res.status(500).json({
+    console.error('Error in updateRaag:', error);
+    res.status(500).json({ 
       success: false,
-      message: 'Error updating raag'
+      message: 'Error updating raag' 
     });
   }
 };
 
-// Delete raag
-exports.deleteRaag = async (req, res) => {
+exports.getAllRaags = async (req, res) => {
+  try {
+    const raags = await Raag.find();
+    res.json(raags);
+  } catch (error) {
+    console.error('Error in getAllRaags:', error);
+    res.status(500).json({ message: 'Error fetching raags' });
+  }
+};
+
+exports.getRaagById = async (req, res) => {
   try {
     const { id } = req.params;
-    const raag = await Raag.findByIdAndDelete(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid raag id' });
+    }
+    const raag = await Raag.findById(id);
     
     if (!raag) {
-      return res.status(404).json({
-        success: false,
-        message: 'Raag not found'
-      });
+      return res.status(404).json({ message: 'Raag not found' });
     }
-    
-    res.json({
-      success: true,
-      message: 'Raag deleted successfully',
-      data: { deletedId: id, deletedName: raag.name.value }
-    });
+
+    res.json(raag);
   } catch (error) {
-    console.error('Error deleting raag:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting raag'
-    });
+    console.error('Error in getRaagById:', error);
+    res.status(500).json({ message: 'Error fetching raag' });
   }
 };
 
-// Bulk delete raags
-exports.bulkDeleteRaags = async (req, res) => {
-  try {
-    const { ids } = req.body;
-    
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide an array of raag IDs to delete'
-      });
-    }
-    
-    const result = await Raag.deleteMany({ _id: { $in: ids } });
-    
-    res.json({
-      success: true,
-      message: `${result.deletedCount} raags deleted successfully`,
-      data: { deletedCount: result.deletedCount }
-    });
-  } catch (error) {
-    console.error('Error in bulk delete:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting raags'
-    });
-  }
-};
-
-// Get verified raags
 exports.getVerifiedRaags = async (req, res) => {
   try {
     const { field } = req.query;
-    
     let query = {};
+    
     if (field) {
       query[`${field}.verified`] = true;
     } else {
@@ -445,33 +291,27 @@ exports.getVerifiedRaags = async (req, res) => {
           { 'thaat.verified': true },
           { 'rasBhaav.verified': true },
           { 'tanpuraTuning.verified': true },
-          { 'timeOfRendition.verified': true },
-          { 'allAboutData.answer.verified': true }
+          { 'timeOfRendition.verified': true }
         ]
       };
     }
     
-    const raags = await Raag.find(query).sort({ createdAt: -1 });
-    
+    const raags = await Raag.find(query).sort({ updatedAt: -1 });
     res.json({
-      success: true,
+      count: raags.length,
       data: raags
     });
   } catch (error) {
-    console.error('Error fetching verified raags:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching verified raags'
-    });
+    console.error('Error in getVerifiedRaags:', error);
+    res.status(500).json({ message: 'Error fetching verified raags' });
   }
 };
 
-// Get unverified raags
 exports.getUnverifiedRaags = async (req, res) => {
   try {
     const { field } = req.query;
-    
     let query = {};
+    
     if (field) {
       query[`${field}.verified`] = false;
     } else {
@@ -486,45 +326,37 @@ exports.getUnverifiedRaags = async (req, res) => {
           { 'thaat.verified': false },
           { 'rasBhaav.verified': false },
           { 'tanpuraTuning.verified': false },
-          { 'timeOfRendition.verified': false },
-          { 'allAboutData.answer.verified': false }
+          { 'timeOfRendition.verified': false }
         ]
       };
     }
     
     const raags = await Raag.find(query).sort({ createdAt: -1 });
-    
     res.json({
-      success: true,
+      count: raags.length,
       data: raags
     });
   } catch (error) {
-    console.error('Error fetching unverified raags:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching unverified raags'
-    });
+    console.error('Error in getUnverifiedRaags:', error);
+    res.status(500).json({ message: 'Error fetching unverified raags' });
   }
 };
 
-// Get verification statistics
 exports.getVerificationStats = async (req, res) => {
   try {
-    const total = await Raag.countDocuments();
+    const totalRaags = await Raag.countDocuments();
     
-    const fullyVerified = await Raag.countDocuments({
-      'name.verified': true,
-      'aroha.verified': true,
-      'avroha.verified': true,
-      'chalan.verified': true,
-      'vadi.verified': true,
-      'samvadi.verified': true,
-      'thaat.verified': true,
-      'rasBhaav.verified': true,
-      'tanpuraTuning.verified': true,
-      'timeOfRendition.verified': true,
-      'allAboutData.answer.verified': true
-    });
+    const nameVerified = await Raag.countDocuments({ 'name.verified': true });
+    const arohaVerified = await Raag.countDocuments({ 'aroha.verified': true });
+    const avrohaVerified = await Raag.countDocuments({ 'avroha.verified': true });
+    const chalanVerified = await Raag.countDocuments({ 'chalan.verified': true });
+    const vadiVerified = await Raag.countDocuments({ 'vadi.verified': true });
+    const samvadiVerified = await Raag.countDocuments({ 'samvadi.verified': true });
+    const thaatVerified = await Raag.countDocuments({ 'thaat.verified': true });
+    const rasBhaavVerified = await Raag.countDocuments({ 'rasBhaav.verified': true });
+    const tanpuraTuningVerified = await Raag.countDocuments({ 'tanpuraTuning.verified': true });
+    const timeOfRenditionVerified = await Raag.countDocuments({ 'timeOfRendition.verified': true });
+    const allAboutAnswerVerified = await Raag.countDocuments({ 'allAboutData.answer.verified': true });
     
     const partiallyVerified = await Raag.countDocuments({
       $or: [
@@ -542,38 +374,124 @@ exports.getVerificationStats = async (req, res) => {
       ]
     });
     
-    const unverified = total - partiallyVerified;
+    const fullyVerified = await Raag.countDocuments({
+      'name.verified': true,
+      'aroha.verified': true,
+      'avroha.verified': true,
+      'chalan.verified': true,
+      'vadi.verified': true,
+      'samvadi.verified': true,
+      'thaat.verified': true,
+      'rasBhaav.verified': true,
+      'tanpuraTuning.verified': true,
+      'timeOfRendition.verified': true,
+      'allAboutData.answer.verified': true
+    });
     
-    const fieldStats = {};
-    const fields = ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition'];
-    
-    for (const field of fields) {
-      fieldStats[field] = await Raag.countDocuments({ [`${field}.verified`]: true });
-    }
+    const unverified = totalRaags - partiallyVerified;
     
     res.json({
-      total,
+      total: totalRaags,
       fullyVerified,
       partiallyVerified,
       unverified,
-      fieldStats,
+      fieldStats: {
+        name: nameVerified,
+        aroha: arohaVerified,
+        avroha: avrohaVerified,
+        chalan: chalanVerified,
+        vadi: vadiVerified,
+        samvadi: samvadiVerified,
+        thaat: thaatVerified,
+        rasBhaav: rasBhaavVerified,
+        tanpuraTuning: tanpuraTuningVerified,
+        timeOfRendition: timeOfRenditionVerified,
+        allAboutAnswer: allAboutAnswerVerified
+      },
       percentages: {
-        fullyVerified: total > 0 ? ((fullyVerified / total) * 100).toFixed(2) : '0.00',
-        partiallyVerified: total > 0 ? ((partiallyVerified / total) * 100).toFixed(2) : '0.00',
-        unverified: total > 0 ? ((unverified / total) * 100).toFixed(2) : '0.00'
+        fullyVerified: totalRaags > 0 ? ((fullyVerified / totalRaags) * 100).toFixed(2) : 0,
+        partiallyVerified: totalRaags > 0 ? ((partiallyVerified / totalRaags) * 100).toFixed(2) : 0,
+        unverified: totalRaags > 0 ? ((unverified / totalRaags) * 100).toFixed(2) : 0
       }
     });
   } catch (error) {
-    console.error('Error in verification stats:', error);
+    console.error('Error in getVerificationStats:', error);
     res.status(500).json({ message: 'Error fetching verification statistics' });
   }
 };
 
-// Export single raag
+exports.deleteRaag = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const raag = await Raag.findByIdAndDelete(id);
+    
+    if (!raag) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Raag not found' 
+      });
+    }
+
+    res.json({ 
+      success: true,
+      message: 'Raag deleted successfully',
+      data: { deletedId: id, deletedName: raag.name.value }
+    });
+  } catch (error) {
+    console.error('Error in deleteRaag:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error deleting raag' 
+    });
+  }
+};
+
+exports.bulkDeleteRaags = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Raag IDs array is required'
+      });
+    }
+
+    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid raag IDs: ${invalidIds.join(', ')}`
+      });
+    }
+
+    const raagsToDelete = await Raag.find({ _id: { $in: ids } }).select('name.value');
+    const deletedNames = raagsToDelete.map(raag => raag.name.value);
+
+    const result = await Raag.deleteMany({ _id: { $in: ids } });
+    
+    res.json({
+      success: true,
+      message: `${result.deletedCount} raags deleted successfully`,
+      data: {
+        deletedCount: result.deletedCount,
+        deletedIds: ids,
+        deletedNames: deletedNames
+      }
+    });
+  } catch (error) {
+    console.error('Error in bulkDeleteRaags:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting raags'
+    });
+  }
+};
+
 exports.exportSingleRaag = async (req, res) => {
   try {
     const { id } = req.params;
-    const { format = 'markdown' } = req.query;
+    const { format = 'json' } = req.query;
     
     const raag = await Raag.findById(id);
     if (!raag) {
@@ -582,19 +500,28 @@ exports.exportSingleRaag = async (req, res) => {
         message: 'Raag not found'
       });
     }
-    
-    if (format === 'markdown') {
-      const markdown = this.generateRaagMarkdown(raag);
-      res.setHeader('Content-Type', 'text/markdown');
-      res.send(markdown);
-    } else {
-      res.json({
-        success: true,
-        data: raag
-      });
+
+    const exportData = formatRaagForExport(raag);
+    const raagName = raag.name?.value || 'Unknown Raag';
+    const shortId = raag._id.toString().slice(-8);
+    const filename = `${raagName} ${shortId}`;
+
+    switch (format.toLowerCase()) {
+      case 'markdown':
+        const markdown = generateRaagMarkdown([exportData]);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
+        res.send(markdown);
+        break;
+        
+      default:
+        res.json({
+          success: true,
+          data: exportData
+        });
     }
   } catch (error) {
-    console.error('Error exporting raag:', error);
+    console.error('Error in exportSingleRaag:', error);
     res.status(500).json({
       success: false,
       message: 'Error exporting raag'
@@ -602,30 +529,65 @@ exports.exportSingleRaag = async (req, res) => {
   }
 };
 
-// Export raags
 exports.exportRaags = async (req, res) => {
   try {
-    const { format = 'markdown', ids } = req.body;
-    
+    const { format = 'json', ids } = req.body;
     let query = {};
+    
     if (ids && Array.isArray(ids) && ids.length > 0) {
-      query._id = { $in: ids };
+      query = { _id: { $in: ids } };
     }
     
     const raags = await Raag.find(query).sort({ 'name.value': 1 });
     
-    if (format === 'markdown') {
-      const markdown = raags.map(raag => this.generateRaagMarkdown(raag)).join('\n\n---\n\n');
-      res.setHeader('Content-Type', 'text/markdown');
-      res.send(markdown);
-    } else {
-      res.json({
-        success: true,
-        data: raags
+    if (raags.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No raags found to export'
       });
     }
+
+    const exportData = raags.map(raag => formatRaagForExport(raag));
+    
+    let filename;
+    if (ids && ids.length > 0) {
+      if (ids.length === 1) {
+        // Single raag: use raag name with ID
+        const raag = raags[0];
+        const raagName = raag.name?.value || 'Unknown Raag';
+        const shortId = raag._id.toString().slice(-8);
+        filename = `${raagName} ${shortId}`;
+      } else {
+        // Multiple selected raags: use first raag name + count
+        const firstRaag = raags[0];
+        const firstName = firstRaag.name?.value || 'Unknown';
+        filename = `${firstName} And Other ${ids.length - 1}`;
+      }
+    } else {
+      // All raags
+      filename = `All Raags ${raags.length}`;
+    }
+
+    switch (format.toLowerCase()) {
+      case 'markdown':
+        const markdown = generateRaagMarkdown(exportData);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.md"`);
+        res.send(markdown);
+        break;
+        
+      default:
+        res.json({
+          success: true,
+          data: {
+            raags: exportData,
+            count: raags.length,
+            exported: new Date().toISOString()
+          }
+        });
+    }
   } catch (error) {
-    console.error('Error exporting raags:', error);
+    console.error('Error in exportRaags:', error);
     res.status(500).json({
       success: false,
       message: 'Error exporting raags'
@@ -633,38 +595,93 @@ exports.exportRaags = async (req, res) => {
   }
 };
 
-// Helper function to generate markdown
-exports.generateRaagMarkdown = (raag) => {
-  const fields = [
-    { key: 'name', label: 'Name' },
-    { key: 'aroha', label: 'Aroha' },
-    { key: 'avroha', label: 'Avroha' },
-    { key: 'chalan', label: 'Chalan / Pakad' },
-    { key: 'vadi', label: 'Vadi' },
-    { key: 'samvadi', label: 'Samvadi' },
-    { key: 'thaat', label: 'Thaat' },
-    { key: 'rasBhaav', label: 'Ras-Bhaav' },
-    { key: 'tanpuraTuning', label: 'Tanpura Tuning' },
-    { key: 'timeOfRendition', label: 'Time of Rendition' }
-  ];
-
-  let markdown = `# ${raag.name.value}\n\n`;
-  
-  fields.forEach(field => {
-    if (field.key !== 'name' && raag[field.key]?.value) {
-      markdown += `## ${field.label}\n${raag[field.key].value}\n\n`;
-      if (raag[field.key].reference) {
-        markdown += `**Source:** ${raag[field.key].reference}\n\n`;
-      }
+// Helper functions
+function formatRaagForExport(raag) {
+  return {
+    id: raag._id,
+    name: raag.name?.value || 'N/A',
+    aroha: raag.aroha?.value || 'N/A',
+    avroha: raag.avroha?.value || 'N/A',
+    chalan: raag.chalan?.value || 'N/A',
+    vadi: raag.vadi?.value || 'N/A',
+    samvadi: raag.samvadi?.value || 'N/A',
+    thaat: raag.thaat?.value || 'N/A',
+    rasBhaav: raag.rasBhaav?.value || 'N/A',
+    tanpuraTuning: raag.tanpuraTuning?.value || 'N/A',
+    timeOfRendition: raag.timeOfRendition?.value || 'N/A',
+    verification: {
+      name: raag.name?.verified || false,
+      aroha: raag.aroha?.verified || false,
+      avroha: raag.avroha?.verified || false,
+      chalan: raag.chalan?.verified || false,
+      vadi: raag.vadi?.verified || false,
+      samvadi: raag.samvadi?.verified || false,
+      thaat: raag.thaat?.verified || false,
+      rasBhaav: raag.rasBhaav?.verified || false,
+      tanpuraTuning: raag.tanpuraTuning?.verified || false,
+      timeOfRendition: raag.timeOfRendition?.verified || false
+    },
+    sources: {
+      name: raag.name?.reference || 'N/A',
+      aroha: raag.aroha?.reference || 'N/A',
+      avroha: raag.avroha?.reference || 'N/A',
+      chalan: raag.chalan?.reference || 'N/A',
+      vadi: raag.vadi?.reference || 'N/A',
+      samvadi: raag.samvadi?.reference || 'N/A',
+      thaat: raag.thaat?.reference || 'N/A',
+      rasBhaav: raag.rasBhaav?.reference || 'N/A',
+      tanpuraTuning: raag.tanpuraTuning?.reference || 'N/A',
+      timeOfRendition: raag.timeOfRendition?.reference || 'N/A'
+    },
+    metadata: {
+      createdAt: raag.createdAt,
+      updatedAt: raag.updatedAt,
+      verificationPercentage: calculateRaagVerificationPercentage(raag)
     }
+  };
+}
+
+function calculateRaagVerificationPercentage(raag) {
+  const fields = ['name', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition'];
+  const verifiedFields = fields.filter(field => raag[field]?.verified);
+  return Math.round((verifiedFields.length / fields.length) * 100);
+}
+
+function generateRaagMarkdown(raags) {
+  let markdown = '# Indian Classical Music Raags\n\n';
+  markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
+  markdown += `**Total Raags:** ${raags.length}\n\n`;
+  markdown += '---\n\n';
+  
+  raags.forEach((raag, index) => {
+    markdown += `## ${index + 1}. ${raag.name}\n\n`;
+    
+    markdown += '### Musical Details\n\n';
+    if (raag.aroha !== 'N/A') markdown += `**Aroha:** ${raag.aroha}\n\n`;
+    if (raag.avroha !== 'N/A') markdown += `**Avroha:** ${raag.avroha}\n\n`;
+    if (raag.chalan !== 'N/A') markdown += `**Chalan/Pakad:** ${raag.chalan}\n\n`;
+    if (raag.vadi !== 'N/A') markdown += `**Vadi:** ${raag.vadi}\n\n`;
+    if (raag.samvadi !== 'N/A') markdown += `**Samvadi:** ${raag.samvadi}\n\n`;
+    if (raag.thaat !== 'N/A') markdown += `**Thaat:** ${raag.thaat}\n\n`;
+    if (raag.rasBhaav !== 'N/A') markdown += `**Ras-Bhaav:** ${raag.rasBhaav}\n\n`;
+    if (raag.tanpuraTuning !== 'N/A') markdown += `**Tanpura Tuning:** ${raag.tanpuraTuning}\n\n`;
+    if (raag.timeOfRendition !== 'N/A') markdown += `**Time of Rendition:** ${raag.timeOfRendition}\n\n`;
+    
+    markdown += '### Verification Status\n\n';
+    markdown += `- **Verification Progress:** ${raag.metadata.verificationPercentage}%\n`;
+    markdown += `- **Name:** ${raag.verification.name ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Aroha:** ${raag.verification.aroha ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Avroha:** ${raag.verification.avroha ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Chalan:** ${raag.verification.chalan ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Vadi:** ${raag.verification.vadi ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Samvadi:** ${raag.verification.samvadi ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Thaat:** ${raag.verification.thaat ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Ras-Bhaav:** ${raag.verification.rasBhaav ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Tanpura Tuning:** ${raag.verification.tanpuraTuning ? '✅ Verified' : '❌ Unverified'}\n`;
+    markdown += `- **Time of Rendition:** ${raag.verification.timeOfRendition ? '✅ Verified' : '❌ Unverified'}\n\n`;
+    
+    markdown += '---\n\n';
   });
   
-  if (raag.allAboutData?.answer?.value) {
-    markdown += `## Summary\n${raag.allAboutData.answer.value}\n\n`;
-  }
-  
-  markdown += `**Created:** ${raag.createdAt}\n`;
-  markdown += `**Last Updated:** ${raag.updatedAt}\n`;
-  
   return markdown;
-};
+} 

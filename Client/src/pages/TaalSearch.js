@@ -1,744 +1,575 @@
-const axios = require('axios');
+import React, { useState } from 'react';
+import { apiService } from '../utils/api';
+import { toast } from 'react-toastify';
+import { debounce } from 'lodash';
+import DualModeSearchForm from '../components/DualModeSearchForm';
+import AllAboutDisplay from '../components/AllAboutDisplay';
+import { 
+  CheckCircleIcon, 
+  XCircleIcon, 
+  ArrowTopRightOnSquareIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
 
-class PerplexityResearcher {
-  constructor() {
-    this.apiKey = process.env.PERPLEXITY_API_KEY;
-    this.baseURL = 'https://api.perplexity.ai/chat/completions';
-    // Use sonar-pro for faster, reliable research
-    this.model = 'sonar-pro'; // Fast and comprehensive
-    this.fallbackModels = [
-      'sonar', // Lightweight for quick responses
-      'sonar-reasoning-pro', // Advanced reasoning for complex queries
-      'sonar-reasoning', // Fast reasoning for general tasks
-      'r1-1776', // Specialized for factuality and precision
-      // Third-party models for fallback
-      'gpt-4-turbo', // OpenAI GPT-4 Turbo
-      'claude-3-sonnet', // Anthropic Claude 3
-      'gemini-1.5-pro', // Google Gemini 1.5 Pro
-    ];
-  }
+const TaalSearch = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [taal, setTaal] = useState(null);
+  const [allAboutData, setAllAboutData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [selectedFields, setSelectedFields] = useState(new Set());
 
-  async researchArtist(name) {
-    console.log('Starting Perplexity AI research for artist:', name);
-    
-    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
-      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
-    }
-    
-    // Simplified, faster prompt for structured data extraction
-    const prompt = `Research the Indian Classical Music artist "${name}" and provide structured information in JSON format.
+  const fields = [
+    { key: 'name', label: 'Name' },
+    { key: 'numberOfBeats', label: 'Number of Beats' },
+    { key: 'divisions', label: 'Divisions' },
+    { key: 'taali.count', label: 'Taali Count' },
+    { key: 'taali.beatNumbers', label: 'Taali Beat Numbers' },
+    { key: 'khaali.count', label: 'Khaali Count' },
+    { key: 'khaali.beatNumbers', label: 'Khaali Beat Numbers' },
+    { key: 'jaati', label: 'Jaati' }
+  ];
 
-Find information about:
-- Full name and basic details
-- Primary guru/teacher
-- Gharana/musical tradition
-- Major awards and achievements
-- Notable disciples/students
-- Brief biographical summary
-
-Provide the information in this exact JSON format:
-
-{
-  "name": {
-    "value": "${name}",
-    "reference": "Primary source URL",
-    "verified": false
-  },
-  "guru": {
-    "value": "Primary guru/teacher name with title (Ustad/Pandit)",
-    "reference": "Source URL for guru information",
-    "verified": false
-  },
-  "gharana": {
-    "value": "Gharana name (e.g., 'Patiala Gharana', 'Kirana Gharana')",
-    "reference": "Source URL for gharana information",
-    "verified": false
-  },
-  "notableAchievements": {
-    "value": "Major awards and achievements with years",
-    "reference": "Source URL for achievements",
-    "verified": false
-  },
-  "disciples": {
-    "value": "Notable disciples/students or 'No specific disciples documented'",
-    "reference": "Source URL for disciples information",
-    "verified": false
-  },
-  "summary": {
-    "value": "Brief biographical summary (150-200 words)",
-    "reference": "Primary biographical source URL",
-    "verified": false
-  }
-}
-
-- **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
-- **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
-`;
-
+  // Debounced structured search function
+  const debouncedStructuredSearch = debounce(async (query, aiEnabled, provider, model, modelData) => {
+    setLoading(true);
     try {
-      const response = await axios.post(this.baseURL, {
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
-
-RESEARCH EXPERTISE:
-- Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
-- Advanced web research techniques for finding official artist information
-- Social media intelligence for extracting biographical details
-- Academic and institutional database navigation
-- Cross-referencing and fact-verification across multiple sources
-- Understanding of gharana systems, guru-shishya traditions, and musical lineages
-
-SEARCH METHODOLOGY:
-1. **Official Source Priority**: Always search for official websites, verified social media, artist biographies first
-2. **Social Media Mining**: Extract valuable biographical information from Facebook, Instagram, Twitter, YouTube profiles and posts
-3. **Institutional Deep Dive**: Thoroughly search music institutions, academies, universities, and cultural organizations
-4. **Academic Cross-Reference**: Use scholarly articles, research papers, and academic publications for verification
-5. **Contemporary Sources**: Include recent interviews, articles, and current biographical content
-6. **Lineage Tracking**: Pay special attention to guru-shishya relationships and gharana affiliations
-7. **Legacy Documentation**: Focus on finding information about disciples and teaching contributions
-
-CRITICAL SUCCESS FACTORS:
-- Conduct multi-step, systematic research as outlined in the user prompt
-- Never skip the specific searches for gharana, guru, disciples, and achievements
-- Use official websites and verified social media as primary sources when available
-- Cross-verify information from multiple independent sources
-- Return comprehensive, accurate information with working URLs
-- If information is genuinely not available, clearly state this in the reference field
-
-RESPONSE REQUIREMENTS:
-- Return ONLY valid JSON without any additional text
-- Use real, accessible URLs that can be verified
-- Be precise with Indian music terminology and proper names
-- Include titles (Ustad, Pandit) when mentioned in sources
-- Focus on factual, verifiable biographical and musical information`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.02, // Extremely low temperature for maximum factual accuracy
-        max_tokens: 2000, // Reduced tokens for faster response
-        top_p: 0.9, // Slightly higher for better source diversity
-        // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
-        frequency_penalty: 0.1 // Reduce repetition only
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 60000 // 60 second timeout for comprehensive research
-      });
-
-      console.log('Perplexity API response received');
-      const responseText = response.data.choices[0].message.content;
-      console.log('Raw Perplexity response:', responseText);
-      return this.parseAIResponse(responseText);
+      const response = await apiService.searchTaal(query, aiEnabled, provider, model);
+      setTaal(response.data);
+      toast.success(`Taal data ${aiEnabled ? `researched using ${modelData?.name || model}` : 'scraped from web'} successfully`);
     } catch (error) {
-      console.error('Error in Perplexity research:', error);
-      if (error.response) {
-        console.error('Perplexity API error:', error.response.data);
-        
-        // Try fallback models if primary model fails
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt, 'artist');
-        }
-        
-        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
-      }
-      throw new Error('Failed to research artist using Perplexity AI: ' + error.message);
-    }
-  }
-
-  async researchRaag(name) {
-    console.log('Starting Perplexity AI research for raag:', name);
-    
-    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
-      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
-    }
-    
-    const prompt = `Conduct comprehensive research about the Indian Classical Music raag "${name}". Search systematically through these sources:
-
-**STEP 1: Primary Musical Sources**
-- Search Wikipedia for detailed "${name}" raag article
-- Look for "${name}" in specialized raga databases and music theory websites
-- Check classical music learning platforms and educational resources
-- Find "${name}" in music institution websites (Sangeet Natak Akademi, ITC SRA)
-
-**STEP 2: Academic and Scholarly Sources**
-- Search academic musicology papers mentioning "${name}"
-- Look for university music department resources and course materials
-- Check scholarly articles on Indian music theory featuring "${name}"
-- Find research publications and dissertations about "${name}"
-
-**STEP 3: Practical Music Sources**
-- Search for "${name}" in tabla/sitar/vocal learning websites
-- Look for "${name}" performance guides and tutorials
-- Check music teacher resources and instructional materials
-- Find "${name}" in concert programs and performance notes
-
-**STEP 4: Specific Technical Information**
-For AROHA/AVROHA: Search for:
-- "${name} aroha avroha notes"
-- "${name} scale ascending descending"
-- "${name} swaras sequence"
-
-For THAAT: Search for:
-- "${name} thaat parent scale"
-- "${name} belongs to thaat"
-- "${name} classification"
-
-For VADI/SAMVADI: Search for:
-- "${name} vadi samvadi notes"
-- "${name} important notes"
-- "${name} dominant subdominant"
-
-Provide accurate musical information in this JSON format:
-
-{
-  "name": {
-    "value": "${name}",
-    "reference": "Most authoritative source URL",
-    "verified": false
-  },
-  "aroha": {
-    "value": "Complete ascending note sequence using proper sargam notation (Sa Re Ga Ma Pa Dha Ni Sa format with komal/tivra markings)",
-    "reference": "Specific URL where aroha/ascending scale is clearly mentioned",
-    "verified": false
-  },
-  "avroha": {
-    "value": "Complete descending note sequence using proper sargam notation with komal/tivra markings",
-    "reference": "Specific URL where avroha/descending scale is clearly mentioned",
-    "verified": false
-  },
-  "chalan": {
-    "value": "Characteristic melodic phrases, pakad, or typical note movements that define the raag",
-    "reference": "URL mentioning chalan, pakad, or characteristic phrases",
-    "verified": false
-  },
-  "vadi": {
-    "value": "Most important/dominant note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
-    "reference": "URL specifically mentioning vadi swara or dominant note",
-    "verified": false
-  },
-  "samvadi": {
-    "value": "Second most important note (Sa, Re, Ga, Ma, Pa, Dha, or Ni with komal/tivra if applicable)",
-    "reference": "URL specifically mentioning samvadi swara or subdominant note",
-    "verified": false
-  },
-  "thaat": {
-    "value": "Parent thaat/scale name (e.g., Bilawal, Khamaj, Kafi, Kalyan, Bhairav, etc.)",
-    "reference": "URL specifically mentioning thaat classification or parent scale",
-    "verified": false
-  },
-  "rasBhaav": {
-    "value": "Emotional content, mood, and aesthetic expression (e.g., devotional, romantic, peaceful, heroic, melancholic)",
-    "reference": "URL discussing emotional aspects, mood, or aesthetic qualities",
-    "verified": false
-  },
-  "tanpuraTuning": {
-    "value": "Recommended tanpura tuning notes (e.g., Sa Pa Sa Sa, Sa Ma Sa Sa)",
-    "reference": "URL mentioning tanpura tuning or drone notes",
-    "verified": false
-  },
-  "timeOfRendition": {
-    "value": "Traditional time of performance with specific periods (early morning, late morning, afternoon, evening, night, late night)",
-    "reference": "URL mentioning traditional performance time or time theory",
-    "verified": false
-  }
-}
-
-REQUIREMENTS:
-- Conduct systematic multi-step research as outlined above
-- Use proper sargam notation with komal (♭) and tivra (♯) markings when applicable
-- Provide specific note names for vadi/samvadi with proper notation
-- Use standard, recognized thaat names from Indian music theory
-- Include detailed aroha/avroha sequences as found in authoritative sources
-- Return only verified musical information found in your comprehensive search
-- Use real, accessible URLs as references that can be verified`;
-
-    try {
-      const response = await axios.post(this.baseURL, {
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert Indian Classical Music theorist and raga researcher with comprehensive knowledge of:
-
-MUSICAL EXPERTISE:
-- Deep understanding of raga theory, thaat system, and melodic structures
-- Expertise in sargam notation, swara relationships, and musical scales
-- Knowledge of traditional performance practices and time theory
-- Understanding of emotional aesthetics (rasa-bhava) in Indian music
-- Familiarity with both Hindustani and Carnatic traditions
-
-RESEARCH METHODOLOGY:
-1. **Technical Source Priority**: Focus on music theory websites, academic papers, and educational resources
-2. **Cross-Reference Verification**: Verify technical details across multiple authoritative sources
-3. **Notation Accuracy**: Ensure proper sargam notation with correct komal/tivra markings
-4. **Traditional Knowledge**: Include traditional performance practices and cultural context
-5. **Contemporary Resources**: Use modern learning platforms and digital music resources
-
-CRITICAL REQUIREMENTS:
-- Conduct thorough multi-step research as specified in the user prompt
-- Pay special attention to technical musical details (aroha, avroha, vadi, samvadi)
-- Use proper Indian music terminology and notation systems
-- Verify information across multiple independent musical sources
-- Include both theoretical and practical aspects of the raga
-- Return comprehensive, technically accurate information with working URLs`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.02,
-        max_tokens: 3000,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.2
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 45000
-      });
-
-      console.log('Perplexity API response received');
-      const responseText = response.data.choices[0].message.content;
-      console.log('Raw Perplexity response:', responseText);
-      return this.parseAIResponse(responseText);
-    } catch (error) {
-      console.error('Error in Perplexity research:', error);
-      if (error.response) {
-        console.error('Perplexity API error:', error.response.data);
-        
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt, 'raag');
-        }
-        
-        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
-      }
-      throw new Error('Failed to research raag using Perplexity AI: ' + error.message);
-    }
-  }
-
-  async researchTaal(name) {
-    console.log('Starting Perplexity AI research for taal:', name);
-    
-    if (!this.apiKey || this.apiKey === 'your_perplexity_api_key_here') {
-      throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
-    }
-    
-    const prompt = `Conduct comprehensive research about the Indian Classical Music taal "${name}". Search systematically through these sources:
-
-**STEP 1: Primary Rhythm Sources**
-- Search Wikipedia for detailed "${name}" taal article
-- Look for "${name}" in tabla learning websites and percussion resources
-- Check rhythm and taal databases, music theory websites
-- Find "${name}" in classical music institution websites
-
-**STEP 2: Educational and Academic Sources**
-- Search academic papers on Indian rhythm systems mentioning "${name}"
-- Look for music conservatory and university resources about "${name}"
-- Check scholarly articles on taal theory and rhythmic systems
-- Find research publications about Indian percussion and rhythm
-
-**STEP 3: Practical Learning Sources**
-- Search tabla tutorial websites and learning platforms for "${name}"
-- Look for "${name}" in music teacher resources and instructional materials
-- Check percussion method books and educational content
-- Find "${name}" in concert programs and performance guides
-
-**STEP 4: Specific Technical Information**
-For BEAT STRUCTURE: Search for:
-- "${name} beats matras structure"
-- "${name} rhythm pattern"
-- "${name} time signature"
-
-For TAALI/KHAALI: Search for:
-- "${name} taali khaali positions"
-- "${name} clap wave pattern"
-- "${name} beat emphasis"
-
-For DIVISIONS: Search for:
-- "${name} vibhag divisions"
-- "${name} sections structure"
-- "${name} rhythmic grouping"
-
-Provide accurate rhythmic information in this JSON format:
-
-{
-  "name": {
-    "value": "${name}",
-    "reference": "Most authoritative source URL",
-    "verified": false
-  },
-  "numberOfBeats": {
-    "value": "Total number of matras/beats as a number (e.g., 16, 12, 10, 14, 7)",
-    "reference": "URL specifically mentioning the total beat count or matra structure",
-    "verified": false
-  },
-  "divisions": {
-    "value": "Complete vibhag/section structure description (e.g., '4 vibhags of 4 beats each', '3 vibhags: 4+2+2')",
-    "reference": "URL describing vibhag structure or rhythmic divisions",
-    "verified": false
-  },
-  "taali": {
-    "count": {
-      "value": "Number of taali (clap) positions as a number",
-      "reference": "URL mentioning taali count or clap positions",
-      "verified": false
-    },
-    "beatNumbers": {
-      "value": "Specific beat numbers where taali/claps occur (e.g., '1, 5, 13' or '1, 4, 7')",
-      "reference": "URL showing exact taali positions or clap beats",
-      "verified": false
-    }
-  },
-  "khaali": {
-    "count": {
-      "value": "Number of khaali (wave) positions as a number",
-      "reference": "URL mentioning khaali count or wave positions",
-      "verified": false
-    },
-    "beatNumbers": {
-      "value": "Specific beat numbers where khaali/waves occur (e.g., '9' or '5, 9')",
-      "reference": "URL showing exact khaali positions or wave beats",
-      "verified": false
-    }
-  },
-  "jaati": {
-    "value": "Jaati classification based on subdivision (Chatusra, Tisra, Khanda, Misra, or Sankeerna)",
-    "reference": "URL mentioning jaati classification or rhythmic subdivision",
-    "verified": false
-  }
-}
-
-REQUIREMENTS:
-- Conduct systematic multi-step research as outlined above
-- Provide exact beat numbers, counts, and mathematical relationships
-- Use standard jaati terminology from Indian rhythm theory
-- Ensure mathematical accuracy (taali + khaali positions should align with total beats)
-- Include complete vibhag structure with proper divisions
-- Return only verified rhythmic information found in your comprehensive search
-- Use real, accessible URLs as references that can be verified`;
-
-    try {
-      const response = await axios.post(this.baseURL, {
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert Indian Classical Music rhythmist and taal researcher with comprehensive knowledge of:
-
-RHYTHMIC EXPERTISE:
-- Deep understanding of taal theory, matra systems, and rhythmic structures
-- Expertise in taali-khaali patterns, vibhag divisions, and beat mathematics
-- Knowledge of jaati classifications and rhythmic subdivisions
-- Understanding of tabla, pakhawaj, and other percussion traditions
-- Familiarity with both theoretical and practical aspects of Indian rhythm
-
-RESEARCH METHODOLOGY:
-1. **Percussion Source Priority**: Focus on tabla websites, rhythm learning platforms, and percussion resources
-2. **Mathematical Verification**: Ensure all beat counts, divisions, and patterns are mathematically accurate
-3. **Pattern Analysis**: Verify taali-khaali patterns across multiple authoritative sources
-4. **Traditional Knowledge**: Include traditional performance practices and cultural context
-5. **Educational Resources**: Use modern learning platforms and digital rhythm resources
-
-CRITICAL REQUIREMENTS:
-- Conduct thorough multi-step research as specified in the user prompt
-- Pay special attention to mathematical accuracy of beat structures
-- Verify taali-khaali patterns and vibhag divisions across multiple sources
-- Use proper Indian rhythm terminology and classification systems
-- Include both theoretical framework and practical performance aspects
-- Return comprehensive, mathematically accurate information with working URLs`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.02,
-        max_tokens: 3000,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.2
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 45000
-      });
-
-      console.log('Perplexity API response received');
-      const responseText = response.data.choices[0].message.content;
-      console.log('Raw Perplexity response:', responseText);
-      return this.parseAIResponse(responseText);
-    } catch (error) {
-      console.error('Error in Perplexity research:', error);
-      if (error.response) {
-        console.error('Perplexity API error:', error.response.data);
-        
-        if (error.response.status === 400 || error.response.data.error?.type === 'invalid_model') {
-          console.log('Trying with fallback models...');
-          return await this.researchWithFallbackModel(name, prompt, 'taal');
-        }
-        
-        throw new Error(`Perplexity API error: ${error.response.data.error?.message || error.message}`);
-      }
-      throw new Error('Failed to research taal using Perplexity AI: ' + error.message);
-    }
-  }
-
-  async researchWithFallbackModel(name, prompt, type) {
-    for (const model of this.fallbackModels) {
-      try {
-        console.log(`Trying fallback model: ${model}`);
-        const response = await axios.post(this.baseURL, {
-          model: model,
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert researcher specializing in Indian Classical Music ${type} research. Your expertise includes:
-- Deep knowledge of Indian Classical Music traditions
-- Access to academic and institutional sources
-- Ability to verify information across multiple sources
-- Understanding of proper musicological terminology
-Always provide accurate information with verifiable sources. Return only valid JSON without any additional text or formatting.`
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.02,
-          max_tokens: 2000,
-          top_p: 0.9
-        }, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 60000
-        });
-
-        console.log(`Fallback model ${model} worked!`);
-        const responseText = response.data.choices[0].message.content;
-        return this.parseAIResponse(responseText);
-      } catch (fallbackError) {
-        console.log(`Fallback model ${model} failed:`, fallbackError.response?.data?.error?.message);
-        continue;
-      }
-    }
-
-    throw new Error('All Perplexity models failed. Please check your API access and model availability.');
-  }
-
-  parseAIResponse(response) {
-    try {
-      // Clean the response to extract JSON
-      let cleanResponse = response.trim();
-      
-      // Remove any thinking blocks that Perplexity might include
-      cleanResponse = cleanResponse.replace(/<think>[\s\S]*?<\/think>/g, '');
-      
-      // Remove markdown code blocks if present
-      cleanResponse = cleanResponse.replace(/``\`json\n?/g, '').replace(/```\n?/g, '');
-      
-      // More aggressive cleaning to handle various response formats
-      cleanResponse = cleanResponse.replace(/^[^{]*/, '').replace(/[^}]*$/s, '');
-      
-      // Handle cases where there might be explanatory text after JSON
-      const jsonEndIndex = cleanResponse.lastIndexOf('}');
-      if (jsonEndIndex !== -1) {
-        cleanResponse = cleanResponse.substring(0, jsonEndIndex + 1);
-      }
-      
-      // Find JSON object
-      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        // Convert arrays to strings for fields that expect strings
-        this.normalizeDataTypes(parsed);
-        
-        // Validate and clean the data
-        this.validateAndCleanData(parsed);
-        
-        console.log('Parsed Perplexity response:', parsed);
-        return parsed;
-      }
-      
-      throw new Error('No valid JSON found in Perplexity response');
-    } catch (error) {
-      console.error('Error parsing Perplexity response:', error);
-      console.error('Raw response:', response);
-      throw new Error('Failed to parse Perplexity research results: ' + error.message);
-    }
-  }
-
-  normalizeDataTypes(data) {
-    // Convert arrays to comma-separated strings for fields that expect strings
-    const fieldsToNormalize = ['notableAchievements', 'disciples'];
-    
-    fieldsToNormalize.forEach(field => {
-      if (data[field] && data[field].value && Array.isArray(data[field].value)) {
-        data[field].value = data[field].value.join(', ');
-      }
-    });
-    
-    // Handle nested fields for taals
-    if (data.taali) {
-      if (data.taali.count && data.taali.count.value && Array.isArray(data.taali.count.value)) {
-        data.taali.count.value = data.taali.count.value.join(', ');
-      }
-      if (data.taali.beatNumbers && data.taali.beatNumbers.value && Array.isArray(data.taali.beatNumbers.value)) {
-        data.taali.beatNumbers.value = data.taali.beatNumbers.value.join(', ');
-      }
-    }
-    
-    if (data.khaali) {
-      if (data.khaali.count && data.khaali.count.value && Array.isArray(data.khaali.count.value)) {
-        data.khaali.count.value = data.khaali.count.value.join(', ');
-      }
-      if (data.khaali.beatNumbers && data.khaali.beatNumbers.value && Array.isArray(data.khaali.beatNumbers.value)) {
-        data.khaali.beatNumbers.value = data.khaali.beatNumbers.value.join(', ');
-      }
-    }
-  }
-
-  validateAndCleanData(data) {
-    // Ensure all required fields exist with proper structure
-    const requiredFields = ['name'];
-    const optionalFields = ['guru', 'gharana', 'notableAchievements', 'disciples', 'aroha', 'avroha', 'chalan', 'vadi', 'samvadi', 'thaat', 'rasBhaav', 'tanpuraTuning', 'timeOfRendition', 'numberOfBeats', 'divisions', 'jaati'];
-    
-    requiredFields.forEach(field => {
-      if (!data[field]) {
-        data[field] = { value: '', reference: 'Required field - information not found in comprehensive search', verified: false };
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
       } else {
-        // Ensure each field has the required structure
-        if (typeof data[field].value === 'undefined') data[field].value = '';
-        if (typeof data[field].reference === 'undefined') data[field].reference = 'Source reference not provided';
-        if (typeof data[field].verified === 'undefined') data[field].verified = false;
-        
-        // Convert verified to boolean if it's not already
-        data[field].verified = Boolean(data[field].verified);
-        
-        // Clean and format references
-        data[field].reference = this.cleanReference(data[field].reference);
+        toast.error(error.response?.data?.message || 'Error searching for taal');
       }
-    });
-    
-    // Handle optional fields
-    optionalFields.forEach(field => {
-      if (data[field]) {
-        if (typeof data[field].value === 'undefined') data[field].value = '';
-        if (typeof data[field].reference === 'undefined') data[field].reference = 'Information found but source not specified';
-        if (typeof data[field].verified === 'undefined') data[field].verified = false;
-        data[field].verified = Boolean(data[field].verified);
-        
-        // Clean and format references
-        data[field].reference = this.cleanReference(data[field].reference);
-      }
-    });
+    } finally {
+      setLoading(false);
+    }
+  }, 1000);
 
-    // Special handling for taal nested fields
-    if (data.taali) {
-      if (!data.taali.count) data.taali.count = { value: '', reference: 'Information not found', verified: false };
-      if (!data.taali.beatNumbers) data.taali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-      
-      // Clean references for nested fields
-      data.taali.count.reference = this.cleanReference(data.taali.count.reference);
-      data.taali.beatNumbers.reference = this.cleanReference(data.taali.beatNumbers.reference);
-    }
-    
-    if (data.khaali) {
-      if (!data.khaali.count) data.khaali.count = { value: '', reference: 'Information not found', verified: false };
-      if (!data.khaali.beatNumbers) data.khaali.beatNumbers = { value: '', reference: 'Information not found', verified: false };
-      
-      // Clean references for nested fields
-      data.khaali.count.reference = this.cleanReference(data.khaali.count.reference);
-      data.khaali.beatNumbers.reference = this.cleanReference(data.khaali.beatNumbers.reference);
-    }
-  }
-
-  cleanReference(reference) {
-    if (!reference) return 'No source provided';
-    
-    // Handle multiple URLs separated by various delimiters
-    const urlSeparators = ['; ', ' | ', ', ', ' ; ', ' , '];
-    let cleanRef = reference;
-    
-    // Check if it contains multiple URLs
-    let hasMultipleUrls = false;
-    for (const separator of urlSeparators) {
-      if (cleanRef.includes(separator)) {
-        hasMultipleUrls = true;
-        break;
-      }
-    }
-    
-    if (hasMultipleUrls) {
-      // Split and clean multiple URLs
-      let urls = cleanRef;
-      for (const separator of urlSeparators) {
-        urls = urls.split(separator).join(' | ');
-      }
-      
-      // Clean each URL
-      const urlList = urls.split(' | ').map(url => {
-        const trimmedUrl = url.trim();
-        
-        // Remove parenthetical descriptions
-        const cleanUrl = trimmedUrl.replace(/\s*\([^)]*\)\s*/g, '').trim();
-        
-        // Validate URL format
-        if (this.isValidUrl(cleanUrl)) {
-          return cleanUrl;
-        } else if (cleanUrl.includes('.com') || cleanUrl.includes('.org') || cleanUrl.includes('.edu') || cleanUrl.includes('wikipedia')) {
-          return `Invalid URL format: ${cleanUrl}`;
-        } else {
-          return `Non-URL reference: ${cleanUrl}`;
-        }
-      }).filter(url => url.length > 0);
-      
-      return urlList.join(' | ');
-    } else {
-      // Single reference
-      const trimmedRef = cleanRef.trim();
-      
-      // Remove parenthetical descriptions
-      const cleanSingleRef = trimmedRef.replace(/\s*\([^)]*\)\s*/g, '').trim();
-      
-      // Validate single URL
-      if (this.isValidUrl(cleanSingleRef)) {
-        return cleanSingleRef;
-      } else if (cleanSingleRef.includes('.com') || cleanSingleRef.includes('.org') || cleanSingleRef.includes('.edu') || cleanSingleRef.includes('wikipedia')) {
-        return `Invalid URL format: ${cleanSingleRef}`;
-      } else if (cleanSingleRef.includes('not found') || cleanSingleRef.includes('Information not') || cleanSingleRef.includes('No authoritative')) {
-        return cleanSingleRef; // Keep explanatory messages as-is
+  // All About search function
+  const handleAllAboutSearch = async (query, provider, model, modelData) => {
+    setLoading(true);
+    try {
+      const response = await apiService.getAllAboutTaal(query, provider, model);
+      setAllAboutData(response.data.data);
+      toast.success(`Summary Mode search completed using ${modelData?.name || model}`);
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
       } else {
-        return `Non-URL reference: ${cleanSingleRef}`;
+        toast.error(error.response?.data?.message || 'Error in Summary Mode search');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFieldValue = (field) => {
+    if (!taal) return '';
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      return taal[parent]?.[child]?.value || '';
+    }
+    return taal[field]?.value || '';
+  };
+
+  const getFieldVerified = (field) => {
+    if (!taal) return false;
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      return taal[parent]?.[child]?.verified || false;
+    }
+    return taal[field]?.verified || false;
+  };
+
+  const getFieldReference = (field) => {
+    if (!taal) return '';
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      return taal[parent]?.[child]?.reference || '';
+    }
+    return taal[field]?.reference || '';
+  };
+
+  const updateTaalField = (field, updates) => {
+    setTaal(prevTaal => {
+      const newTaal = { ...prevTaal };
+      
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        newTaal[parent] = {
+          ...newTaal[parent],
+          [child]: {
+            ...newTaal[parent][child],
+            ...updates
+          }
+        };
+      } else {
+        newTaal[field] = {
+          ...newTaal[field],
+          ...updates
+        };
+      }
+      
+      return newTaal;
+    });
+  };
+
+  const handleVerification = async (field, currentStatus) => {
+    if (!taal) return;
+
+    try {
+      const updatedTaal = { ...taal };
+      
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        updatedTaal[parent] = {
+          ...updatedTaal[parent],
+          [child]: {
+            ...updatedTaal[parent][child],
+            verified: !currentStatus
+          }
+        };
+      } else {
+        updatedTaal[field] = {
+          ...updatedTaal[field],
+          verified: !currentStatus
+        };
+      }
+
+      await apiService.updateTaal(taal._id, updatedTaal);
+      
+      // Update local state immediately
+      updateTaalField(field, { verified: !currentStatus });
+      
+      toast.success(`${field} verification updated successfully`);
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error('Failed to update verification status');
       }
     }
-  }
+  };
+
+  const handleEdit = (field) => {
+    setEditingField(field);
+    setEditValue(getFieldValue(field));
+  };
+
+  const handleSave = async () => {
+    try {
+      const updatedTaal = { ...taal };
+      
+      if (editingField.includes('.')) {
+        const [parent, child] = editingField.split('.');
+        updatedTaal[parent] = {
+          ...updatedTaal[parent],
+          [child]: {
+            ...updatedTaal[parent][child],
+            value: editValue
+          }
+        };
+      } else {
+        updatedTaal[editingField] = {
+          ...updatedTaal[editingField],
+          value: editValue
+        };
+      }
+
+      await apiService.updateTaal(taal._id, updatedTaal);
+      
+      // Update local state immediately
+      updateTaalField(editingField, { value: editValue });
+      
+      setEditingField(null);
+      setEditValue('');
+      
+      toast.success('Field updated successfully');
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error('Failed to update field');
+      }
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
   
-  isValidUrl(string) {
-    try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch (_) {
-      return false;
-    }
-  }
-}
+  const renderSources = (reference) => {
+    if (!reference) return null;
 
-module.exports = new PerplexityResearcher();
+    const noSourceIndicators = [
+      'no authoritative sources',
+      'information not found',
+      'no reliable information',
+      'no specific',
+      'not available',
+      'no official',
+      'sources not found'
+    ];
+
+    const isNoSourceMessage = noSourceIndicators.some(indicator => 
+      reference.toLowerCase().includes(indicator)
+    );
+
+    if (isNoSourceMessage) {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">No Sources Available</p>
+              <p className="text-sm text-amber-700 mt-1">{reference}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const sources = reference.split(' | ').map(source => source.trim()).filter(source => source.length > 0);
+
+    if (sources.length === 1) {
+      const source = sources[0];
+      const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
+      
+      if (isValidUrl) {
+        return (
+          <a
+            href={source}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-sm text-orange-700 hover:underline break-all"
+          >
+            {source}
+            <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+          </a>
+        );
+      } else {
+        return (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-sm text-gray-700">{source}</p>
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div className="space-y-2">
+        {sources.map((source, index) => {
+          const isValidUrl = source.startsWith('http://') || source.startsWith('https://');
+          
+          return (
+            <div key={index} className="flex items-start space-x-2">
+              <span className="text-sm font-medium text-gray-600 mt-1 flex-shrink-0">
+                Link {index + 1}:
+              </span>
+              {isValidUrl ? (
+                <a
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm text-orange-700 hover:underline break-all"
+                >
+                  {source}
+                  <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1 flex-shrink-0" />
+                </a>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 flex-1">
+                  <p className="text-sm text-gray-700">{source}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Bulk verification functions
+  const handleSelectAll = () => {
+    if (selectedFields.size === fields.length) {
+      setSelectedFields(new Set());
+    } else {
+      setSelectedFields(new Set(fields.map(field => field.key)));
+    }
+  };
+
+  const handleFieldSelect = (fieldKey) => {
+    const newSelected = new Set(selectedFields);
+    if (newSelected.has(fieldKey)) {
+      newSelected.delete(fieldKey);
+    } else {
+      newSelected.add(fieldKey);
+    }
+    setSelectedFields(newSelected);
+  };
+
+  const handleBulkVerification = async (verify) => {
+    if (selectedFields.size === 0) {
+      toast.warning('Please select fields to verify/unverify');
+      return;
+    }
+
+    try {
+      const updatedTaal = { ...taal };
+      
+      selectedFields.forEach(field => {
+        if (field.includes('.')) {
+          const [parent, child] = field.split('.');
+          updatedTaal[parent] = {
+            ...updatedTaal[parent],
+            [child]: {
+              ...updatedTaal[parent][child],
+              verified: verify
+            }
+          };
+        } else {
+          updatedTaal[field] = {
+            ...updatedTaal[field],
+            verified: verify
+          };
+        }
+      });
+
+      await apiService.updateTaal(taal._id, updatedTaal);
+      setTaal(updatedTaal);
+      setSelectedFields(new Set());
+      
+      toast.success(`${selectedFields.size} fields ${verify ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error('Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error('Failed to update verification status');
+      }
+    }
+  };
+
+  const handleAllAboutDataUpdate = (updatedData) => {
+    setAllAboutData(updatedData);
+  };
+  const renderField = (field) => {
+    if (!taal) return null;
+
+    const value = getFieldValue(field.key);
+    const verified = getFieldVerified(field.key);
+    const reference = getFieldReference(field.key);
+    const isEditing = editingField === field.key;
+    const isSelected = selectedFields.has(field.key);
+
+    return (
+      <div key={field.key} className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-200 hover:border-orange-300 transition-colors duration-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => handleFieldSelect(field.key)}
+              className="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+            />
+            <h3 className="text-lg font-semibold text-gray-900">{field.label}</h3>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleEdit(field.key)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 rounded-lg hover:bg-gray-100"
+              title="Edit field"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleVerification(field.key, verified)}
+              className={`flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                verified
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 shadow-sm'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200 shadow-sm'
+              }`}
+            >
+              {verified ? (
+                <>
+                  <CheckCircleIcon className="h-4 w-4 mr-1" />
+                  Verified
+                </>
+              ) : (
+                <>
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  Unverified
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-4">
+            <textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              rows={3}
+              placeholder={`Enter ${field.label.toLowerCase()}...`}
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSave}
+                className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <CheckIcon className="h-4 w-4 mr-1" />
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4">
+              {value ? (
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{value}</p>
+              ) : (
+                <p className="text-gray-500 italic">No data available</p>
+              )}
+            </div>
+
+            {reference && (
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Source:</p>
+                <div className="space-y-2">
+                  {renderSources(reference)}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const verifiedFields = taal ? fields.filter(field => getFieldVerified(field.key)) : [];
+  const verificationPercentage = taal && verifiedFields.length > 0 ? Math.round((verifiedFields.length / fields.length) * 100) : 0;
+
+  return (
+    <div className="max-w-6xl mx-auto text-white">
+      {/* Dual Mode Search Form */}
+      <DualModeSearchForm
+        onStructuredSearch={debouncedStructuredSearch}
+        onAllAboutSearch={handleAllAboutSearch}
+        loading={loading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        placeholder="Enter taal name"
+        category="taal"
+      />
+
+      {/* Results Container */}
+      <div className="space-y-8">
+        {/* Option 1: Structured Mode Results */}
+        {taal && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                📊 Structured Mode Results
+              </h3>
+              <p className="text-gray-600">
+                Organized field data with verification capabilities
+              </p>
+            </div>
+
+            {/* Header with Progress */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {getFieldValue('name') || 'Taal Information'}
+                </h3>
+                <span className="text-sm text-gray-600">
+                  {verifiedFields.length}/{fields.length} fields verified ({verificationPercentage}%)
+                </span>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    verificationPercentage === 100 ? 'bg-green-500' :
+                    verificationPercentage > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${verificationPercentage}%` }}
+                ></div>
+              </div>
+
+              {/* Bulk Actions */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={handleSelectAll}
+                      className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+                    >
+                      {selectedFields.size === fields.length ? 'Unselect All' : 'Select All'}
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      {selectedFields.size} of {fields.length} fields selected
+                    </span>
+                  </div>
+                  
+                  {selectedFields.size > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleBulkVerification(true)}
+                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <CheckCircleIcon className="h-4 w-4 mr-1" />
+                        Verify Selected ({selectedFields.size})
+                      </button>
+                      <button
+                        onClick={() => handleBulkVerification(false)}
+                        className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <XCircleIcon className="h-4 w-4 mr-1" />
+                        Unverify Selected ({selectedFields.size})
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Fields */}
+            <div className="space-y-6">
+              {fields.map(renderField)}
+            </div>
+          </div>
+        )}
+
+        {/* Option 2: All About Mode Results */}
+        {allAboutData && (
+          <AllAboutDisplay
+            data={allAboutData} 
+            category="taal" 
+            itemId={allAboutData.taalId || allAboutData._id}
+            onDataUpdate={handleAllAboutDataUpdate}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TaalSearch;

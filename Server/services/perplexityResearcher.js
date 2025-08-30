@@ -25,66 +25,175 @@ class PerplexityResearcher {
       throw new Error('Perplexity API key is not configured. Please add your API key to the .env file.');
     }
     
-    // Ultra-simplified prompt for fastest processing
-    const prompt = `Find basic information about Indian Classical Music artist "${name}":
+    // Multi-step enhanced prompt for comprehensive artist research
+    const prompt = `I need you to conduct a comprehensive, multi-step research about the Indian Classical Music artist "${name}". Please search systematically through these sources in order:
 
-Return JSON with: name, guru, gharana, achievements, disciples, summary.
+**STEP 1: Official Artist Presence**
+- Search for "${name}" official website, biography page, or artist profile
+- Look for "${name}" social media profiles (Facebook, Instagram, Twitter, YouTube)
+- Check "${name}" artist pages on music platforms and streaming services
+- Find "${name}" profiles on concert hall and festival websites
+- Search for "${name}" comprehensive biography or detailed artist profile
+- Look for "${name}" birth details, full name, and personal background
+
+**STEP 2: Institutional and Academic Sources**
+- Search Wikipedia for "${name}" detailed biography
+- Check Sangeet Natak Akademi, ITC Sangeet Research Academy databases
+- Look for "${name}" in university music department faculty/alumni pages
+- Search academic papers, journals, and musicology publications mentioning "${name}"
+- Check cultural institution archives and music organization websites
+- Find detailed biographical articles and interviews about "${name}"
+- Search for "${name}" career timeline and major milestones
+
+**STEP 3: Specific Information Hunting**
+For GHARANA: Search specifically for:
+- "${name} gharana tradition"
+- "${name} musical lineage"
+- "${name} school of music"
+- "${name} musical heritage"
+
+For GURU/TEACHER: Search for:
+- "${name} guru teacher"
+- "${name} trained under"
+- "${name} student of"
+- "${name} learned from"
+- "${name} musical education"
+
+For DISCIPLES/STUDENTS: Search for:
+- "${name} disciples students"
+- "${name} taught"
+- "students of ${name}"
+- "${name} musical legacy"
+- "${name} proteges"
+
+For ACHIEVEMENTS: Search for:
+- "${name} awards honors"
+- "${name} Padma Shri Padma Bhushan"
+- "${name} Sangeet Natak Akademi award"
+- "${name} Grammy recognition"
+- "${name} national international awards"
+- "${name} major performances collaborations"
+- "${name} concert tours festivals"
+- "${name} recordings albums discography"
+
+For COMPREHENSIVE BIOGRAPHY: Search for:
+- "${name} full biography life story"
+- "${name} birth date birthplace family background"
+- "${name} career timeline major milestones"
+- "${name} contributions to Indian classical music"
+- "${name} cultural significance global impact"
+- "${name} detailed artist profile comprehensive overview"
+
+**STEP 4: Cross-Reference and Verify**
+- Cross-check information from multiple sources
+- Prioritize official websites and verified social media accounts
+- Use academic and institutional sources for verification
+- Include recent interviews, articles, and biographical content
+
+After conducting this comprehensive research, provide the information in this exact JSON format:
 
 {
   "name": {
     "value": "${name}",
-    "reference": "Source URL",
+    "reference": "Primary source URL - verify this link works and is accessible",
     "verified": false
   },
   "guru": {
-    "value": "Guru name with title",
-    "reference": "Source URL",
+    "value": "Complete name of primary guru/teacher with titles (Ustad/Pandit if applicable) - if multiple gurus, list primary one",
+    "reference": "Primary source URL | Secondary source URL (if multiple sources found) - ensure URLs are working and accessible",
     "verified": false
   },
   "gharana": {
-    "value": "Gharana name",
-    "reference": "Source URL",
+    "value": "Complete gharana name with proper suffix (e.g., 'Punjab Gharana', 'Kirana Gharana', 'Gwalior Gharana') - be specific about the tradition",
+    "reference": "Primary source URL | Secondary source URL (if multiple sources confirm) - verify links work",
     "verified": false
   },
   "notableAchievements": {
-    "value": "Awards and achievements",
-    "reference": "Source URL",
+    "value": "Comprehensive list of major awards with years: Padma Shri (year), Padma Bhushan (year), Grammy Awards (years), Sangeet Natak Akademi (year), etc.",
+    "reference": "Awards source URL | Official recognition URL | Wikipedia URL (if multiple sources list different awards) - ensure all links are accessible",
     "verified": false
   },
   "disciples": {
-    "value": "Notable disciples or 'None documented'",
-    "reference": "Source URL",
+    "value": "Names of notable disciples/students with instruments: Name 1 (tabla), Name 2 (percussion), etc. - if no specific disciples found, state 'No specific disciples documented in available sources'",
+    "reference": "Teaching source URL | Student mention URL | Interview URL (if multiple sources mention students) - if no disciples found, state 'No authoritative sources found listing specific disciples'",
     "verified": false
   },
   "summary": {
-    "value": "Brief summary (100-150 words)",
-    "reference": "Source URL",
+    "value": "Comprehensive biographical summary (200-300 words) covering: Full name & birth details, primary profession/role, guru/teacher lineage, gharana/style/school, notable achievements & awards, major performances/collaborations, disciples/students, and cultural significance. Include background, lineage details, achievements, contributions to the art form, and global impact.",
+    "reference": "Primary biographical source URL | Official website URL | Major interview/article URL",
     "verified": false
   }
-}`;
+}
+
+CRITICAL REQUIREMENTS:
+- **URL VALIDATION**: Test each URL before including - ensure they are accessible and working
+- **REFERENCE FORMATTING**: Use format "Primary URL | Secondary URL | Third URL" for multiple sources
+- **LINK VERIFICATION**: Only include URLs that actually contain the mentioned information
+- **SOURCE QUALITY**: Prioritize official websites, verified social media, Wikipedia, academic institutions
+- **BROKEN LINK HANDLING**: If a source seems relevant but link is broken, note as "Source found but link inaccessible: [description]"
+- **NO FABRICATION**: If information is not found in accessible sources, clearly state this in the reference
+- Conduct thorough multi-step research as outlined above
+- **MULTIPLE SOURCE VERIFICATION**: When multiple sources confirm the same information, list them separated by " | "
+- **CLEAR EXPLANATIONS**: When information is not found, provide clear explanation in reference field
+- **WORKING LINKS ONLY**: Double-check that all provided URLs are accessible and contain the mentioned information
+`;
 
     try {
       const response = await axios.post(this.baseURL, {
-        model: 'sonar', // Use fastest model for Option 1
+        model: this.model,
         messages: [
           {
             role: "system",
-            content: "You are an expert Indian Classical Music researcher. Find basic information about artists quickly and return only valid JSON."
+            content: `You are an expert Indian Classical Music researcher and digital detective with advanced skills in:
+
+RESEARCH EXPERTISE:
+- Deep knowledge of Indian Classical Music traditions, lineages, and cultural context
+- Advanced web research techniques for finding official artist information
+- Social media intelligence for extracting biographical details
+- Academic and institutional database navigation
+- Cross-referencing and fact-verification across multiple sources
+- Understanding of gharana systems, guru-shishya traditions, and musical lineages
+
+SEARCH METHODOLOGY:
+1. **Official Source Priority**: Always search for official websites, verified social media, artist biographies first
+2. **Social Media Mining**: Extract valuable biographical information from Facebook, Instagram, Twitter, YouTube profiles and posts
+3. **Institutional Deep Dive**: Thoroughly search music institutions, academies, universities, and cultural organizations
+4. **Academic Cross-Reference**: Use scholarly articles, research papers, and academic publications for verification
+5. **Contemporary Sources**: Include recent interviews, articles, and current biographical content
+6. **Lineage Tracking**: Pay special attention to guru-shishya relationships and gharana affiliations
+7. **Legacy Documentation**: Focus on finding information about disciples and teaching contributions
+
+CRITICAL SUCCESS FACTORS:
+- Conduct multi-step, systematic research as outlined in the user prompt
+- Never skip the specific searches for gharana, guru, disciples, and achievements
+- Use official websites and verified social media as primary sources when available
+- Cross-verify information from multiple independent sources
+- Return comprehensive, accurate information with working URLs
+- If information is genuinely not available, clearly state this in the reference field
+
+RESPONSE REQUIREMENTS:
+- Return ONLY valid JSON without any additional text
+- Use real, accessible URLs that can be verified
+- Be precise with Indian music terminology and proper names
+- Include titles (Ustad, Pandit) when mentioned in sources
+- Focus on factual, verifiable biographical and musical information`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 1500, // Reduced for faster processing
-        top_p: 0.9
+        temperature: 0.02, // Extremely low temperature for maximum factual accuracy
+        max_tokens: 2000, // Reduced tokens for faster response
+        top_p: 0.9, // Slightly higher for better source diversity
+        // Note: Perplexity doesn't support both frequency_penalty and presence_penalty together
+        frequency_penalty: 0.1 // Reduce repetition only
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 90000 // 90 second timeout
+        timeout: 60000 // 60 second timeout for comprehensive research
       });
 
       console.log('Perplexity API response received');

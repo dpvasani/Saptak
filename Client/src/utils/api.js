@@ -1,23 +1,32 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 120000, // 2 minutes timeout for AI operations
+  timeout: 120000, // 2 minutes for AI operations
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add request interceptor to include auth token
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Add auth token to all requests
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    console.log('API Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      hasToken: !!token
+    });
+    
     return config;
   },
   (error) => {
@@ -25,107 +34,176 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for error handling
+// Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', {
+      status: response.status,
+      url: response.config.url,
+      dataType: typeof response.data
+    });
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+    console.error('API Error:', error);
+
+    // Handle different error types
+    if (error.code === 'ECONNABORTED') {
+      toast.error('Request timeout. Please try again.');
+    } else if (error.response) {
+      // Server responded with error status
+      const { status, data } = error.response;
+      
+      console.error('API Error Details:', {
+        status,
+        message: data.message,
+        url: error.config?.url
+      });
+      
+      switch (status) {
+        case 400:
+          toast.error(data.message || 'Invalid request');
+          break;
+        case 401:
+          console.log('Authentication failed, redirecting to login...');
+          toast.error('Please login to access this feature');
+          // Redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 100);
+          break;
+        case 403:
+          toast.error('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 100);
+          break;
+        case 404:
+          toast.error(data.message || 'Resource not found');
+          break;
+        case 500:
+          toast.error(data.message || 'Server error. Please try again later.');
+          break;
+        case 503:
+          toast.error(data.message || 'Service temporarily unavailable');
+          break;
+        default:
+          toast.error(data.message || 'An error occurred');
+      }
+    } else if (error.request) {
+      // Network error
+      toast.error('Network error. Please check your connection.');
+    } else {
+      // Other error
+      toast.error('An unexpected error occurred');
     }
+
     return Promise.reject(error);
   }
 );
 
+// API methods
 export const apiService = {
-  // Health check
-  healthCheck: () => api.get('/health'),
-
-  // Auth endpoints
-  login: (credentials) => api.post('/auth/login', credentials),
-  register: (userData) => api.post('/auth/register', userData),
-  logout: () => api.post('/auth/logout'),
-  getCurrentUser: () => api.get('/auth/me'),
-  updateUserProfile: (profileData) => api.put('/auth/profile', profileData),
-  changePassword: (passwordData) => api.put('/auth/password', passwordData),
-  getUserActivity: (params) => api.get(`/auth/activity?${params}`),
-
-  // Artist endpoints
+  // Artists
   searchArtist: (name, useAI = false, aiProvider = 'openai', aiModel = 'default') =>
-    api.get(`/artists/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
+    api.get(`/api/artists/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
   
-  getAllAboutArtist: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro', entityId = null) => {
-    let url = `/artists/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`;
-    if (entityId) {
-      url += `&entityId=${entityId}`;
-    }
-    return api.get(url);
-  },
-  
-  getAllArtists: () => api.get('/artists'),
-  getArtistById: (id) => api.get(`/artists/${id}`),
-  updateArtist: (id, data) => api.put(`/artists/${id}`, data),
-  deleteArtist: (id) => api.delete(`/artists/${id}`),
-  getVerifiedArtists: (field = '') => api.get(`/artists/verified${field ? `?field=${field}` : ''}`),
-  getUnverifiedArtists: (field = '') => api.get(`/artists/unverified${field ? `?field=${field}` : ''}`),
-  getArtistStats: () => api.get('/artists/stats'),
-  exportArtists: (data) => api.post('/artists/export', data),
+  getAllArtists: () => api.get('/api/artists'),
+  getArtistById: (id) => api.get(`/api/artists/${id}`),
+  updateArtist: (id, data) => api.put(`/api/artists/${id}`, data),
+  getVerifiedArtists: (field) => api.get(`/api/artists/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedArtists: (field) => api.get(`/api/artists/unverified${field ? `?field=${field}` : ''}`),
+  getArtistStats: () => api.get('/api/artists/stats'),
+  getAllAboutArtist: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro') =>
+    api.get(`/api/artists/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
 
-  // Raag endpoints
+  // Delete operations
+  deleteArtist: (id) => api.delete(`/api/artists/${id}`),
+  bulkDeleteArtists: (ids) => api.delete('/api/artists', { data: { ids } }),
+
+  // Export operations
+  exportSingleArtist: (id, format) => api.get(`/api/artists/${id}/export?format=${format}`),
+  exportArtists: (format, ids = null) => api.post('/api/artists/export', { format, ids }),
+
+  // Delete operations for raags
+  deleteRaag: (id) => api.delete(`/api/raags/${id}`),
+  bulkDeleteRaags: (ids) => api.delete('/api/raags', { data: { ids } }),
+
+  // Export operations for raags
+  exportSingleRaag: (id, format) => api.get(`/api/raags/${id}/export?format=${format}`),
+  exportRaags: (format, ids = null) => api.post('/api/raags/export', { format, ids }),
+
+  // Delete operations for taals
+  deleteTaal: (id) => api.delete(`/api/taals/${id}`),
+  bulkDeleteTaals: (ids) => api.delete('/api/taals', { data: { ids } }),
+
+  // Export operations for taals
+  exportSingleTaal: (id, format) => api.get(`/api/taals/${id}/export?format=${format}`),
+  exportTaals: (format, ids = null) => api.post('/api/taals/export', { format, ids }),
+
+  // Raags
+  searchRaag: (name, useAI = false, aiProvider = 'openai') =>
+    api.get(`/api/raags/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}`),
+  
+  getAllRaags: () => api.get('/api/raags'),
+  getRaagById: (id) => api.get(`/api/raags/${id}`),
+  updateRaag: (id, data) => api.put(`/api/raags/${id}`, data),
+  getVerifiedRaags: (field) => api.get(`/api/raags/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedRaags: (field) => api.get(`/api/raags/unverified${field ? `?field=${field}` : ''}`),
+  getRaagStats: () => api.get('/api/raags/stats'),
+
+  // Taals
+  searchTaal: (name, useAI = false, aiProvider = 'openai') =>
+    api.get(`/api/taals/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}`),
+  
+  getAllTaals: () => api.get('/api/taals'),
+  getTaalById: (id) => api.get(`/api/taals/${id}`),
+  updateTaal: (id, data) => api.put(`/api/taals/${id}`, data),
+  getVerifiedTaals: (field) => api.get(`/api/taals/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedTaals: (field) => api.get(`/api/taals/unverified${field ? `?field=${field}` : ''}`),
+  getTaalStats: () => api.get('/api/taals/stats'),
+
+  // Dashboard
+  getDashboardStats: () => api.get('/api/dashboard/stats'),
+  getPendingVerification: (category = '', limit = 10) => {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (category) params.append('category', category);
+    return api.get(`/api/dashboard/pending-verification?${params}`);
+  },
+
+  // User and Auth
+  getUserActivity: (queryString = '') => api.get(`/api/auth/activity${queryString ? `?${queryString}` : ''}`),
+  updateUserProfile: (data) => api.put('/api/auth/profile', data),
+
+  // Raags
   searchRaag: (name, useAI = false, aiProvider = 'openai', aiModel = 'default') =>
-    api.get(`/raags/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
+    api.get(`/api/raags/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
   
-  getAllAboutRaag: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro', entityId = null) => {
-    let url = `/raags/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`;
-    if (entityId) {
-      url += `&entityId=${entityId}`;
-    }
-    return api.get(url);
-  },
-  
-  getAllRaags: () => api.get('/raags'),
-  getRaagById: (id) => api.get(`/raags/${id}`),
-  updateRaag: (id, data) => api.put(`/raags/${id}`, data),
-  deleteRaag: (id) => api.delete(`/raags/${id}`),
-  getVerifiedRaags: (field = '') => api.get(`/raags/verified${field ? `?field=${field}` : ''}`),
-  getUnverifiedRaags: (field = '') => api.get(`/raags/unverified${field ? `?field=${field}` : ''}`),
-  getRaagStats: () => api.get('/raags/stats'),
-  exportRaags: (data) => api.post('/raags/export', data),
+  getAllRaags: () => api.get('/api/raags'),
+  getRaagById: (id) => api.get(`/api/raags/${id}`),
+  updateRaag: (id, data) => api.put(`/api/raags/${id}`, data),
+  getVerifiedRaags: (field) => api.get(`/api/raags/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedRaags: (field) => api.get(`/api/raags/unverified${field ? `?field=${field}` : ''}`),
+  getRaagStats: () => api.get('/api/raags/stats'),
+  getAllAboutRaag: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro') =>
+    api.get(`/api/raags/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
 
-  // Taal endpoints
+  // Taals
   searchTaal: (name, useAI = false, aiProvider = 'openai', aiModel = 'default') =>
-    api.get(`/taals/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
+    api.get(`/api/taals/search?name=${encodeURIComponent(name)}&useAI=${useAI}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
   
-  getAllAboutTaal: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro', entityId = null) => {
-    let url = `/taals/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`;
-    if (entityId) {
-      url += `&entityId=${entityId}`;
-    }
-    return api.get(url);
-  },
-  
-  getAllTaals: () => api.get('/taals'),
-  getTaalById: (id) => api.get(`/taals/${id}`),
-  updateTaal: (id, data) => api.put(`/taals/${id}`, data),
-  deleteTaal: (id) => api.delete(`/taals/${id}`),
-  getVerifiedTaals: (field = '') => api.get(`/taals/verified${field ? `?field=${field}` : ''}`),
-  getUnverifiedTaals: (field = '') => api.get(`/taals/unverified${field ? `?field=${field}` : ''}`),
-  getTaalStats: () => api.get('/taals/stats'),
-  exportTaals: (data) => api.post('/taals/export', data),
-
-  // Dashboard endpoints
-  getDashboardStats: () => api.get('/dashboard/stats'),
-  getPendingVerification: (category = '', limit = 10) => 
-    api.get(`/dashboard/pending-verification?category=${category}&limit=${limit}`),
-
-  // All About Data endpoints
-  getAllAboutData: (category = '', limit = 20, page = 1) =>
-    api.get(`/all-about?category=${category}&limit=${limit}&page=${page}`),
-  getAllAboutDataById: (id) => api.get(`/all-about/${id}`),
-  updateAllAboutData: (id, data) => api.put(`/all-about/${id}`, data),
-  deleteAllAboutData: (id) => api.delete(`/all-about/${id}`),
+  getAllTaals: () => api.get('/api/taals'),
+  getTaalById: (id) => api.get(`/api/taals/${id}`),
+  updateTaal: (id, data) => api.put(`/api/taals/${id}`, data),
+  getVerifiedTaals: (field) => api.get(`/api/taals/verified${field ? `?field=${field}` : ''}`),
+  getUnverifiedTaals: (field) => api.get(`/api/taals/unverified${field ? `?field=${field}` : ''}`),
+  getTaalStats: () => api.get('/api/taals/stats'),
+  getAllAboutTaal: (name, aiProvider = 'perplexity', aiModel = 'sonar-pro') =>
+    api.get(`/api/taals/all-about?name=${encodeURIComponent(name)}&aiProvider=${aiProvider}&aiModel=${aiModel}`),
 };
 
-export default apiService;
+export default api;
